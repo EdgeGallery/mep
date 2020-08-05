@@ -92,6 +92,7 @@ MEP_CERTS_DIR is where you put mepauth server certificates and keys.
 MEPAUTH_CONF_PATH is a config file for mepauth.
 
 ### run mepserver
+MEP_CERTS_DIR is where you put mep server certificates and keys.
 ```
 docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_DIR}" \
                                  --cap-drop All \
@@ -101,7 +102,6 @@ docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_
                                  -v ${MEP_CERTS_DIR}/mepserver_cert_pwd:${MEPSERVER_SSL_DIR}/cert_pwd:ro \
                                  edgegallery/mep:latest
 ```
-MEP_CERTS_DIR is where you put mep server certificates and keys.
 
 More details about building and installation, please refer to [HERE](https://gitee.com/edgegallery/docs/blob/master/MEP/EdgeGallery%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%E9%AA%8C%E8%AF%81%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E%E4%B9%A6.md).
 
