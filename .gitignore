@@ -1,12 +1,10 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+.idea/
+mepserver/.idea
+mepserver/data
+mepserver/*.log
+mepserver/etc
+dns-server/data
+mepauth/conf/*.crt
+mepauth/conf/*key
+mepauth/conf/*file
 
-# Test binary, built with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
