@@ -18,10 +18,17 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"os"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	_ "github.com/apache/servicecomb-service-center/server/init"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	_ "mepserver/mp1"
 	"mepserver/mp1/util"
@@ -29,10 +36,48 @@ import (
 )
 
 func main() {
-	err := util.ValidateCertificatePasswordComplexity("/usr/mep/ssl/cert_pwd")
+
+	pwd, err := readPassword("Please input tls certificates password: ")
 	if err != nil {
-		log.Errorf(err, "Certificate password complexity validation failed.")
+		log.Errorf(err, "read password failed")
 		return
 	}
+	confirm, err := readPassword("Confirm the password: ")
+	if err != nil || !bytes.Equal(pwd, confirm) {
+		log.Errorf(err, "confirm password failed")
+		return
+	}
+	_, verifyErr := util.ValidatePassword(&pwd)
+	if verifyErr != nil {
+		log.Errorf(verifyErr, "Certificate password complexity validation failed.")
+		return
+	}
+
+	encryptCertPwd := encryptPass(&pwd)
+	wErr := ioutil.WriteFile(util.Cert_Pwd_Path, encryptCertPwd, 0600)
+	if wErr != nil {
+		log.Errorf(wErr, "write encrypt cert pwd failed")
+	}
+
 	server.Run()
+}
+
+func encryptPass(pwd *[]byte) []byte {
+
+	// clear password
+	for i := 0; i < len(*pwd); i++ {
+		(*pwd)[i] = 0
+	}
+	// encypt password
+	encryptPass := []byte("encryptPass")
+	return encryptPass
+}
+
+func readPassword(prompt string) ([]byte, error) {
+	fmt.Print("\n" + prompt)
+	pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return nil, err
+	}
+	return pass, nil
 }

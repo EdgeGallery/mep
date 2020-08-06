@@ -69,3 +69,4 @@ const pwdLengthMin int = 8
 const pwdLengthMax int = 16
 const pwdCount int = 2
 const HookTimerLimit time.Duration = 5
+const Cert_Pwd_Path string = "/usr/mep/ssl/cert_pwd"
