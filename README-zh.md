@@ -1,41 +1,30 @@
-# EdgeGallery MEP project
+# EdgeGallery MEP项目
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![Jenkins](https://img.shields.io/jenkins/build?jobUrl=http%3A%2F%2Fjenkins.edgegallery.org%2Fview%2FMEC-PLATFORM-BUILD%2Fjob%2Fmep-docker-image-build-update-daily-master%2F)
 
-## Introduction
+## 介绍
 
-Edgegallery MEP is an open source implementation of MEC platform according to
-ETSI MEC 003 [1] and 011 [2] documentation.
+Edgegallery MEP是根据ETSI MEC 003 [1]和011 [2]文档的MEC平台的开源实现。
 
-The MEC platform, as defined in ETSI GS MEC 003, offers an environment
-where MEC applications may discover, advertise, consume and offer MEC services.
-Upon receipt of update, activation or deactivation of traffic rules from the
-MEC platform manager, applications or services, the MEC platform instructs the
-data plane accordingly. The MEC platform also receives DNS records from the MEC
-platform manager and uses them to configure a DNS proxy/server.
- 
-Via Mp1 reference point between the MEC platform and the MEC applications,
-as defined in ETSI GS MEC 011, the basic functions are enabled, such as:
-* MEC service assistance:
-    - authentication and authorization of producing and consuming MEC services;
-    - a means for service producing MEC applications to register/deregister
-    towards the MEC platform the MEC services they provide, and to update the
-    MEC platform about changes of the MEC service availability;
-    - a means to notify the changes of the MEC service availability to the
-    relevant MEC application;
-    - discovery of available MEC services;
-* MEC application assistance:
-    - MEC application availability subscription;
-    - MEC application termination subscription;
+ETSI GS MEC 003中定义的MEC平台提供了一个环境，使MEC应用程序可以发现，通告，使用和提供MEC服务。在从MEC平台管理器，应用程序或服务接收到流量规则的更新，激活或停用后，MEC平台会相应地指示数据平面。MEC平台还从MEC平台管理器接收DNS记录，并使用它们来配置DNS代理/服务器。
 
-## MEP architecture
+通过ETSI GS MEC 011中定义的MEC平台和MEC应用程序之间的Mp1参考点，可以启用基本功能，例如：
 
-MEP Mp1 service registry and discovery bases on servicecomb service center [3].
-Servicecomb service center is a Restful based service-registry that provides micro-services discovery and micro-service management. MEP utilize its registry abilities and plugin mechanism to implement Mp1 interfaces.
-The mep-server module is the core implementations of MEP server for Mp1 APIs. The APIs is provided for MEC Apps to register or discover services in MEC platform.
+* MEC协助服务：
+    - 生产和使用MEC服务的认证和授权；
+    - 一种服务产生的MEC应用程序向其提供的MEC服务的MEC平台注册/注销，并向MEC平台更新有关MEC服务可用性的变化的手段；
+    - 一种向相关的MEC应用程序通知MEC服务可用性的改变的手段；
+    - 发现可用的MEC服务；
+* MEC应用程序协助：
+    - MEC应用程序可用性订阅；
+    - MEC应用程序终止订阅；
 
-## MEP code directory
+## MEP架构
+
+MEP Mp1服务注册和发现基于servicecomb服务中心[3]。Servicecomb服务中心是一个基于Restful的服务注册表，提供微服务发现和微服务管理。MEP利用其注册表功能和插件机制来实现Mp1接口。mep-server模块是Mp1 API的MEP服务器的核心实现。提供了API，供MEC Apps在MEC平台中注册或发现服务。
+
+## MEP代码目录
 ```
 ├── kong-plugin
 │   ├── appid-header
@@ -45,31 +34,31 @@ The mep-server module is the core implementations of MEP server for Mp1 APIs. Th
 └── README.md
 
 ```
-Above is the directory tree of MEP project, their usage is as belows:
-- kong-plugin: mep api gateway kong plugin
-- mepserver: mep server implementation
-- mepauth: mepauth module provide token apply api for Apps
+上面是MEP项目的目录树，其用法如下：
+- kong-plugin: mep api网关kong插件
+- mepserver: mep server实现
+- mepauth: epauth模块为应用提供令牌应用api
 
-## MEP build & run
+## MEP构建和运行
 
-Most of the MEP project codes are developed by golang, the kong plugin is by lua. MEP project is released via docker image.
+大多数MEP项目代码是由golang开发的，kong插件是由lua开发的。MEP项目通过docker image发布。
 
-### build mep-auth
-
-```
-cd mepauth
-sudo ./docker-build.sh
-
-```
-
-### build mep-server
+### 建立mep-auth
 
 ```
 cd mepauth
 sudo ./docker-build.sh
+
 ```
 
-### run mepauth
+### 建立mep服务器
+
+```
+cd mepauth
+sudo ./docker-build.sh
+```
+
+### 运行mepauth
 
 ```
 docker run -itd --name mepauth \
@@ -88,11 +77,10 @@ docker run -itd --name mepauth \
              edgegallery/mepauth:latest
 ```
 
-MEP_CERTS_DIR is where you put mepauth server certificates and keys.
-MEPAUTH_CONF_PATH is a config file for mepauth.
+MEP_CERTS_DIR是放置mepauth服务器证书和密钥的位置。MEPAUTH_CONF_PATH是mepauth的配置文件。
 
-### run mepserver
-MEP_CERTS_DIR is where you put mep server certificates and keys.
+### 运行mepserver
+MEP_CERTS_DIR是放置mep服务器证书和密钥的位置。
 ```
 docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_DIR}" \
                                  --cap-drop All \
@@ -104,9 +92,9 @@ docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_
 ```
 
 
-More details about the building and installation of MEP, please refer to [HERE](https://gitee.com/edgegallery/docs/blob/master/MEP/EdgeGallery%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%E9%AA%8C%E8%AF%81%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E%E4%B9%A6.md).
+有关MEP的构建和安装的更多详细信息，请参阅 [HERE](https://gitee.com/edgegallery/docs/blob/master/MEP/EdgeGallery%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%E9%AA%8C%E8%AF%81%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E%E4%B9%A6.md).
 
-## Reference
+## 参考
 [1] https://www.etsi.org/deliver/etsi_gs/MEC/001_099/003/02.01.01_60/gs_MEC003v020101p.pdf
 
 [2] https://www.etsi.org/deliver/etsi_gs/MEC/001_099/011/01.01.01_60/gs_MEC011v010101p.pdf
