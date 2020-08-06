@@ -31,6 +31,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	_ "mepserver/mp1"
+	_ "mepserver/mp1/tls"
 	"mepserver/mp1/util"
 	_ "mepserver/mp1/uuid"
 )

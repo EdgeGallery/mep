@@ -1,0 +1,58 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+//mepserver tls plugin for service center
+package tls
+
+import (
+	"io/ioutil"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	mgr "github.com/apache/servicecomb-service-center/server/plugin"
+
+	"mepserver/mp1/util"
+)
+
+func init() {
+	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.CIPHER, Name: "mepserver_tls", New: New})
+
+}
+
+// new plugin instance
+func New() mgr.PluginInstance {
+	return &MepServerTLS{}
+}
+
+type MepServerTLS struct {
+}
+
+func (c *MepServerTLS) Encrypt(src string) (string, error) {
+	df, ok := mgr.DynamicPluginFunc(mgr.CIPHER, "Encrypt").(func(src string) (string, error))
+	if ok {
+		return df(src)
+	}
+	return src, nil
+}
+
+func (c *MepServerTLS) Decrypt(src string) (string, error) {
+
+	err := ioutil.WriteFile(util.Cert_Pwd_Path, []byte(""), 0600)
+	if err != nil {
+		log.Error("clear cert pwd failed", nil)
+	}
+
+	return src, err
+}
