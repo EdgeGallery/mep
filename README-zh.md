@@ -5,24 +5,24 @@
 
 ## 介绍
 
-Edgegallery MEP是根据ETSI MEC 003 [1]和011 [2]文档的MEC平台的开源实现。
+Edgegallery MEP是依据ETSI MEC 003 [1]和011 [2]标准实现的MEP开源方案。
 
-ETSI GS MEC 003中定义的MEC平台提供了一个环境，使MEC应用程序可以发现，通告，使用和提供MEC服务。在从MEC平台管理器，应用程序或服务接收到流量规则的更新，激活或停用后，MEC平台会相应地指示数据平面。MEC平台还从MEC平台管理器接收DNS记录，并使用它们来配置DNS代理/服务器。
+ETSI GS MEC 003中定义的MEP，提供了一个使应用程序可以发现，通告，使用和提供MEC服务的环境。在从MEC平台管理器、应用程序或服务接收到流量规则的更新，激活或停用后，MEP会进行对应的执行动作。MEP还从MEC平台管理器接收DNS记录，并使用它们来配置DNS代理/服务器。
 
-通过ETSI GS MEC 011中定义的MEC平台和MEC应用程序之间的Mp1参考点，可以启用基本功能，例如：
+通过ETSI GS MEC 011中定义的MEP和应用程序之间的Mp1参考点，可以启用基本功能，例如：
 
-* MEC协助服务：
-    - 生产和使用MEC服务的认证和授权；
-    - 一种服务产生的MEC应用程序向其提供的MEC服务的MEC平台注册/注销，并向MEC平台更新有关MEC服务可用性的变化的手段；
-    - 一种向相关的MEC应用程序通知MEC服务可用性的改变的手段；
+* MEC服务协同：
+    - 提供和使用MEC服务的认证和授权；
+    - MEC应用程序向MEC平台注册/注销其提供的MEC服务，并向MEC平台更新有关MEC服务可用性的变化；
+    - 向相关的MEC应用程序通知MEC服务可用性的改变；
     - 发现可用的MEC服务；
-* MEC应用程序协助：
+* MEC应用协助：
     - MEC应用程序可用性订阅；
     - MEC应用程序终止订阅；
 
 ## MEP架构
 
-MEP Mp1服务注册和发现基于servicecomb服务中心[3]。Servicecomb服务中心是一个基于Restful的服务注册表，提供微服务发现和微服务管理。MEP利用其注册表功能和插件机制来实现Mp1接口。mep-server模块是Mp1 API的MEP服务器的核心实现。提供了API，供MEC Apps在MEC平台中注册或发现服务。
+MEP Mp1服务注册和发现基于servicecomb服务中心实现[3]。Servicecomb服务中心是一个基于Restful的服务注册表，提供微服务发现和微服务管理。MEP利用其注册表功能和插件机制来实现Mp1接口。mep-server模块是Mp1 API的MEP服务器的核心实现。提供了API，供MEC Apps在MEC平台中注册或发现服务。
 
 ## MEP代码目录
 ```
@@ -34,10 +34,10 @@ MEP Mp1服务注册和发现基于servicecomb服务中心[3]。Servicecomb服务
 └── README.md
 
 ```
-上面是MEP项目的目录树，其用法如下：
+上面是MEP项目的目录树：
 - kong-plugin: mep api网关kong插件
 - mepserver: mep server实现
-- mepauth: epauth模块为应用提供令牌应用api
+- mepauth: mepauth模块为应用提供令牌申请api
 
 ## MEP构建和运行
 
@@ -80,7 +80,7 @@ docker run -itd --name mepauth \
 MEP_CERTS_DIR是放置mepauth服务器证书和密钥的位置。MEPAUTH_CONF_PATH是mepauth的配置文件。
 
 ### 运行mepserver
-MEP_CERTS_DIR是放置mep服务器证书和密钥的位置。
+MEP_CERTS_DIR是放置mep服务器证书和密钥的目录。
 ```
 docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_DIR}" \
                                  --cap-drop All \
