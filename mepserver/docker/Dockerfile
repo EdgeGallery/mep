@@ -69,6 +69,11 @@ RUN chmod 750 $HOME &&\
     chmod 550 -R $HOME/bin &&\
     mkdir -p -m 700 $HOME/ssl &&\
     mkdir -p -m 750 $HOME/log &&\
+    mkdir -p -m 700 $HOME/keys  &&\
+    mkdir -p -m 700 $HOME/cprop  &&\
+    mkdir -p -m 700 $HOME/sprop  &&\
+    mkdir -p -m 700 $HOME/wprop  &&\
+    mkdir -p -m 700 $HOME/wnprop &&\
     chown -hR $USER_NAME:$GROUP_NAME $HOME
 
 USER $USER_NAME

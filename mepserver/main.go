@@ -20,7 +20,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -54,24 +53,30 @@ func main() {
 		return
 	}
 
-	encryptCertPwd := encryptPass(&pwd)
-	wErr := ioutil.WriteFile(util.Cert_Pwd_Path, encryptCertPwd, 0600)
-	if wErr != nil {
-		log.Errorf(wErr, "write encrypt cert pwd failed")
+	keyComponentFromUser, err := readPassword("Please input root key component: ")
+	if err != nil || !bytes.Equal(pwd, confirm) {
+		log.Errorf(err, "read root key component failed")
+		return
+	}
+	verifyErr = util.ValidateKeyComponentUserInput(&keyComponentFromUser)
+	if verifyErr != nil {
+		log.Errorf(verifyErr, "Root key component from user validation failed.")
+		return
+	}
+	util.KeyComponentFromUserStr = &keyComponentFromUser
+
+	err = util.InitRootKeyAndWorkKey()
+	if err != nil {
+		log.Errorf(err, "Failed to init root key and work key.")
+		return
+	}
+
+	encryptCertPwdErr := util.EncryptAndSaveCertPwd(&pwd)
+	if encryptCertPwdErr != nil {
+		log.Errorf(encryptCertPwdErr, "encrypt cert pwd failed")
 	}
 
 	server.Run()
-}
-
-func encryptPass(pwd *[]byte) []byte {
-
-	// clear password
-	for i := 0; i < len(*pwd); i++ {
-		(*pwd)[i] = 0
-	}
-	// encypt password
-	encryptPass := []byte("encryptPass")
-	return encryptPass
 }
 
 func readPassword(prompt string) ([]byte, error) {
