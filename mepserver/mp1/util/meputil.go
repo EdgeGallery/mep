@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/pbkdf2"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -35,6 +34,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/rest"
@@ -315,7 +316,7 @@ func GetClientIp(r *http.Request) string {
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < ComponentSize {
 		log.Errorf(nil, "key component user string length is not valid")
-		return  fmt.Errorf("key component user string length is not valid")
+		return fmt.Errorf("key component user string length is not valid")
 	}
 	return nil
 }
@@ -386,7 +387,7 @@ func GetWorkKey() ([]byte, error) {
 // Init root key and work key
 func InitRootKeyAndWorkKey() error {
 	// generate and save random root key components if not exist
-	if !isFileOrDirExist(ComponentFilePath) || !isFileOrDirExist(SaltFilePath) {
+	if !IsFileOrDirExist(ComponentFilePath) || !IsFileOrDirExist(SaltFilePath) {
 		genRandRootKeyComponentErr := genRandRootKeyComponent(ComponentFilePath, SaltFilePath)
 		if genRandRootKeyComponentErr != nil {
 			log.Errorf(nil, "failed to generate random key")
@@ -396,7 +397,7 @@ func InitRootKeyAndWorkKey() error {
 	}
 
 	// generate and save encrypted work key if not exist.
-	if !isFileOrDirExist(EncryptedWorkKeyFilePath) || !isFileOrDirExist(WorkKeyNonceFilePath) {
+	if !IsFileOrDirExist(EncryptedWorkKeyFilePath) || !IsFileOrDirExist(WorkKeyNonceFilePath) {
 		// get root key by key components
 		rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
 		if genRootKeyErr != nil {
@@ -537,7 +538,8 @@ func genRandRootKeyComponent(componentFilePath string, saltFilePath string) erro
 	return nil
 }
 
-func isFileOrDirExist(path string) bool {
+// check file of dir exist
+func IsFileOrDirExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		return false

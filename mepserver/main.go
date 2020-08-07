@@ -26,8 +26,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	_ "github.com/apache/servicecomb-service-center/server/init"
-	"github.com/apache/servicecomb-service-center/syncer/pkg/utils"
-
 	"golang.org/x/crypto/ssh/terminal"
 
 	_ "mepserver/mp1"
@@ -37,18 +35,24 @@ import (
 )
 
 func main() {
-	if !utils.IsFileExist(util.EncryptedCertPwdFilePath) {
-		err := initialEncryptCertPwd()
+
+	err := initialEncryptComponent()
+	if err != nil {
+		log.Errorf(err, "initial encrypt component failed")
+		return
+	}
+	if !util.IsFileOrDirExist(util.EncryptedCertPwdFilePath) {
+		err := encryptCertPwd()
 		if err != nil {
-			log.Errorf(err, "initial encrypt cert pwd failed")
+			log.Errorf(err, "input cert pwd failed")
 			return
 		}
-	}
 
+	}
 	server.Run()
 }
 
-func initialEncryptCertPwd() error {
+func encryptCertPwd() error {
 	pwd, err := readPassword("Please input tls certificates password: ")
 	if err != nil {
 		log.Errorf(err, "read password failed")
@@ -64,13 +68,21 @@ func initialEncryptCertPwd() error {
 		log.Errorf(verifyErr, "Certificate password complexity validation failed")
 		return verifyErr
 	}
+	encryptCertPwdErr := util.EncryptAndSaveCertPwd(&pwd)
+	if encryptCertPwdErr != nil {
+		log.Errorf(encryptCertPwdErr, "encrypt cert pwd failed")
+		return encryptCertPwdErr
+	}
+	return nil
+}
 
+func initialEncryptComponent() error {
 	keyComponentFromUser, err := readPassword("Please input root key component: ")
 	if err != nil {
 		log.Errorf(err, "read root key component failed")
 		return err
 	}
-	verifyErr = util.ValidateKeyComponentUserInput(&keyComponentFromUser)
+	verifyErr := util.ValidateKeyComponentUserInput(&keyComponentFromUser)
 	if verifyErr != nil {
 		log.Errorf(verifyErr, "root key component from user validation failed")
 		return verifyErr
@@ -81,12 +93,6 @@ func initialEncryptCertPwd() error {
 	if err != nil {
 		log.Errorf(err, "failed to init root key and work key")
 		return err
-	}
-
-	encryptCertPwdErr := util.EncryptAndSaveCertPwd(&pwd)
-	if encryptCertPwdErr != nil {
-		log.Errorf(encryptCertPwdErr, "encrypt cert pwd failed")
-		return encryptCertPwdErr
 	}
 	return nil
 }
