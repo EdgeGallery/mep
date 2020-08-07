@@ -65,6 +65,10 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 	}
 
 	idx := strings.Index(domainProject, "/")
+	if idx == -1 {
+		log.Error("get domain name failed", nil)
+		return
+	}
 	domainName := domainProject[:idx]
 	switch action {
 	case proto.EVT_INIT:
