@@ -597,7 +597,8 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	return nil
 }
 
-func getCertPwd() ([]byte, error) {
+// get cert pwd
+func GetCertPwd() ([]byte, error) {
 	// get work key
 	workKey, getWorkKeyErr := GetWorkKey()
 	if getWorkKeyErr != nil {

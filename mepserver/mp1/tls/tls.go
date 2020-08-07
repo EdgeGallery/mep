@@ -18,10 +18,11 @@
 package tls
 
 import (
-	"io/ioutil"
+
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	mgr "github.com/apache/servicecomb-service-center/server/plugin"
+	svcutil "github.com/apache/servicecomb-service-center/pkg/util"
 
 	"mepserver/mp1/util"
 )
@@ -49,10 +50,12 @@ func (c *MepServerTLS) Encrypt(src string) (string, error) {
 
 func (c *MepServerTLS) Decrypt(src string) (string, error) {
 
-	err := ioutil.WriteFile(util.Cert_Pwd_Path, []byte(""), 0600)
+	decrypt := src
+	certPwd, err := util.GetCertPwd()
 	if err != nil {
-		log.Error("clear cert pwd failed", nil)
+		log.Errorf(err, "get cert pwd failed")
+		return decrypt, err
 	}
-
-	return src, err
+	decrypt = svcutil.BytesToStringWithNoCopy(certPwd)
+	return decrypt, err
 }
