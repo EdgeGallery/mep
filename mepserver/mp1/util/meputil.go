@@ -20,14 +20,22 @@ package util
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/rest"
@@ -39,6 +47,22 @@ import (
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
 	"github.com/go-playground/validator/v10"
 )
+
+const KeyFileMode os.FileMode = 0600
+
+const KeySize int = 32
+const NonceSize int = 12
+const IterationNum int = 100000
+const ComponentSize int = 256
+
+const ComponentFilePath string = "cprop/c_properties"
+const SaltFilePath string = "sprop/s_properties"
+const EncryptedWorkKeyFilePath string = "wprop/w_properties"
+const WorkKeyNonceFilePath string = "wnprop/wn_properties"
+const EncryptedCertPwdFilePath string = "ssl/cert_pwd"
+const CertPwdNonceFilePath string = "ssl/cert_pwd_nonce"
+
+var KeyComponentFromUserStr *[]byte
 
 // put k,v into map
 func InfoToProperties(properties map[string]string, key string, value string) {
@@ -256,16 +280,6 @@ func ValidateAppInstanceIdWithHeader(id string, r *http.Request) error {
 	return errors.New("UnAuthorization to access the resource")
 }
 
-// trans obj to json
-func ParseToJson(v interface{}) string {
-	parseResult, err := json.Marshal(v)
-	if err != nil {
-		log.Error("Failed to marshal service info to json.", nil)
-		return ""
-	}
-	return string(parseResult)
-}
-
 // get resource info
 func GetResourceInfo(r *http.Request) string {
 	resource := r.URL.String()
@@ -297,4 +311,312 @@ func GetClientIp(r *http.Request) string {
 		clientIp = "UNKNOWN_IP"
 	}
 	return clientIp
+}
+
+func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
+	if len(*keyComponentUserStr) < ComponentSize {
+		log.Errorf(nil, "key component user string length is not valid")
+		return fmt.Errorf("key component user string length is not valid")
+	}
+	return nil
+}
+
+// use aes 256 gcm algo to encrypt secret keys
+func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Errorf(nil, "failed to create aes cipher")
+		return nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Errorf(nil, "failed to wrap cipher")
+		return nil, err
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, plaintext, nil)
+	return ciphertext, nil
+}
+
+// use aes 256 gcm algo to decrypt secret keys
+func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Errorf(nil, "failed to create aes cipher")
+		return nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Errorf(nil, "failed to wrap cipher")
+		return nil, err
+	}
+
+	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		log.Errorf(nil, "failed to decrypt secret key")
+		return nil, err
+	}
+
+	return plaintext, nil
+}
+
+// Generate work key by using root key
+func GetWorkKey() ([]byte, error) {
+	// get root key by key components
+	rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
+	if genRootKeyErr != nil {
+		log.Errorf(nil, "failed to generate root key by key components")
+		return nil, genRootKeyErr
+	}
+	log.Info("Succeed to generate root key by key components.")
+
+	// decrypt work key by root key.
+	workKey, decryptedWorkKeyErr := decryptKey(rootKey, EncryptedWorkKeyFilePath, WorkKeyNonceFilePath)
+	// clear root key
+	ClearByteArray(rootKey)
+	if decryptedWorkKeyErr != nil {
+		log.Errorf(nil, decryptedWorkKeyErr.Error())
+		return nil, decryptedWorkKeyErr
+	}
+	log.Info("Succeed to decrypt work key.")
+	return workKey, nil
+}
+
+// Init root key and work key
+func InitRootKeyAndWorkKey() error {
+	// generate and save random root key components if not exist
+	if !IsFileOrDirExist(ComponentFilePath) || !IsFileOrDirExist(SaltFilePath) {
+		genRandRootKeyComponentErr := genRandRootKeyComponent(ComponentFilePath, SaltFilePath)
+		if genRandRootKeyComponentErr != nil {
+			log.Errorf(nil, "failed to generate random key")
+			return genRandRootKeyComponentErr
+		}
+		log.Info("Succeed to generate random key components and salt.")
+	}
+
+	// generate and save encrypted work key if not exist.
+	if !IsFileOrDirExist(EncryptedWorkKeyFilePath) || !IsFileOrDirExist(WorkKeyNonceFilePath) {
+		// get root key by key components
+		rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
+		if genRootKeyErr != nil {
+			log.Errorf(nil, "failed to generate root key")
+			return genRootKeyErr
+		}
+		log.Info("Succeed to generate root key by key components.")
+		workKey, genAndSaveWorkKeyErr := genAndSaveWorkKey(rootKey, EncryptedWorkKeyFilePath, WorkKeyNonceFilePath)
+		ClearByteArray(workKey)
+		ClearByteArray(rootKey)
+		if genAndSaveWorkKeyErr != nil {
+			log.Errorf(nil, "failed to generate and save work key")
+			return genAndSaveWorkKeyErr
+		}
+		log.Info("Succeed to generate and save encrypted work key and nonce.")
+	}
+	return nil
+}
+
+func genAndSaveWorkKey(rootKey []byte, encryptedWorkKeyFilePath string, workKeyNonceFilePath string) ([]byte, error) {
+	workKey := make([]byte, KeySize, 50)
+	_, workKeyErr := rand.Read(workKey)
+	if workKeyErr != nil {
+		return nil, fmt.Errorf("failed to generate random work secret key")
+	}
+	workKeyNonce := make([]byte, NonceSize, 20)
+	_, workKeyNonceErr := rand.Read(workKeyNonce)
+	if workKeyNonceErr != nil {
+		ClearByteArray(workKey)
+		return nil, fmt.Errorf("failed to generate random work key nonce")
+	}
+	encryptedWorkKey, encryptedWorkKeyErr := EncryptByAES256GCM(workKey, rootKey, workKeyNonce)
+	if encryptedWorkKeyErr != nil {
+		ClearByteArray(workKey)
+		ClearByteArray(workKeyNonce)
+		return nil, fmt.Errorf("failed to encrypt work secret key")
+	}
+
+	writeEncryptedWorkKeyErr := ioutil.WriteFile(encryptedWorkKeyFilePath, encryptedWorkKey, KeyFileMode)
+	writeWorkKeyNonceErr := ioutil.WriteFile(workKeyNonceFilePath, workKeyNonce, KeyFileMode)
+	ClearByteArray(encryptedWorkKey)
+	ClearByteArray(workKeyNonce)
+	if writeEncryptedWorkKeyErr != nil || writeWorkKeyNonceErr != nil {
+		ClearByteArray(workKey)
+		return nil, fmt.Errorf("failed to write work secret key and nonce to file")
+	}
+	return workKey, nil
+}
+
+func decryptKey(key []byte, encryptedKeyFilePath string, keyNonceFilePath string) ([]byte, error) {
+	encryptedKey, readEncryptedKeyErr := ioutil.ReadFile(encryptedKeyFilePath)
+	if readEncryptedKeyErr != nil {
+		return nil, fmt.Errorf("failed to read encrypted key from file")
+	}
+
+	keyNonce, readKeyNonceErr := ioutil.ReadFile(keyNonceFilePath)
+	if readKeyNonceErr != nil {
+		ClearByteArray(encryptedKey)
+		return nil, fmt.Errorf("failed to read nonce from file")
+	}
+	key, decryptedKeyErr := DecryptByAES256GCM(encryptedKey, key, keyNonce)
+	ClearByteArray(encryptedKey)
+	ClearByteArray(keyNonce)
+	if decryptedKeyErr != nil {
+		return nil, fmt.Errorf("failed to decrypt secret key")
+	}
+	return key, nil
+}
+
+func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
+	// get component from user input
+	if len(*KeyComponentFromUserStr) == 0 {
+		log.Errorf(nil, "parameter of key is not provided")
+		return nil, fmt.Errorf("parameter of key is not provided")
+	}
+	componentFromUser := make([]byte, ComponentSize, 300)
+	for i := 0; i < ComponentSize && i < len(*KeyComponentFromUserStr); i++ {
+		componentFromUser[i] = (*KeyComponentFromUserStr)[i]
+	}
+
+	// get component from file
+	componentFromFile, readComponentErr := ioutil.ReadFile(componentFilePath)
+	if readComponentErr != nil {
+		ClearByteArray(componentFromUser)
+		return nil, fmt.Errorf("failed to read random key components from file")
+	}
+	salt, readSaltErr := ioutil.ReadFile(saltFilePath)
+	if readSaltErr != nil {
+		ClearByteArray(componentFromUser)
+		ClearByteArray(componentFromFile)
+		return nil, fmt.Errorf("failed to read random key salt from file")
+	}
+
+	// get component from hard code
+	componentFromHardCode := make([]byte, ComponentSize, 300)
+	componentFromHardCodeTmp := []byte(ComponentContent)
+	for i := 0; i < ComponentSize && i < len(componentFromHardCodeTmp); i++ {
+		componentFromHardCode[i] = componentFromHardCodeTmp[i]
+	}
+
+	// generate root key by key components
+	tmpComponent := make([]byte, ComponentSize, 300)
+	for i := 0; i < ComponentSize; i++ {
+		tmpComponent[i] = componentFromUser[i] ^ componentFromFile[i] ^ componentFromHardCode[i]
+	}
+	rootKey := pbkdf2.Key(tmpComponent, salt, IterationNum, KeySize, sha256.New)
+	ClearByteArray(componentFromUser)
+	ClearByteArray(componentFromFile)
+	ClearByteArray(componentFromHardCode)
+	ClearByteArray(componentFromHardCodeTmp)
+	ClearByteArray(salt)
+	ClearByteArray(tmpComponent)
+	return rootKey, nil
+}
+
+func genRandRootKeyComponent(componentFilePath string, saltFilePath string) error {
+	component := make([]byte, ComponentSize, 300)
+	_, generateComponentErr := rand.Read(component)
+	if generateComponentErr != nil {
+		return fmt.Errorf("failed to generate random key component")
+	}
+
+	salt := make([]byte, ComponentSize, 300)
+	_, generateSaltErr := rand.Read(salt)
+	if generateSaltErr != nil {
+		ClearByteArray(component)
+		return fmt.Errorf("failed to generate random key salt")
+	}
+	writeComponent1FileErr := ioutil.WriteFile(componentFilePath, component, KeyFileMode)
+	writeSaltFileErr := ioutil.WriteFile(saltFilePath, salt, KeyFileMode)
+	// clear component
+	ClearByteArray(component)
+	// clear salt
+	ClearByteArray(salt)
+	if writeComponent1FileErr != nil || writeSaltFileErr != nil {
+		return fmt.Errorf("failed to write random key component and salt to file")
+	}
+	return nil
+}
+
+// check file of dir exist
+func IsFileOrDirExist(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+// Clear byte array from memory
+func ClearByteArray(data []byte) {
+	if data == nil {
+		return
+	}
+	for i := 0; i < len(data); i++ {
+		data[i] = 0
+	}
+}
+
+// Encrypt and save cert password
+func EncryptAndSaveCertPwd(certPwd *[]byte) error {
+	certPwdNonce := make([]byte, NonceSize, 20)
+	_, certPwdNonceErr := rand.Read(certPwdNonce)
+	if certPwdNonceErr != nil {
+		errMsg := "failed to generate random cert password nonce"
+		log.Errorf(nil, errMsg)
+		ClearByteArray(*certPwd)
+		return errors.New(errMsg)
+	}
+	// get work key
+	workKey, getWorkKeyErr := GetWorkKey()
+	if getWorkKeyErr != nil {
+		log.Errorf(nil, "failed to get work key")
+		ClearByteArray(*certPwd)
+		ClearByteArray(certPwdNonce)
+		return getWorkKeyErr
+	}
+	encryptedCertPwd, encryptedCertPwdErr := EncryptByAES256GCM(*certPwd, workKey, certPwdNonce)
+	ClearByteArray(*certPwd)
+	ClearByteArray(workKey)
+	if encryptedCertPwdErr != nil {
+		errMsg := "failed to encrypt cert password"
+		log.Errorf(nil, errMsg)
+		ClearByteArray(certPwdNonce)
+		return errors.New(errMsg)
+	}
+
+	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedCertPwdFilePath,
+		encryptedCertPwd, KeyFileMode)
+	writeNonceErr := ioutil.WriteFile(CertPwdNonceFilePath, certPwdNonce, KeyFileMode)
+	ClearByteArray(encryptedCertPwd)
+	ClearByteArray(certPwdNonce)
+	if writeEncryptedPwdErr != nil || writeNonceErr != nil {
+		errMsg := "failed to write encrypt cert password and nonce to file"
+		log.Errorf(nil, errMsg)
+		return errors.New(errMsg)
+	}
+	log.Info("Succeed to encrypt and save cert password and nonce to file.")
+	return nil
+}
+
+// get cert pwd
+func GetCertPwd() ([]byte, error) {
+	// get work key
+	workKey, getWorkKeyErr := GetWorkKey()
+	if getWorkKeyErr != nil {
+		log.Errorf(nil, "failed to get work key")
+		return nil, getWorkKeyErr
+	}
+
+	// decrypt cert password by work key.
+	certPwd, decryptedCertPwdErr := decryptKey(workKey, EncryptedCertPwdFilePath,
+		CertPwdNonceFilePath)
+	// clear work key
+	ClearByteArray(workKey)
+	if decryptedCertPwdErr != nil {
+		log.Errorf(nil, decryptedCertPwdErr.Error())
+		return nil, decryptedCertPwdErr
+	}
+	log.Info("Succeed to decrypt cert password.")
+	return certPwd, nil
 }
