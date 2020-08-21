@@ -92,7 +92,7 @@ docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_
 ```
 
 
-有关证书、密钥设置以及MEP构建和安装的更多详细信息，请参阅 [HERE](https://gitee.com/edgegallery/docs/blob/master/MEP/EdgeGallery%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%E9%AA%8C%E8%AF%81%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E%E4%B9%A6.md).
+有关证书、密钥设置以及MEP构建和安装的更多详细信息，请参阅 [HERE](https://gitee.com/edgegallery/docs/blob/master/Projects/MEP/EdgeGallery%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%E9%AA%8C%E8%AF%81%E6%9C%8D%E5%8A%A1%E8%AF%B4%E6%98%8E%E4%B9%A6.md#EG-LDVS-MEP%E9%83%A8%E7%BD%B2%E6%8C%87%E5%AF%BC).
 
 ## 参考
 [1] https://www.etsi.org/deliver/etsi_gs/MEC/001_099/003/02.01.01_60/gs_MEC003v020101p.pdf
