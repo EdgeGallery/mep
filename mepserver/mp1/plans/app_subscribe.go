@@ -22,6 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	scutil "github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core"
@@ -30,12 +34,10 @@ import (
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 	"github.com/satori/go.uuid"
-	"net"
-	"net/http"
-	"net/url"
-	"mepserver/mp1/arch/workspace"
+
+	"mepserver/common/arch/workspace"
+	"mepserver/common/util"
 	"mepserver/mp1/models"
-	"mepserver/mp1/util"
 )
 
 type SubscribeIst struct {
@@ -301,7 +303,7 @@ func (t *SubscribeIst) getMp1SubscribeInfo() interface{} {
 
 func (t *SubscribeIst) insertOrUpdateData(subscribeJSON []byte) error {
 	opts := []registry.PluginOp{
-		registry.OpPut(registry.WithStrKey(util.GetSubscribeKeyPath(t.SubscribeType) + t.AppInstanceId+"/" +
+		registry.OpPut(registry.WithStrKey(util.GetSubscribeKeyPath(t.SubscribeType)+t.AppInstanceId+"/"+
 			t.SubscribeId),
 			registry.WithValue(subscribeJSON)),
 	}

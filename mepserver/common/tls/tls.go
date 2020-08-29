@@ -18,13 +18,11 @@
 package tls
 
 import (
-
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	mgr "github.com/apache/servicecomb-service-center/server/plugin"
 	svcutil "github.com/apache/servicecomb-service-center/pkg/util"
+	mgr "github.com/apache/servicecomb-service-center/server/plugin"
 
-	"mepserver/mp1/util"
+	"mepserver/common/util"
 )
 
 func init() {

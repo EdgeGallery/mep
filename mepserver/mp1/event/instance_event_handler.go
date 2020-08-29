@@ -35,8 +35,8 @@ import (
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
 	"golang.org/x/net/context"
 
+	util2 "mepserver/common/util"
 	"mepserver/mp1/models"
-	util2 "mepserver/mp1/util"
 )
 
 const ConsumeIdLength = 16

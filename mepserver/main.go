@@ -28,9 +28,10 @@ import (
 	_ "github.com/apache/servicecomb-service-center/server/init"
 	"golang.org/x/crypto/ssh/terminal"
 
+	_ "mepserver/common/tls"
+	"mepserver/common/util"
+	_ "mepserver/mm5"
 	_ "mepserver/mp1"
-	_ "mepserver/mp1/tls"
-	"mepserver/mp1/util"
 	_ "mepserver/mp1/uuid"
 )
 

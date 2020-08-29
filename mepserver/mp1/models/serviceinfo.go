@@ -28,7 +28,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
-	meputil "mepserver/mp1/util"
+	meputil "mepserver/common/util"
 )
 
 const PropertiesMapSize = 5

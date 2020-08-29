@@ -27,9 +27,9 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 
-	"mepserver/mp1/arch/workspace"
+	"mepserver/common/arch/workspace"
+	"mepserver/common/util"
 	"mepserver/mp1/models"
-	"mepserver/mp1/util"
 )
 
 type GetOneSubscribe struct {
@@ -55,7 +55,7 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId
 	subscribeId := t.SubscribeId
-	log.Debugf("Query request arrived to fetch the subscription information with  " +
+	log.Debugf("Query request arrived to fetch the subscription information with  "+
 		"appId %s and subscriptionId %s", appInstanceId, subscribeId)
 
 	opts := []registry.PluginOp{

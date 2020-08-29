@@ -20,7 +20,7 @@ package workspace
 import (
 	"sync"
 
-	"mepserver/mp1/arch/bus"
+	"mepserver/common/arch/bus"
 )
 
 type GoPolicy int

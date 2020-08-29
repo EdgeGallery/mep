@@ -31,7 +31,7 @@ import (
 
 	"mepserver/common/arch/workspace"
 	"mepserver/common/util"
-	"mepserver/mp1/models"
+	"mepserver/mm5/models"
 )
 
 type SendHttpRsp struct {
@@ -95,11 +95,11 @@ func (t *SendHttpRsp) writeResponse(w http.ResponseWriter, resp *proto.Response,
 		controller.WriteError(w, error2.ErrInternal, err.Error())
 		return
 	}
-	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(http.StatusOK))
 	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_JSON)
 	if t.StatusCode == 0 {
 		t.StatusCode = http.StatusOK
 	}
+	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(t.StatusCode))
 	w.WriteHeader(t.StatusCode)
 	_, err = fmt.Fprintln(w, string(objJSON))
 	if err != nil {
@@ -116,10 +116,6 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 		Detail: errInfo.Message,
 	}
 	switch workspace.ErrCode(errInfo.ErrCode) {
-	case util.SerErrServiceNotFound:
-		body.Title = "Can not found resource"
-	case util.SerInstanceNotFound:
-		fallthrough
 	case util.SubscriptionNotFound:
 		statusCode = http.StatusNotFound
 		body.Title = "Can not found resource"
@@ -132,14 +128,8 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 	case util.AuthorizationValidateErr:
 		statusCode = http.StatusUnauthorized
 		body.Title = "UnAuthorization"
-	case util.SerErrServiceRegFailed:
-		body.Title = "Service register failed"
-	case util.SerErrServiceInstanceFailed:
-		body.Title = "Service instance failed"
 	case util.RequestParamErr:
 		body.Title = "Request parameter error"
-	case util.SubscriptionErr:
-		body.Title = "App subscription error"
 	default:
 		body.Title = "Bad Request"
 	}

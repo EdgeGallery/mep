@@ -30,9 +30,10 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
-	"mepserver/mp1/arch/workspace"
+
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
-	meputil "mepserver/mp1/util"
 )
 
 type DecodeRestReq struct {

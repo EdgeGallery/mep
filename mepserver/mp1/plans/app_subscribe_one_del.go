@@ -26,8 +26,8 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 
-	"mepserver/mp1/arch/workspace"
-	"mepserver/mp1/util"
+	"mepserver/common/arch/workspace"
+	"mepserver/common/util"
 )
 
 type DelOneSubscribe struct {

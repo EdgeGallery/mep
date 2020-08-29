@@ -18,8 +18,9 @@
 package util
 
 import (
-	"mepserver/mp1/arch/workspace"
 	"time"
+
+	"mepserver/common/arch/workspace"
 )
 
 const (
@@ -42,11 +43,15 @@ const (
 
 const (
 	RootPath            = "/mep"
+	Mm5RootPath         = "/mepcfg"
 	MecServicePath      = "/mec_service_mgmt/v1"
 	MecAppSupportPath   = "/mec_app_support/v1"
+	MecRuleConfigPath   = "/mec_app_config/v1"
 	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
 	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
+	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
+	DNSConfigRulesPath  = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
 )
 
 const Uris string = "uris"
@@ -71,3 +76,5 @@ const pwdCount int = 2
 const HookTimerLimit time.Duration = 5
 
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
+
+const EndDNSRuleKeyPath string = "/cse-sr/etsi/dns-rule/"

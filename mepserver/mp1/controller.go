@@ -23,10 +23,10 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
-	"mepserver/mp1/arch/workspace"
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
 	"mepserver/mp1/plans"
-	meputil "mepserver/mp1/util"
 )
 
 type APIHookFunc func() models.EndPointInfo
@@ -77,14 +77,17 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 			Func: getEndAppOneSubscribe},
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.EndAppSubscribePath + "/:subscriptionId",
 			Func: delEndAppOneSubscribe},
+		// DNS
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath, Func: getDnsRules},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath + "/:dnsRuleId", Func: getDnsRule},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSRulesPath + "/:dnsRuleId", Func: dnsRuleUpdate},
 	}
 }
 
 func appEndSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		(&plans.DecodeRestReq{}).WithBody(&models.AppTerminationNotificationSubscription{}),
+	workPlan.Try((&plans.DecodeRestReq{}).WithBody(&models.AppTerminationNotificationSubscription{}),
 		(&plans.AppSubscribeLimit{}).WithType(meputil.AppTerminationNotificationSubscription),
 		(&plans.SubscribeIst{}).WithType(meputil.AppTerminationNotificationSubscription))
 	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusCreated})
@@ -226,6 +229,38 @@ func serviceDelete(w http.ResponseWriter, r *http.Request) {
 		&plans.DecodeRestReq{},
 		&plans.DeleteService{})
 	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusNoContent})
+
+	workspace.WkRun(workPlan)
+}
+
+func getDnsRules(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeDnsRestReq{},
+		&plans.DNSRulesGet{})
+	workPlan.Finally(&plans.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func getDnsRule(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeDnsRestReq{},
+		&plans.DNSRuleGet{})
+	workPlan.Finally(&plans.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		(&plans.DecodeDnsRestReq{}).WithBody(&models.DnsRule{}),
+		&plans.DNSRuleUpdate{})
+	workPlan.Finally(&plans.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
