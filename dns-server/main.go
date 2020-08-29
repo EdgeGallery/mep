@@ -1,0 +1,167 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package main
+
+import (
+	"flag"
+	"fmt"
+	"net"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+
+	"dns-server/datastore"
+	"dns-server/mgmt"
+	"dns-server/util"
+)
+
+// Input placeholder
+type InputParameters struct {
+	dbName          *string // DB name placeholder
+	port            *uint   // dns port number
+	mgmtPort        *uint   // management interface port number
+	connTimeOut     *uint   // connection time out value
+	ipAddString     *string // dns listening ip
+	ipMgmtAddString *string // management interface listening ip
+	forwarder       *string // forwarder ip address
+	loadBalance     *bool   // need load balancing?
+}
+
+// Input flag parameters registration
+func registerInputParameters(inParam *InputParameters) {
+	if inParam == nil {
+		log.Fatalf(nil, "Input config is not ready yet.")
+		return
+	}
+	inParam.dbName = flag.String("db", "dbEgDns", "Database name")
+	inParam.port = flag.Uint("port", util.DefaultDnsPort, "Port number to listens to")
+	inParam.mgmtPort = flag.Uint("managementPort", util.DefaultManagementPort,
+		"Management interface port number to listens to")
+	inParam.connTimeOut = flag.Uint("connectionTimeout", util.DefaultConnTimeout,
+		"Connection timeout(Read & Write) in seconds(2~50)")
+	inParam.ipAddString = flag.String("ipAdd", "0.0.0.0", "Ipv4/Ipv6 address to listens to")
+	inParam.ipMgmtAddString = flag.String("managementIpAdd", "0.0.0.0",
+		"Management Ipv4/Ipv6 address to listens to")
+	inParam.forwarder = flag.String("forwarder", "8.8.8.8", "Forwarder")
+	inParam.loadBalance = flag.Bool("loadBalance", false, "Load balance using random shuffle")
+
+	flag.Parse()
+}
+
+// Input parameter validation, parsing and generating configuration for running the dns server
+func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
+	// Validate db name
+	if len(*inParam.dbName) >= util.MaxDbNameLength {
+		err := fmt.Errorf("error: db name should be less than 256")
+		log.Fatalf(err, "Failed to parse db name.")
+	}
+	if strings.ContainsAny(*inParam.dbName, util.DbStringExceptions) {
+		err := fmt.Errorf("error: db name should be a single world and should not have \"%s\"",
+			util.DbStringExceptions)
+		log.Fatalf(err, "Failed to parse db name(%s).", *inParam.dbName)
+	}
+
+	// Validate DNS port range
+	if *inParam.port > util.MaxPortNumber || *inParam.port == 0 {
+		err := fmt.Errorf("error: port number not in valid range")
+		log.Fatalf(err, "Failed to parse port number.")
+	}
+
+	// Validate DNS management port range
+	if *inParam.mgmtPort > util.MaxPortNumber || *inParam.mgmtPort == 0 {
+		err := fmt.Errorf("error: management port number not in valid range")
+		log.Fatalf(err, "Failed to parse management port number.")
+	}
+	if *inParam.port == *inParam.mgmtPort {
+		err := fmt.Errorf("error: cannot use same port number for dns and management")
+		log.Fatalf(err, "Port number conflict.")
+	}
+
+	// Validate connTimeOut range
+	if *inParam.connTimeOut > util.MaxConnTimeout || *inParam.connTimeOut < util.MinConnTimeout {
+		err := fmt.Errorf("error: connection timeout not in valid range(2~50)")
+		log.Fatalf(err, "Failed to parse connection timeout input.")
+	}
+
+	// Validate IP address
+	ipAdd := net.ParseIP(*inParam.ipAddString)
+	if ipAdd == nil {
+		err := fmt.Errorf("error: parsing ip address failed, not in ipv4/ipv6 format")
+		log.Fatalf(err, "Failed to parse ip address(%s).", *inParam.ipAddString)
+	}
+
+	// Validate Management IP address
+	ipMgmtAdd := net.ParseIP(*inParam.ipMgmtAddString)
+	if ipMgmtAdd == nil {
+		err := fmt.Errorf("error: parsing management ip address failed, not in ipv4/ipv6 format")
+		log.Fatalf(err, "Failed to parse management ip address(%s).", *inParam.ipMgmtAddString)
+	}
+
+	// Validate forwarder
+	forwarderAdd := net.ParseIP(*inParam.forwarder)
+	if forwarderAdd == nil {
+		err := fmt.Errorf("error: parsing forwarder failed, not in ipv4/ipv6 format")
+		log.Fatalf(err, "Failed to parse forwarder address(%s).", *inParam.forwarder)
+	}
+
+	return &Config{dbName: *inParam.dbName,
+		port:              *inParam.port,
+		mgmtPort:          *inParam.mgmtPort,
+		ipAdd:             ipAdd,
+		ipMgmtAdd:         ipMgmtAdd,
+		connectionTimeout: *inParam.connTimeOut,
+		forwarder:         forwarderAdd,
+		loadBalance:       *inParam.loadBalance,
+	}
+}
+
+func waitForSignal() {
+	sig := make(chan os.Signal)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	for {
+		select {
+		case s := <-sig:
+			log.Infof("Signal(%d) received, stopping dns server\n", s)
+			os.Exit(0)
+		}
+	}
+}
+
+func main() {
+	log.Info("Starting Edge-Gallery DNS-Server.")
+
+	inputParam := &InputParameters{}
+	// Register input flag parameters
+	registerInputParameters(inputParam)
+
+	config := validateInputAndGenerateConfig(inputParam)
+
+	store := &datastore.BoltDB{FileName: config.dbName, TTL: util.DefaultTTL}
+	mgmtCtl := &mgmt.EchoController{}
+	dnsServer := NewServer(config, store, mgmtCtl)
+
+	err := dnsServer.Run()
+	defer dnsServer.Stop()
+	if err != nil {
+		log.Fatal("Failed to Start the DNS server.", err)
+	}
+
+	log.Info("DNS server started successfully.")
+	waitForSignal()
+}
