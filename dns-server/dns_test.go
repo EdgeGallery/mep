@@ -28,6 +28,15 @@ import (
 	"dns-server/util"
 )
 
+const (
+	DefaultTestForwarder = "8.8.8.8"
+	TestDomainServer     = "www.edgegallery.org."
+	ErrorForwarding      = "Error in forwarding"
+	ErrorInResponse      = "Error in response"
+	PanicImplement       = "implement me"
+	ExampleDomain        = "www.example.com."
+)
+
 func TestForward(t *testing.T) {
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
@@ -41,43 +50,56 @@ func TestForward(t *testing.T) {
 	var port uint = util.DefaultDnsPort
 	var mgmtPort uint = util.DefaultManagementPort
 	var connTimeOut uint = util.DefaultConnTimeout
-	var ipAddString = "0.0.0.0"
-	var ipMgmtAddString = "0.0.0.0"
-	var forwarder = "8.8.8.8"
+	var ipAddString = util.DefaultIP
+	var ipMgmtAddString = util.DefaultIP
+	var forwarder = DefaultTestForwarder
 	var loadBalance = false
 	parameters := &InputParameters{&dbName, &port, &mgmtPort, &connTimeOut,
 		&ipAddString, &ipMgmtAddString, &forwarder, &loadBalance}
 	config := validateInputAndGenerateConfig(parameters)
 
 	store := &datastore.BoltDB{FileName: config.dbName, TTL: util.DefaultTTL}
-	mgmtCtl := &mgmt.EchoController{}
+	mgmtCtl := &mgmt.Controller{}
 	dnsServer := NewServer(config, store, mgmtCtl)
 
 	t.Run("BasicTest", func(t *testing.T) {
-		rsp, err := dnsServer.forward(&dns.Msg{Question: []dns.Question{{Name: "www.google.com.", Qtype: dns.TypeA,
-			Qclass: dns.ClassINET}}})
-		assert.Equal(t, nil, err, "Error in forwarding")
-		assert.Contains(t, rsp.Answer[0].String(), "www.google.com.", "Error in forwarding")
+		dnsMsg := new(dns.Msg)
+		dnsMsg.Id = dns.Id()
+		dnsMsg.RecursionDesired = true
+		dnsMsg.Question = make([]dns.Question, 1)
+		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+
+		rsp, err := dnsServer.forward(dnsMsg)
+		assert.Equal(t, nil, err, ErrorForwarding)
+		assert.Contains(t, rsp.Answer[0].String(), TestDomainServer, ErrorForwarding)
 	})
 
 	t.Run("NonExistingDomainName", func(t *testing.T) {
-		_, err := dnsServer.forward(&dns.Msg{Question: []dns.Question{{Name: "www.goooooo3232o234gle.com.",
-			Qtype:  dns.TypeA,
-			Qclass: dns.ClassINET}}})
-		assert.NotEqual(t, nil, err, "Error in forwarding")
-		assert.EqualError(t, err, "forward of request \"www.goooooo3232o234gle.com.\" was not accepted "+
-			"by \"8.8.8.8\", return code: SERVFAIL", "Error in forwarding")
+		dnsMsg := new(dns.Msg)
+		dnsMsg.Id = dns.Id()
+		dnsMsg.RecursionDesired = true
+		dnsMsg.Question = make([]dns.Question, 1)
+		dnsMsg.Question[0] = dns.Question{Name: "www.edgegallery0000111.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		_, err := dnsServer.forward(dnsMsg)
+		assert.NotEqual(t, nil, err, ErrorForwarding)
+		assert.EqualError(t, err, "forward of request \"www.edgegallery0000111.org.\" was not "+
+			"accepted", ErrorForwarding)
 	})
 
 	t.Run("WrongForwardAddress", func(t *testing.T) {
 		config.forwarder = net.ParseIP("0.0.0.0")
-		defer func() { config.forwarder = net.ParseIP("8.8.8.8") }()
-		_, err := dnsServer.forward(&dns.Msg{Question: []dns.Question{{Name: "www.google.com.",
-			Qtype:  dns.TypeA,
-			Qclass: dns.ClassINET}}})
-		assert.NotEqual(t, nil, err, "Error in forwarding")
-		assert.EqualError(t, err, "forward of request \"www.google.com.\" was not accepted "+
-			"by \"0.0.0.0\"", "Error in forwarding")
+		defer func() { config.forwarder = net.ParseIP(DefaultTestForwarder) }()
+
+		dnsMsg := new(dns.Msg)
+		dnsMsg.Id = dns.Id()
+		dnsMsg.RecursionDesired = true
+		dnsMsg.Question = make([]dns.Question, 1)
+		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+
+		_, err := dnsServer.forward(dnsMsg)
+		assert.NotEqual(t, nil, err, ErrorForwarding)
+		assert.EqualError(t, err, "could not resolve the request \"www.edgegallery.org.\" and no forwarder is "+
+			"configured", ErrorForwarding)
 	})
 
 }
@@ -89,11 +111,11 @@ type mockDnsRespWriter struct {
 }
 
 func (m *mockDnsRespWriter) LocalAddr() net.Addr {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) RemoteAddr() net.Addr {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) WriteMsg(msg *dns.Msg) error {
@@ -103,23 +125,23 @@ func (m *mockDnsRespWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 func (m *mockDnsRespWriter) Write(bytes []byte) (int, error) {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) Close() error {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) TsigStatus() error {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) TsigTimersOnly(b bool) {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func (m *mockDnsRespWriter) Hijack() {
-	panic("implement me")
+	panic(PanicImplement)
 }
 
 func TestHandleDNS(t *testing.T) {
@@ -135,51 +157,51 @@ func TestHandleDNS(t *testing.T) {
 	var port uint = util.DefaultDnsPort
 	var mgmtPort uint = util.DefaultManagementPort
 	var connTimeOut uint = util.DefaultConnTimeout
-	var ipAddString = "0.0.0.0"
-	var ipMgmtAddString = "0.0.0.0"
-	var forwarder = "8.8.8.8"
+	var ipAddString = util.DefaultIP
+	var ipMgmtAddString = util.DefaultIP
+	var forwarder = DefaultTestForwarder
 	var loadBalance = false
 	parameters := &InputParameters{&dbName, &port, &mgmtPort, &connTimeOut,
 		&ipAddString, &ipMgmtAddString, &forwarder, &loadBalance}
 	config := validateInputAndGenerateConfig(parameters)
 
 	store := &datastore.BoltDB{FileName: config.dbName, TTL: util.DefaultTTL}
-	mgmtCtl := &mgmt.EchoController{}
+	mgmtCtl := &mgmt.Controller{}
 	dnsServer := NewServer(config, store, mgmtCtl)
 
 	err := store.Open()
 	assert.Equal(t, nil, err, "Error in opening the db")
 	defer store.Close()
-	rrecord := datastore.ResourceRecord{Name: "www.example.com.", Type: "A", Class: "IN", TTL: 30,
+	rrecord := datastore.ResourceRecord{Name: ExampleDomain, Type: "A", Class: "IN", TTL: 30,
 		RData: []string{"179.138.147.240"}}
 	err = store.SetResourceRecord(".", &rrecord)
 	assert.Equal(t, nil, err, "Error in setting the record")
 
 	t.Run("BasicTest", func(t *testing.T) {
-		req := &dns.Msg{Question: []dns.Question{{Name: "www.example.com.",
+		req := &dns.Msg{Question: []dns.Question{{Name: ExampleDomain,
 			Qtype:  dns.TypeA,
 			Qclass: dns.ClassINET}}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, "Error in response")
-		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), "Error in response")
+		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, ErrorInResponse)
+		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), ErrorInResponse)
 	})
 
 	t.Run("QuestionEmpty", func(t *testing.T) {
 		req := &dns.Msg{Question: []dns.Question{}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeFormatError, mockDnsWriter.rspMsg.Rcode, "Error in response")
+		assert.Equal(t, dns.RcodeFormatError, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
 	})
 
 	t.Run("OpCodeError", func(t *testing.T) {
-		req := &dns.Msg{Question: []dns.Question{{Name: "www.example.com.",
+		req := &dns.Msg{Question: []dns.Question{{Name: ExampleDomain,
 			Qtype:  dns.TypeA,
 			Qclass: dns.ClassINET}}}
 		req.Opcode = dns.OpcodeStatus
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeRefused, mockDnsWriter.rspMsg.Rcode, "Error in response")
+		assert.Equal(t, dns.RcodeRefused, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
 	})
 
 	t.Run("NonExistingQuery", func(t *testing.T) {
@@ -188,18 +210,21 @@ func TestHandleDNS(t *testing.T) {
 			Qclass: dns.ClassINET}}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeServerFailure, mockDnsWriter.rspMsg.Rcode, "Error in response")
+		assert.Equal(t, dns.RcodeServerFailure, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
 	})
 
 	t.Run("ForwardingQuery", func(t *testing.T) {
-		req := &dns.Msg{Question: []dns.Question{{Name: "www.google.com.",
-			Qtype:  dns.TypeA,
-			Qclass: dns.ClassINET}}}
+		dnsMsg := new(dns.Msg)
+		dnsMsg.Id = dns.Id()
+		dnsMsg.RecursionDesired = true
+		dnsMsg.Question = make([]dns.Question, 1)
+		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+
 		mockDnsWriter := &mockDnsRespWriter{}
-		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, "Error in response")
-		// assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), "Error in response")
-		assert.Contains(t, mockDnsWriter.rspMsg.Answer[0].String(), "www.google.com.", "Error in response")
+		dnsServer.handleDNS(mockDnsWriter, dnsMsg)
+		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, ErrorInResponse)
+		// assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), ErrorInResponse)
+		assert.Contains(t, mockDnsWriter.rspMsg.Answer[0].String(), TestDomainServer, ErrorInResponse)
 	})
 
 }

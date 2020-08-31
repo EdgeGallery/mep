@@ -109,15 +109,16 @@ func (s *Server) Stop() {
 
 // forward request to external server
 func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
-	var err error
-	var ret *dns.Msg
 	c := new(dns.Client)
-
 	forwarder := s.config.forwarder.String()
+	if forwarder == "0.0.0.0" {
+		return nil, fmt.Errorf("could not resolve the request %q and no forwarder is configured",
+			req.Question[0].Name)
+	}
 
 	// Retry 3 times on failure. exchange will not retry on failure.
 	for i := 0; i < util.ForwardRetryCount; i++ {
-		ret, _, err = c.Exchange(req, forwarder+":53")
+		ret, _, err := c.Exchange(req, forwarder+":53")
 		if err != nil {
 			continue
 		}
@@ -125,12 +126,8 @@ func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
 			return ret, nil
 		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("forward of request %q was not accepted by %q", req.Question[0].Name, forwarder)
-	}
 
-	return nil, fmt.Errorf("forward of request %q was not accepted by %q, return code: %s", req.Question[0].Name,
-		forwarder, dns.RcodeToString[ret.Rcode])
+	return nil, fmt.Errorf("forward of request %q was not accepted", req.Question[0].Name)
 }
 
 // Handle DNS Query matching
@@ -140,21 +137,11 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 		s.writeErrorResponse(w, req, dns.RcodeFormatError)
 		return
 	}
-
 	if req.Opcode == dns.OpcodeQuery {
 		log.Debugf("Query lookup (%s)", req.Question[0].String())
 		// Match data from db
 		rrs, err := s.dataStore.GetResourceRecord(&req.Question[0])
-		if err == nil {
-			// Shuffle the response if load balancing is enabled
-			if s.config.loadBalance && len(*rrs) > 1 {
-				rand.Shuffle(len(*rrs), func(i, j int) {
-					(*rrs)[i], (*rrs)[j] = (*rrs)[j], (*rrs)[i]
-				})
-			}
-			s.writeSuccessResponse(rrs, w, req)
-			return
-		} else {
+		if err != nil {
 			respMsg, err := s.forward(req)
 			if err != nil {
 				s.writeErrorResponse(w, req, dns.RcodeServerFailure)
@@ -167,6 +154,14 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 			}
 			return
 		}
+		// Shuffle the response if load balancing is enabled
+		if s.config.loadBalance && len(*rrs) > 1 {
+			rand.Shuffle(len(*rrs), func(i, j int) {
+				(*rrs)[i], (*rrs)[j] = (*rrs)[j], (*rrs)[i]
+			})
+		}
+		s.writeSuccessResponse(rrs, w, req)
+		return
 	} else {
 		log.Debugf("Unsupported DNS OpCode %s", dns.OpcodeToString[req.Opcode])
 		s.writeErrorResponse(w, req, dns.RcodeRefused)

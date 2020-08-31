@@ -103,20 +103,57 @@ func (b *BoltDB) Close() error {
 	return nil
 }
 
+func (b *BoltDB) setOrCreateDBEntryGeneration(confValueBytes []byte, rr *ResourceRecord) ([]byte, error) {
+	var err error
+	dnsCfgValue := &DNSConfigRRValue{}
+
+	// confValueBytes will have value only in case of an update
+	if confValueBytes != nil && len(confValueBytes) != 0 {
+		// Update if exists
+		if err = json.Unmarshal(confValueBytes, dnsCfgValue); err != nil {
+			return nil, fmt.Errorf("parsing failed on data retrieval")
+		}
+	} else {
+		if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Class) == 0 || len(rr.RData) == 0 {
+			log.Error("DNS create input not complete.", nil)
+			return nil, fmt.Errorf("input data error for create dns entry")
+		}
+	}
+	if len(rr.Class) != 0 {
+		rrClass, ok := rrClassMap[rr.Class]
+		if !ok || rrClass == dns.ClassANY {
+			return nil, fmt.Errorf("unsupported rrclass(%s) entry", rr.Class)
+		}
+		dnsCfgValue.RRClass = rrClass
+	}
+	dnsCfgValue.Ttl = rr.TTL
+	if len(rr.RData) != 0 {
+		dnsCfgValue.PointTo = rr.RData
+	}
+	updatedConfValueBytes, err := json.Marshal(dnsCfgValue)
+	if err != nil {
+		return nil, fmt.Errorf("data store could not marshal dns config json")
+	}
+	return updatedConfValueBytes, nil
+}
+
 func (b *BoltDB) SetResourceRecord(zone string, rr *ResourceRecord) error {
 	rrType, ok := rrTypeMap[rr.Type]
 	if !ok {
 		return fmt.Errorf("unsupported rrtype(%s) entry", rr.Type)
 	}
-	rrClass, ok := rrClassMap[rr.Class]
-	if !ok {
-		return fmt.Errorf("unsupported rrclass(%s) entry", rr.Class)
-	}
-	if rrClass == dns.ClassANY {
-		return fmt.Errorf("unsupported rrclass(%s) entry", rr.Class)
+	if rr.TTL == 0 {
+		log.Error("DNS TTL value 0 is not supported.", nil)
+		return fmt.Errorf("unsupported/missing ttl value")
 	}
 
 	host := strings.ToLower(rr.Name)
+
+	dnsCfgKey := DNSConfigRRKey{Host: host, RRType: rrType}
+	confKeyBytes, err := json.Marshal(dnsCfgKey)
+	if err != nil {
+		return fmt.Errorf("internal error, could not parse dns config json")
+	}
 
 	// Add new entry to the db
 	return b.db.Update(func(tx *bolt.Tx) error {
@@ -124,55 +161,38 @@ func (b *BoltDB) SetResourceRecord(zone string, rr *ResourceRecord) error {
 		if err != nil {
 			return fmt.Errorf("zone(%s) retrieval failed", zone)
 		}
-		dnsCfgKey := DNSConfigRRKey{Host: host, RRType: rrType}
-
-		confKeyBytes, err := json.Marshal(dnsCfgKey)
-		if err != nil {
-			return fmt.Errorf("internal error, could not parse dns config json")
-		}
-
 		confValueBytes := zoneBkt.Get(confKeyBytes)
-		if confValueBytes != nil {
-			dnsCfgValue := &DNSConfigRRValue{}
-			// Update if exists
-			if err := json.Unmarshal(confValueBytes, dnsCfgValue); err != nil {
-				return fmt.Errorf("parsing failed on data retrieval")
-			}
-			if len(rr.Class) != 0 {
-				rrClass, ok := rrClassMap[rr.Class]
-				if !ok {
-					return fmt.Errorf("unsupported rrclass(%s) entry", rr.Class)
-				}
-				dnsCfgValue.RRClass = rrClass
-			}
-			if rr.TTL != 0 {
-				dnsCfgValue.Ttl = rr.TTL
-			}
-			if len(rr.RData) != 0 {
-				dnsCfgValue.PointTo = rr.RData
-			}
-			confValueBytes, err = json.Marshal(dnsCfgValue)
-			if err != nil {
-				return fmt.Errorf("data store could not marshal dns config json")
-			}
-		} else {
-			if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Class) == 0 || len(rr.RData) == 0 {
-				log.Error("DNS create input not complete.", nil)
-				return fmt.Errorf("input data error for create dns entry")
-			}
-			// Create since not exists
-			dnsCfgValue := DNSConfigRRValue{PointTo: rr.RData, RRClass: rrClass, Ttl: rr.TTL}
-			confValueBytes, err = json.Marshal(dnsCfgValue)
-			if err != nil {
-				return fmt.Errorf("data store could not marshal dns config json")
-			}
+		updatedConfValueBytes, err := b.setOrCreateDBEntryGeneration(confValueBytes, rr)
+		if err != nil {
+			return err
 		}
-		if err = zoneBkt.Put(confKeyBytes, confValueBytes); err != nil {
+		if err = zoneBkt.Put(confKeyBytes, updatedConfValueBytes); err != nil {
 			return fmt.Errorf("saving dns entry to data store failed")
 		}
 
 		return nil
 	})
+}
+
+func (b *BoltDB) getRRFromZoneBucket(zoneBkt *bolt.Bucket, dnsCfgKeyBytes []byte, question *dns.Question) []dns.RR {
+	var records []dns.RR
+	dnsCfgBytes := zoneBkt.Get(dnsCfgKeyBytes)
+	if dnsCfgBytes == nil {
+		return records
+	}
+	dnsCfg := &DNSConfigRRValue{}
+	if err := json.Unmarshal(dnsCfgBytes, dnsCfg); err != nil {
+		return records
+	}
+	// rrClass filtering
+	if dnsCfg.RRClass != question.Qclass {
+		return records
+	}
+	for _, pointToIP := range dnsCfg.PointTo {
+		records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: dns.TypeA,
+			Class: dns.ClassINET, Ttl: b.TTL}, A: net.ParseIP(pointToIP)})
+	}
+	return records
 }
 
 func (b *BoltDB) GetResourceRecord(question *dns.Question) (*[]dns.RR, error) {
@@ -209,23 +229,10 @@ func (b *BoltDB) GetResourceRecord(question *dns.Question) (*[]dns.RR, error) {
 				// Zone not available in the db
 				continue
 			}
-			dnsCfgBytes := zoneBkt.Get(dnsCfgKeyBytes)
-			if dnsCfgBytes == nil {
-				continue
+			records = b.getRRFromZoneBucket(zoneBkt, dnsCfgKeyBytes, question)
+			if len(records) != 0 {
+				break
 			}
-			dnsCfg := &DNSConfigRRValue{}
-			if err := json.Unmarshal(dnsCfgBytes, dnsCfg); err != nil {
-				return fmt.Errorf("parsing the dns record failed")
-			}
-			// rrClass filtering
-			if dnsCfg.RRClass != question.Qclass {
-				continue
-			}
-			for _, pointToIP := range dnsCfg.PointTo {
-				records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: dns.TypeA,
-					Class: dns.ClassINET, Ttl: b.TTL}, A: net.ParseIP(pointToIP)})
-			}
-			break // Found the entry, so stop iterating
 		}
 		return nil
 	})
@@ -255,7 +262,7 @@ func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
 
 	err = b.db.Update(func(tx *bolt.Tx) error {
 		var zoneBkt *bolt.Bucket
-		err := tx.Bucket([]byte(ZoneConfig)).ForEach(func(zone, v []byte) error {
+		err := tx.Bucket([]byte(ZoneConfig)).ForEach(func(zone, _ []byte) error {
 			if found {
 				return nil
 			}

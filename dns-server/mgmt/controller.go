@@ -27,12 +27,12 @@ import (
 	"dns-server/datastore"
 )
 
-type EchoController struct {
+type Controller struct {
 	dataStore datastore.DataStore
 	echo      *echo.Echo
 }
 
-func (e *EchoController) StartController(store *datastore.DataStore, ipAddr net.IP, port uint) {
+func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, port uint) {
 	// Echo instance
 	e.echo = echo.New()
 
@@ -50,7 +50,7 @@ func (e *EchoController) StartController(store *datastore.DataStore, ipAddr net.
 	e.echo.Logger.Fatal(e.echo.Start(fmt.Sprintf("%s:%d", ipAddr.String(), port)))
 }
 
-func (e *EchoController) StopController() error {
+func (e *Controller) StopController() error {
 	e.dataStore = nil
 	if e.echo == nil {
 		return nil
@@ -58,7 +58,7 @@ func (e *EchoController) StopController() error {
 	return e.echo.Close()
 }
 
-func (e *EchoController) handleSetResourceRecords(c echo.Context) error {
+func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 	zrs := new([]datastore.ZoneEntry)
 	if err := c.Bind(zrs); err != nil {
 		log.Error("Error in parsing the rr post request body.", nil)
@@ -74,7 +74,7 @@ func (e *EchoController) handleSetResourceRecords(c echo.Context) error {
 			err := e.dataStore.SetResourceRecord(zr.Zone, &rr)
 			if err != nil {
 				log.Error("Failed to set the zone entries.", err)
-				return c.String(http.StatusInternalServerError, "error in adding new rr entry!")
+				return c.String(http.StatusInternalServerError, err.Error())
 			}
 			log.Debugf("New resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
 				zr.Zone, rr.Name, rr.Type, rr.Class, rr.TTL)
@@ -85,7 +85,7 @@ func (e *EchoController) handleSetResourceRecords(c echo.Context) error {
 
 }
 
-func (e *EchoController) handleDeleteResourceRecord(c echo.Context) error {
+func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
 	fqdn := c.Param("fqdn")
 	rrtype := c.Param("rrtype")
 	if len(fqdn) == 0 || len(rrtype) == 0 {

@@ -44,7 +44,7 @@ func TestRestControllerOperations(t *testing.T) {
 	assert.Equal(t, nil, err, "Error in opening the db")
 	defer store.Close()
 
-	mgmtCtl := &EchoController{dataStore: store}
+	mgmtCtl := &Controller{dataStore: store}
 
 	t.Run("BasicOperationsOnSetRecord", func(t *testing.T) {
 		url := "/mep/dns_server_mgmt/v1/rrecord"
@@ -363,23 +363,3 @@ func TestRestControllerOperations(t *testing.T) {
 	_ = os.RemoveAll(datastore.DBPath)
 
 }
-
-// func TestRestControllerStartupAndTearDown(t *testing.T) {
-// 	defer func() {
-// 		_ = os.RemoveAll(datastore.DBPath)
-// 		if r := recover(); r != nil {
-// 			t.Errorf("Panic: %v", r)
-// 		}
-// 	}()
-// 	store := &datastore.BoltDB{FileName: "testdb", TTL: 30}
-// 	err := store.Open()
-// 	assert.Equal(t, nil, err, "Error in opening the db")
-// 	defer store.Close()
-//
-// 	mgmtCtl := &EchoController{}
-// 	var dataStore datastore.DataStore
-// 	dataStore = store
-// 	go mgmtCtl.StartController(&dataStore, net.ParseIP("0.0.0.0"), 30088)
-// 	time.Sleep(100 * time.Millisecond)
-// 	mgmtCtl.StopController()
-// }

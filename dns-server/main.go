@@ -55,10 +55,10 @@ func registerInputParameters(inParam *InputParameters) {
 		"Management interface port number to listens to")
 	inParam.connTimeOut = flag.Uint("connectionTimeout", util.DefaultConnTimeout,
 		"Connection timeout(Read & Write) in seconds(2~50)")
-	inParam.ipAddString = flag.String("ipAdd", "0.0.0.0", "Ipv4/Ipv6 address to listens to")
-	inParam.ipMgmtAddString = flag.String("managementIpAdd", "0.0.0.0",
+	inParam.ipAddString = flag.String("ipAdd", util.DefaultIP, "Ipv4/Ipv6 address to listens to")
+	inParam.ipMgmtAddString = flag.String("managementIpAdd", util.DefaultIP,
 		"Management Ipv4/Ipv6 address to listens to")
-	inParam.forwarder = flag.String("forwarder", "8.8.8.8", "Forwarder")
+	inParam.forwarder = flag.String("forwarder", util.DefaultIP, "Forwarder")
 	inParam.loadBalance = flag.Bool("loadBalance", false, "Load balance using random shuffle")
 
 	flag.Parse()
@@ -153,7 +153,7 @@ func main() {
 	config := validateInputAndGenerateConfig(inputParam)
 
 	store := &datastore.BoltDB{FileName: config.dbName, TTL: util.DefaultTTL}
-	mgmtCtl := &mgmt.EchoController{}
+	mgmtCtl := &mgmt.Controller{}
 	dnsServer := NewServer(config, store, mgmtCtl)
 
 	err := dnsServer.Run()

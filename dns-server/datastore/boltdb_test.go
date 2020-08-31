@@ -23,6 +23,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	ExampleDomain       = "www.example.com."
+	Example1Domain      = "www.example1.com."
+	ExampleAbcDomain    = "abc.example.com."
+	DNSConfigTestIP1    = "179.138.147.240"
+	ErrorDeleteMessage  = "Error in deleting the record"
+	ErrorSettingMessage = "Error in setting record"
+)
+
 // Query dns rules request in mp1 interface
 func TestBasicDataStoreOperations(t *testing.T) {
 	defer func() {
@@ -36,129 +45,129 @@ func TestBasicDataStoreOperations(t *testing.T) {
 	err := store.Open()
 	assert.Equal(t, nil, err, "Error in opening the db")
 
-	rrecord := ResourceRecord{Name: "www.example.com", Type: "A", Class: "IN", TTL: 30, RData: []string{"179.138.147.240"}}
+	rrecord := ResourceRecord{Name: ExampleDomain, Type: "A", Class: "IN", TTL: 30, RData: []string{DNSConfigTestIP1}}
 	err = store.SetResourceRecord(".", &rrecord)
 	assert.Equal(t, nil, err, "Error in setting the record")
 
-	question := dns.Question{Name: "www.example.com", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+	question := dns.Question{Name: ExampleDomain, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 	rrResponse, err := store.GetResourceRecord(&question)
 	assert.Equal(t, nil, err, "Error in reading the record")
 	assert.NotEqual(t, 0, len(*rrResponse), "Not found")
-	assert.Equal(t, "www.example.com\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(), "Error")
+	assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(), "Error")
 
-	err = store.DelResourceRecord("www.example.com", "A")
-	assert.Equal(t, nil, err, "Error in deleting the record")
+	err = store.DelResourceRecord(ExampleDomain, "A")
+	assert.Equal(t, nil, err, ErrorDeleteMessage)
 
 	t.Run("QueryNonExistingRecord", func(t *testing.T) {
-		question := dns.Question{Name: "www.example1.com", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		question := dns.Question{Name: Example1Domain, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 		_, err = store.GetResourceRecord(&question)
 		assert.EqualError(t, err, "could not process/retrieve the query", "Error in reading the db")
 	})
 
 	t.Run("QueryNonSupportedRRType", func(t *testing.T) {
-		rrecord := ResourceRecord{Name: "www.example.com", Type: "AA", Class: "IN", TTL: 30,
-			RData: []string{"179.138.147.240"}}
+		rrecord := ResourceRecord{Name: ExampleDomain, Type: "AA", Class: "IN", TTL: 30,
+			RData: []string{DNSConfigTestIP1}}
 		err = store.SetResourceRecord(".", &rrecord)
-		assert.EqualError(t, err, "unsupported rrtype(AA) entry", "Error in setting record")
+		assert.EqualError(t, err, "unsupported rrtype(AA) entry", ErrorSettingMessage)
 	})
 
 	t.Run("QueryNonSupportedRRClass", func(t *testing.T) {
-		rrecord := ResourceRecord{Name: "www.example.com", Type: "A", Class: "IN345", TTL: 30,
-			RData: []string{"179.138.147.240"}}
+		rrecord := ResourceRecord{Name: ExampleDomain, Type: "A", Class: "IN345", TTL: 30,
+			RData: []string{DNSConfigTestIP1}}
 		err = store.SetResourceRecord(".", &rrecord)
-		assert.EqualError(t, err, "unsupported rrclass(IN345) entry", "Error in setting record")
+		assert.EqualError(t, err, "unsupported rrclass(IN345) entry", ErrorSettingMessage)
 	})
 
 	t.Run("QueryRRClassAny", func(t *testing.T) {
-		rrecord := ResourceRecord{Name: "www.example.com", Type: "A", Class: "*", TTL: 30,
-			RData: []string{"179.138.147.240"}}
+		rrecord := ResourceRecord{Name: ExampleDomain, Type: "A", Class: "*", TTL: 30,
+			RData: []string{DNSConfigTestIP1}}
 		err = store.SetResourceRecord(".", &rrecord)
-		assert.EqualError(t, err, "unsupported rrclass(*) entry", "Error in setting record")
+		assert.EqualError(t, err, "unsupported rrclass(*) entry", ErrorSettingMessage)
 	})
 
 	t.Run("CheckCaseSensitiveInDomainName", func(t *testing.T) {
-		_ = store.SetResourceRecord(".", &ResourceRecord{Name: "WWW.EXAMPLE.COM", Type: "A",
-			Class: "IN", TTL: 30, RData: []string{"179.138.147.240"}})
-		rrResponse, _ := store.GetResourceRecord(&dns.Question{Name: "www.example.com",
+		_ = store.SetResourceRecord(".", &ResourceRecord{Name: "WWW.EXAMPLE.COM.", Type: "A",
+			Class: "IN", TTL: 30, RData: []string{DNSConfigTestIP1}})
+		rrResponse, _ := store.GetResourceRecord(&dns.Question{Name: ExampleDomain,
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
-		assert.Equal(t, "www.example.com\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
+		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
 			"Error")
-		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "WWW.EXAMPLE.COM",
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "WWW.EXAMPLE.COM.",
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
-		assert.Equal(t, "WWW.EXAMPLE.COM\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
-			"Error")
-
-		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "WWW.example.COM",
-			Qtype: dns.TypeA, Qclass: dns.ClassINET})
-		assert.Equal(t, "WWW.example.COM\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
+		assert.Equal(t, "WWW.EXAMPLE.COM.\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord("www.example.com", "A")
-		assert.Equal(t, nil, err, "Error in deleting the record")
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "WWW.example.COM.",
+			Qtype: dns.TypeA, Qclass: dns.ClassINET})
+		assert.Equal(t, "WWW.example.COM.\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
+			"Error")
+
+		err = store.DelResourceRecord(ExampleDomain, "A")
+		assert.Equal(t, nil, err, ErrorDeleteMessage)
 	})
 
 	t.Run("UpdateARecord", func(t *testing.T) {
-		_ = store.SetResourceRecord(".", &ResourceRecord{Name: "www.example.com", Type: "A",
-			Class: "IN", TTL: 30, RData: []string{"179.138.147.240"}})
-		err = store.SetResourceRecord(".", &ResourceRecord{Name: "www.example.com", Type: "A",
+		_ = store.SetResourceRecord(".", &ResourceRecord{Name: ExampleDomain, Type: "A",
+			Class: "IN", TTL: 30, RData: []string{DNSConfigTestIP1}})
+		err = store.SetResourceRecord(".", &ResourceRecord{Name: ExampleDomain, Type: "A",
 			Class: "IN", TTL: 30, RData: []string{"179.138.147.241"}})
 		assert.Equal(t, nil, err, "Error in setting the db")
-		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "www.example.com",
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: ExampleDomain,
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
-		assert.Equal(t, "www.example.com\t30\tIN\tA\t179.138.147.241", (*rrResponse)[0].String(),
+		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.241", (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord("www.example.com", "A")
-		assert.Equal(t, nil, err, "Error in deleting the record")
+		err = store.DelResourceRecord(ExampleDomain, "A")
+		assert.Equal(t, nil, err, ErrorDeleteMessage)
 	})
 
 	t.Run("DeleteNonExistingRecord", func(t *testing.T) {
-		err = store.DelResourceRecord("www.example.com", "A")
+		err = store.DelResourceRecord(ExampleDomain, "A")
 		assert.NotEqual(t, nil, err, "Error in deleting the db")
-		assert.EqualError(t, err, "not found", "Error in setting record")
+		assert.EqualError(t, err, "not found", ErrorSettingMessage)
 	})
 
 	t.Run("DeleteWithInvalidRRType", func(t *testing.T) {
-		_ = store.SetResourceRecord(".", &ResourceRecord{Name: "www.example.com", Type: "A",
-			Class: "IN", TTL: 30, RData: []string{"179.138.147.240"}})
+		_ = store.SetResourceRecord(".", &ResourceRecord{Name: ExampleDomain, Type: "A",
+			Class: "IN", TTL: 30, RData: []string{DNSConfigTestIP1}})
 
-		err = store.DelResourceRecord("www.example.com", "None")
+		err = store.DelResourceRecord(ExampleDomain, "None")
 		assert.NotEqual(t, nil, err, "Error in deleting the db")
 		assert.EqualError(t, err, "unsupported rrtype(None) entry", "Error in deleting record")
 
-		err = store.DelResourceRecord("www.example.com", "A")
-		assert.Equal(t, nil, err, "Error in deleting the record")
+		err = store.DelResourceRecord(ExampleDomain, "A")
+		assert.Equal(t, nil, err, ErrorDeleteMessage)
 	})
 
 	t.Run("NonDefaultZone", func(t *testing.T) {
-		_ = store.SetResourceRecord("example.com", &ResourceRecord{Name: "abc.example.com", Type: "A",
+		_ = store.SetResourceRecord("example.com.", &ResourceRecord{Name: ExampleAbcDomain, Type: "A",
 			Class: "IN", TTL: 30, RData: []string{"179.138.147.242"}})
 
-		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "abc.example.com",
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: ExampleAbcDomain,
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
-		assert.Equal(t, "abc.example.com\t30\tIN\tA\t179.138.147.242", (*rrResponse)[0].String(),
+		assert.Equal(t, "abc.example.com.\t30\tIN\tA\t179.138.147.242", (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord("abc.example.com", "A")
-		assert.Equal(t, nil, err, "Error in deleting the record")
+		err = store.DelResourceRecord(ExampleAbcDomain, "A")
+		assert.Equal(t, nil, err, ErrorDeleteMessage)
 	})
 
 	t.Run("MultiRecordDomains", func(t *testing.T) {
-		_ = store.SetResourceRecord("example.com", &ResourceRecord{Name: "abc.example.com", Type: "A",
+		_ = store.SetResourceRecord("example.com.", &ResourceRecord{Name: ExampleAbcDomain, Type: "A",
 			Class: "IN", TTL: 30, RData: []string{"179.138.147.242", "179.138.147.243", "179.138.147.244"}})
 
-		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: "abc.example.com",
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: ExampleAbcDomain,
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
 		assert.Equal(t, 3, len(*rrResponse), "Not found all records")
-		assert.Equal(t, "abc.example.com\t30\tIN\tA\t179.138.147.242", (*rrResponse)[0].String(),
+		assert.Equal(t, "abc.example.com.\t30\tIN\tA\t179.138.147.242", (*rrResponse)[0].String(),
 			"Error")
-		assert.Equal(t, "abc.example.com\t30\tIN\tA\t179.138.147.243", (*rrResponse)[1].String(),
+		assert.Equal(t, "abc.example.com.\t30\tIN\tA\t179.138.147.243", (*rrResponse)[1].String(),
 			"Error")
-		assert.Equal(t, "abc.example.com\t30\tIN\tA\t179.138.147.244", (*rrResponse)[2].String(),
+		assert.Equal(t, "abc.example.com.\t30\tIN\tA\t179.138.147.244", (*rrResponse)[2].String(),
 			"Error")
 
-		err = store.DelResourceRecord("abc.example.com", "A")
-		assert.Equal(t, nil, err, "Error in deleting the record")
+		err = store.DelResourceRecord(ExampleAbcDomain, "A")
+		assert.Equal(t, nil, err, ErrorDeleteMessage)
 	})
 
 	err = store.Close()
