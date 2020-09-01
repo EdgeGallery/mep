@@ -61,7 +61,7 @@ func (t *DNSRuleDelete) OnRequest(data string) workspace.TaskCode {
 	}
 
 	// Delete the dns entry on remote dns server only if it was active
-	if dnsRule.State == "ACTIVE" {
+	if dnsRule.State == util.ActiveState {
 		dnsAgent := dns.NewRestClient()
 		httpResp, err := dnsAgent.DeleteResourceRecordTypeA(dnsRule.DomainName, "A")
 		if err != nil {

@@ -52,6 +52,15 @@ const (
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	DNSConfigRulesPath  = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
+
+	DNSRuleIdPath      = "/:dnsRuleId"
+	SubscriptionIdPath = "/:subscriptionId"
+	ServiceIdPath      = "/:serviceId"
+)
+
+const (
+	ActiveState   = "ACTIVE"
+	InactiveState = "INACTIVE"
 )
 
 const Uris string = "uris"
@@ -78,3 +87,5 @@ const HookTimerLimit time.Duration = 5
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
 
 const EndDNSRuleKeyPath string = "/cse-sr/etsi/dns-rule/"
+
+const ErrorRequestBodyMessage = "request body invalid"

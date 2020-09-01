@@ -80,7 +80,7 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	callbackUriNotValid := t.ValidateCallbackUri(subscribeJSON)
 	if callbackUriNotValid {
 		log.Error("url validation failed", nil)
-		t.SetFirstErrorCode(util.RequestParamErr, "request Body invalid")
+		t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
 	log.Debugf("request received for app subscription with appId %s", t.AppInstanceId)
@@ -107,8 +107,8 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 		var serAvl models.SerAvailabilityNotificationSubscription
 		errJson := json.Unmarshal(subscribeJSON, &serAvl)
 		if errJson != nil {
-			log.Error("request Body invalid", nil)
-			t.SetFirstErrorCode(util.RequestParamErr, "request Body invalid")
+			log.Error(util.ErrorRequestBodyMessage, nil)
+			t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 			return true
 		}
 		callBack = serAvl.CallbackReference
@@ -116,8 +116,8 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 		var appTermAvl models.AppTerminationNotificationSubscription
 		errJson := json.Unmarshal(subscribeJSON, &appTermAvl)
 		if errJson != nil {
-			log.Error("request Body invalid", nil)
-			t.SetFirstErrorCode(util.RequestParamErr, "request Body invalid")
+			log.Error(util.ErrorRequestBodyMessage, nil)
+			t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 			return true
 		}
 		callBack = appTermAvl.CallbackReference
@@ -294,8 +294,8 @@ func (t *SubscribeIst) getMp1SubscribeInfo() interface{} {
 		mp1SubscribeInfo, ok = t.RestBody.(*models.AppTerminationNotificationSubscription)
 	}
 	if !ok {
-		log.Error("request Body invalid", nil)
-		t.SetFirstErrorCode(util.RequestParamErr, "request Body invalid")
+		log.Error(util.ErrorRequestBodyMessage, nil)
+		t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 		return nil
 	}
 	return mp1SubscribeInfo

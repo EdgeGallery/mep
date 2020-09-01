@@ -22,11 +22,11 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
-	"mepserver/mm5/plans"
-
+	"mepserver/common"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/models"
+	"mepserver/mm5/plans"
 )
 
 func init() {
@@ -47,9 +47,9 @@ func (m *Mm5Service) URLPatterns() []rest.Route {
 		// DNS
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.DNSConfigRulesPath, Func: dnsRuleCreate},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath, Func: getDnsRules},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath + "/:dnsRuleId", Func: getDnsRule},
-		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSConfigRulesPath + "/:dnsRuleId", Func: dnsRuleUpdate},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.DNSConfigRulesPath + "/:dnsRuleId", Func: dnsRuleDelete},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleDelete},
 	}
 }
 
@@ -58,7 +58,7 @@ func dnsRuleCreate(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		(&plans.DecodeDnsConfigRestReq{}).WithBody(&models.DnsConfigRule{}),
 		&plans.CreateDNSRule{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -68,7 +68,7 @@ func getDnsRules(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeDnsConfigRestReq{},
 		&plans.DNSRulesGet{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -78,7 +78,7 @@ func getDnsRule(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeDnsConfigRestReq{},
 		&plans.DNSRuleGet{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -88,7 +88,7 @@ func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		(&plans.DecodeDnsConfigRestReq{}).WithBody(&models.DnsConfigRule{}),
 		&plans.DNSRuleUpdate{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -98,7 +98,7 @@ func dnsRuleDelete(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeDnsConfigRestReq{},
 		&plans.DNSRuleDelete{})
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusNoContent})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 
 	workspace.WkRun(workPlan)
 }

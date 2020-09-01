@@ -33,6 +33,7 @@ import (
 
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
+	"mepserver/common/util"
 )
 
 type mockHttpWriter struct {
@@ -96,7 +97,7 @@ func TestGetDnsRules(t *testing.T) {
 	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		records[DnsRuleId] = outBytes
 		return records, 0
@@ -248,7 +249,7 @@ func TestGetSingleDnsRule(t *testing.T) {
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -364,7 +365,7 @@ func TestPutSingleDnsRule(t *testing.T) {
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -417,7 +418,7 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -476,7 +477,7 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "ACTIVE"}
+			TTL: 30, State: util.ActiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -526,7 +527,7 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -578,7 +579,7 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})

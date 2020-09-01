@@ -182,8 +182,8 @@ func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
-		log.Error("get rest body failed", nil)
-		t.SetFirstErrorCode(1, "get rest body failed")
+		log.Error(meputil.ErrorRequestBodyMessage, nil)
+		t.SetFirstErrorCode(1, meputil.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
 	_, err := json.Marshal(serviceInfo)
@@ -226,8 +226,8 @@ type RegisterServiceInst struct {
 func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
-		log.Error("get rest body failed", nil)
-		t.SetFirstErrorCode(1, "get rest body failed")
+		log.Error(meputil.ErrorRequestBodyMessage, nil)
+		t.SetFirstErrorCode(1, meputil.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}

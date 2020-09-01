@@ -162,7 +162,7 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	if (dnsConfigInput.State != "ACTIVE" && dnsConfigInput.State != "INACTIVE") ||
+	if (dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState) ||
 		len(dnsConfigInput.DomainName) == 0 || len(dnsConfigInput.IpAddress) == 0 {
 		log.Warn("dns input error.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "dns input error")
@@ -192,31 +192,35 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	if dnsConfigInput.State == meputil.InactiveState {
+		t.W.Header().Set("ETag", meputil.GenerateStrongETag(dnsConfigBytes))
+		t.HttpRsp = dnsConfigInput
+		return workspace.TaskFinish
+	}
+
 	dnsAgent := dns.NewRestClient()
 
-	if dnsConfigInput.State == "ACTIVE" {
-		httpResp, err := dnsAgent.SetResourceRecordTypeA(
-			dnsConfigInput.DomainName, "A", "IN", []string{dnsConfigInput.IpAddress},
-			uint32(dnsConfigInput.TTL))
-		if err != nil || !meputil.IsHttpStatusOK(httpResp.StatusCode) {
-			if err != nil {
-				log.Errorf(err, "DNS rule(appId: %s, dnsRuleId: %s) create fail on server!",
-					t.AppInstanceId, t.DNSRuleId)
-				t.SetFirstErrorCode(meputil.RemoteServerErr, "failed to reach the remote server")
-			} else {
-				log.Errorf(err, "DNS rule create failed on server(%d: %s)!", httpResp.StatusCode, httpResp.Status)
-				t.SetFirstErrorCode(meputil.RemoteServerErr, "could not apply rule on dns server")
-			}
+	httpResp, err := dnsAgent.SetResourceRecordTypeA(
+		dnsConfigInput.DomainName, "A", "IN", []string{dnsConfigInput.IpAddress},
+		uint32(dnsConfigInput.TTL))
+	if err != nil || !meputil.IsHttpStatusOK(httpResp.StatusCode) {
+		if err != nil {
+			log.Errorf(err, "DNS rule(appId: %s, dnsRuleId: %s) create fail on server!",
+				t.AppInstanceId, t.DNSRuleId)
+			t.SetFirstErrorCode(meputil.RemoteServerErr, "failed to reach the remote server")
+		} else {
+			log.Errorf(err, "DNS rule create failed on server(%d: %s)!", httpResp.StatusCode, httpResp.Status)
+			t.SetFirstErrorCode(meputil.RemoteServerErr, "could not apply rule on dns server")
+		}
 
-			errCode := backend.DeleteRecord(meputil.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
-			if errCode != 0 {
-				log.Errorf(err, "DNS rule(appId: %s, dnsRuleId: %s) delete from etcd failed, "+
-					"this might lead to data inconsistency!", t.AppInstanceId, t.DNSRuleId)
-				t.SetFirstErrorCode(workspace.ErrCode(errCode), "delete dns rule from etcd failed on server error")
-				return workspace.TaskFinish
-			}
+		errCode := backend.DeleteRecord(meputil.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
+		if errCode != 0 {
+			log.Errorf(err, "DNS rule(appId: %s, dnsRuleId: %s) delete from etcd failed, "+
+				"this might lead to data inconsistency!", t.AppInstanceId, t.DNSRuleId)
+			t.SetFirstErrorCode(workspace.ErrCode(errCode), "delete dns rule from etcd failed on server error")
 			return workspace.TaskFinish
 		}
+		return workspace.TaskFinish
 	}
 
 	t.W.Header().Set("ETag", meputil.GenerateStrongETag(dnsConfigBytes))

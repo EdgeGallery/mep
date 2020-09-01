@@ -15,7 +15,7 @@
  */
 
 // Package path implements mep server api plans
-package plans
+package common
 
 import (
 	"encoding/json"
@@ -47,6 +47,12 @@ type SendHttpRsp struct {
 func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 	// remove service-center server header
 	t.W.Header().Del(util.ServerHeader)
+
+	failureEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
+		"[%s] Result [Failure : %s]"
+	successEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
+		"[%s] Result [Success]"
+
 	errInfo := t.GetSerErrInfo()
 	if errInfo == nil {
 		body := &models.ProblemDetails{
@@ -54,10 +60,8 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 			Status: uint32(util.RemoteServerErr),
 			Detail: "server internal function failed",
 		}
-		log.Infof("Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] Result"+
-			" [Failure: %s]",
-			util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R), util.GetResourceInfo(t.R),
-			body.Detail)
+		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
+			util.GetResourceInfo(t.R), body.Detail)
 		util.HttpErrResponse(t.W, util.RemoteServerErr, body)
 		return workspace.TaskFinish
 	}
@@ -65,15 +69,12 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 	if errInfo.ErrCode >= int(workspace.TaskFail) {
 		statusCode, httpBody := t.cvtHttpErrInfo(errInfo)
 		util.HttpErrResponse(t.W, statusCode, httpBody)
-		log.Infof("Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] Result"+
-			" [Failure: %s]",
-			util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R), util.GetResourceInfo(t.R),
-			errInfo.Message)
+		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
+			util.GetResourceInfo(t.R), errInfo.Message)
 		return workspace.TaskFinish
 	}
-	log.Infof("Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] Result"+
-		" [Success]",
-		util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R), util.GetResourceInfo(t.R))
+	log.Infof(successEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
+		util.GetResourceInfo(t.R))
 	t.writeResponse(t.W, t.HttpErrInf, t.HttpRsp)
 	return workspace.TaskFinish
 }
@@ -95,11 +96,11 @@ func (t *SendHttpRsp) writeResponse(w http.ResponseWriter, resp *proto.Response,
 		controller.WriteError(w, error2.ErrInternal, err.Error())
 		return
 	}
-	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(http.StatusOK))
 	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_JSON)
 	if t.StatusCode == 0 {
 		t.StatusCode = http.StatusOK
 	}
+	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(t.StatusCode))
 	w.WriteHeader(t.StatusCode)
 	_, err = fmt.Fprintln(w, string(objJSON))
 	if err != nil {

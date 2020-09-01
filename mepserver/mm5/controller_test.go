@@ -33,6 +33,7 @@ import (
 
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
+	"mepserver/common/util"
 	"mepserver/mm5/models"
 )
 
@@ -420,7 +421,7 @@ func TestPostDnsRule(t *testing.T) {
 	assert.Equal(t, "IP_V4", rule.IpAddressType, "IP type miss-match in the response")
 	assert.Equal(t, "179.138.147.240", rule.IpAddress, "IP address miss-match in the response")
 	assert.Equal(t, 30, rule.TTL, "TTL miss-match in the response")
-	assert.Equal(t, "INACTIVE", rule.State, "State miss-match in the response")
+	assert.Equal(t, util.InactiveState, rule.State, "State miss-match in the response")
 
 	mockWriter.AssertExpectations(t)
 }
@@ -476,7 +477,7 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 	assert.Equal(t, "IP_V4", rule.IpAddressType, "IP type miss-match in the response")
 	assert.Equal(t, "179.138.147.240", rule.IpAddress, "IP address miss-match in the response")
 	assert.Equal(t, 30, rule.TTL, "TTL miss-match in the response")
-	assert.Equal(t, "ACTIVE", rule.State, "State miss-match in the response")
+	assert.Equal(t, util.ActiveState, rule.State, "State miss-match in the response")
 
 	mockWriter.AssertExpectations(t)
 }
@@ -602,7 +603,7 @@ func TestDeleteDnsRule(t *testing.T) {
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -619,7 +620,7 @@ func TestDeleteDnsRule(t *testing.T) {
 	assert.Equal(t, "IP_V4", rule.IpAddressType, "IP type miss-match in the response")
 	assert.Equal(t, "179.138.147.240", rule.IpAddress, "IP address miss-match in the response")
 	assert.Equal(t, 30, rule.TTL, "TTL miss-match in the response")
-	assert.Equal(t, "INACTIVE", rule.State, "State miss-match in the response")
+	assert.Equal(t, util.InactiveState, rule.State, "State miss-match in the response")
 
 	mockWriter.AssertExpectations(t)
 }
@@ -689,7 +690,7 @@ func TestDeleteActiveDnsRule(t *testing.T) {
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
-			TTL: 30, State: "INACTIVE"}
+			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -715,7 +716,7 @@ func TestDeleteActiveDnsRule(t *testing.T) {
 	assert.Equal(t, "IP_V4", rule.IpAddressType, "IP type miss-match in the response")
 	assert.Equal(t, "179.138.147.240", rule.IpAddress, "IP address miss-match in the response")
 	assert.Equal(t, 30, rule.TTL, "TTL miss-match in the response")
-	assert.Equal(t, "INACTIVE", rule.State, "State miss-match in the response")
+	assert.Equal(t, util.InactiveState, rule.State, "State miss-match in the response")
 
 	mockWriter.AssertExpectations(t)
 }
