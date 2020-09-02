@@ -39,6 +39,7 @@ const (
 	SerErrServiceInstanceFailed                   = 13
 	RequestParamErr                               = 14
 	SubscriptionErr                               = 15
+	ResourceExists                                = 16
 )
 
 const (

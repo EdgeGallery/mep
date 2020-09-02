@@ -141,6 +141,9 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 		body.Title = "Request parameter error"
 	case util.SubscriptionErr:
 		body.Title = "App subscription error"
+	case util.ResourceExists:
+		statusCode = http.StatusUnprocessableEntity
+		body.Title = "Resource already exists"
 	default:
 		body.Title = "Bad Request"
 	}

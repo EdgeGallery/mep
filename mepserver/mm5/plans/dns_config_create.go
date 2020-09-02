@@ -164,8 +164,17 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 
 	if (dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState) ||
 		len(dnsConfigInput.DomainName) == 0 || len(dnsConfigInput.IpAddress) == 0 {
-		log.Warn("dns input error.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "dns input error")
+		return workspace.TaskFinish
+	}
+
+	isExists, errorCode := t.isDomainAlreadyExists(dnsConfigInput.DomainName)
+	if errorCode != 0 {
+		t.SetFirstErrorCode(workspace.ErrCode(errorCode), "validation failure")
+		return workspace.TaskFinish
+	}
+	if isExists {
+		t.SetFirstErrorCode(meputil.ResourceExists, "domain already exists")
 		return workspace.TaskFinish
 	}
 
@@ -226,4 +235,23 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 	t.W.Header().Set("ETag", meputil.GenerateStrongETag(dnsConfigBytes))
 	t.HttpRsp = dnsConfigInput
 	return workspace.TaskFinish
+}
+
+func (t *CreateDNSRule) isDomainAlreadyExists(domainName string) (isExists bool, errorCode int) {
+	records, errCode := backend.GetRecords(meputil.EndDNSRuleKeyPath + t.AppInstanceId)
+	if errCode != 0 {
+		return false, errCode
+	}
+	for _, value := range records {
+		dnsRuleInStore := &dns.RuleEntry{}
+		jsonErr := json.Unmarshal(value, dnsRuleInStore)
+		if jsonErr != nil {
+			log.Errorf(nil, "failed to parse the dns entries from data-store")
+			return false, meputil.OperateDataWithEtcdErr
+		}
+		if dnsRuleInStore.DomainName == domainName {
+			return true, 0
+		}
+	}
+	return false, 0
 }
