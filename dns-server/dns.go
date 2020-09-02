@@ -93,7 +93,7 @@ func (s *Server) Stop() {
 	}
 
 	if s.udpServer != nil {
-		err := s.udpServer.Shutdown()
+		err = s.udpServer.Shutdown()
 		if err != nil {
 			log.Error("Failed to stop the dns udp server.", err)
 		}
@@ -111,7 +111,7 @@ func (s *Server) Stop() {
 func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
 	c := new(dns.Client)
 	forwarder := s.config.forwarder.String()
-	if forwarder == "0.0.0.0" {
+	if forwarder == util.DefaultIP {
 		return nil, fmt.Errorf("could not resolve the request %q and no forwarder is configured",
 			req.Question[0].Name)
 	}

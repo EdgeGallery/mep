@@ -88,7 +88,7 @@ func TestBasicDataStoreOperations(t *testing.T) {
 	t.Run("CheckCaseSensitiveInDomainName", func(t *testing.T) {
 		_ = store.SetResourceRecord(".", &ResourceRecord{Name: "WWW.EXAMPLE.COM.", Type: "A",
 			Class: "IN", TTL: 30, RData: []string{DNSConfigTestIP1}})
-		rrResponse, _ := store.GetResourceRecord(&dns.Question{Name: ExampleDomain,
+		rrResponse, _ = store.GetResourceRecord(&dns.Question{Name: ExampleDomain,
 			Qtype: dns.TypeA, Qclass: dns.ClassINET})
 		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", (*rrResponse)[0].String(),
 			"Error")

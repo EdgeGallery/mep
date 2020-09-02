@@ -61,7 +61,7 @@ func (b *BoltDB) Open() error {
 
 	_, err = os.Stat(DBPath)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(DBPath, 0700)
+		err = os.Mkdir(DBPath, 0700)
 		if err != nil {
 			log.Fatal("Data path does not exists and could not create a new one", err)
 		}
