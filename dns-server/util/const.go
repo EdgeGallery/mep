@@ -29,3 +29,5 @@ const (
 	ForwardRetryCount     = 3
 	DefaultIP             = "0.0.0.0"
 )
+
+const MaxDnsQuestionLength = 254

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -440,7 +441,7 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 	getRequest, _ := http.NewRequest("POST",
 		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules", DefaultAppInstanceId),
 		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"ACTIVE\"}")))
+			" \"179.138.147.240\",\"ttl\": 35,\"state\": \"ACTIVE\"}")))
 	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;", DefaultAppInstanceId)
 	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
 
@@ -452,6 +453,14 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 	mockWriter.On("WriteHeader", 200)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		inputData, err := ioutil.ReadAll(r.Body)
+		assert.Equal(t, nil, err, "Read http response failed")
+		defer r.Body.Close()
+		fmt.Printf("Input Data: %s \n", inputData)
+		assert.Equal(t, string(inputData), "[{\"zone\":\".\",\"rr\":[{\"name\":\"www.example.com.\","+
+			"\"type\":\"A\",\"class\":\"IN\",\"ttl\":35,\"rData\":[\"179.138.147.240\"]}]}]",
+			"DNS request issues")
+
 		w.WriteHeader(http.StatusOK)
 		_, err2 := w.Write([]byte(""))
 		if err2 != nil {
@@ -476,7 +485,7 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 	assert.Equal(t, "www.example.com", rule.DomainName, "Domain name miss-match in the response")
 	assert.Equal(t, "IP_V4", rule.IpAddressType, "IP type miss-match in the response")
 	assert.Equal(t, "179.138.147.240", rule.IpAddress, "IP address miss-match in the response")
-	assert.Equal(t, 30, rule.TTL, "TTL miss-match in the response")
+	assert.Equal(t, 35, rule.TTL, "TTL miss-match in the response")
 	assert.Equal(t, util.ActiveState, rule.State, "State miss-match in the response")
 
 	mockWriter.AssertExpectations(t)

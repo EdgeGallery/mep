@@ -22,7 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
@@ -47,12 +49,12 @@ type DecodeDnsConfigRestReq struct {
 func (t *DecodeDnsConfigRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("parameters validation failed", nil)
 		return workspace.TaskFinish
 	}
 	err = t.parseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", err)
+		log.Error("parse rest body failed", nil)
 	}
 	return workspace.TaskFinish
 }
@@ -63,7 +65,7 @@ func (t *DecodeDnsConfigRestReq) parseBody(r *http.Request) error {
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read failed", err)
+		log.Error("read failed", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return err
 	}
@@ -76,7 +78,7 @@ func (t *DecodeDnsConfigRestReq) parseBody(r *http.Request) error {
 
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check param failed", err)
+		log.Error("check param failed", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "check Param failed")
 		return err
 	}
@@ -134,8 +136,8 @@ func (t *DecodeDnsConfigRestReq) getParam(r *http.Request) error {
 	}
 
 	t.DNSRuleId = query.Get(":dnsRuleId")
-	if len(t.DNSRuleId) > 256 {
-		log.Error("dns rule ID validation failed", err)
+	if len(t.DNSRuleId) > meputil.MaxDNSRuleId {
+		log.Error("dns rule ID validation failed", nil)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "dns rule ID validation failed, invalid length")
 		return err
 	}
@@ -162,23 +164,15 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	if (dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState) ||
-		len(dnsConfigInput.DomainName) == 0 || len(dnsConfigInput.IpAddress) == 0 {
-		t.SetFirstErrorCode(meputil.ParseInfoErr, "dns input error")
-		return workspace.TaskFinish
-	}
-
-	isExists, errorCode := t.isDomainAlreadyExists(dnsConfigInput.DomainName)
+	errorString, errorCode := t.validateInputs(dnsConfigInput)
 	if errorCode != 0 {
-		t.SetFirstErrorCode(workspace.ErrCode(errorCode), "validation failure")
-		return workspace.TaskFinish
-	}
-	if isExists {
-		t.SetFirstErrorCode(meputil.ResourceExists, "domain already exists")
+		t.SetFirstErrorCode(workspace.ErrCode(errorCode), errorString)
 		return workspace.TaskFinish
 	}
 
+	// Generate dns rule id
 	t.DNSRuleId = uuid.NewV4().String()
+
 	dnsConfigInput.DnsRuleId = t.DNSRuleId
 	dnsConfigBytes, err := json.Marshal(
 		dns.NewRuleRecord(
@@ -216,7 +210,7 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 		if err != nil {
 			log.Errorf(err, "DNS rule(appId: %s, dnsRuleId: %s) create fail on server!",
 				t.AppInstanceId, t.DNSRuleId)
-			t.SetFirstErrorCode(meputil.RemoteServerErr, "failed to reach the remote server")
+			t.SetFirstErrorCode(meputil.RemoteServerErr, "failed to apply changes on remote server")
 		} else {
 			log.Errorf(err, "DNS rule create failed on server(%d: %s)!", httpResp.StatusCode, httpResp.Status)
 			t.SetFirstErrorCode(meputil.RemoteServerErr, "could not apply rule on dns server")
@@ -235,6 +229,33 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 	t.W.Header().Set("ETag", meputil.GenerateStrongETag(dnsConfigBytes))
 	t.HttpRsp = dnsConfigInput
 	return workspace.TaskFinish
+}
+
+func (t *CreateDNSRule) validateInputs(dnsConfigInput *models.DnsConfigRule) (errorString string, errorCode int) {
+	if (dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState) ||
+		len(dnsConfigInput.DomainName) == 0 || len(dnsConfigInput.DomainName) > meputil.MaxFQDNLength ||
+		len(dnsConfigInput.IpAddress) == 0 || len(dnsConfigInput.IpAddress) > meputil.MaxIPLength ||
+		(dnsConfigInput.IpAddressType != meputil.IPv4Type && dnsConfigInput.IpAddressType != meputil.IPv6Type) ||
+		dnsConfigInput.TTL == 0 {
+		return "dns input error", meputil.ParseInfoErr
+	}
+
+	ip := net.ParseIP(dnsConfigInput.IpAddress)
+	if ip == nil ||
+		(strings.Contains(dnsConfigInput.IpAddress, ".") && dnsConfigInput.IpAddressType != meputil.IPv4Type) ||
+		(strings.Contains(dnsConfigInput.IpAddress, ":") && dnsConfigInput.IpAddressType != meputil.IPv6Type) {
+		return "dns ip error", meputil.ParseInfoErr
+	}
+
+	isExists, errorCode := t.isDomainAlreadyExists(dnsConfigInput.DomainName)
+	if errorCode != 0 {
+		return "validation failure", errorCode
+	}
+	if isExists {
+		return "domain already exists", meputil.ResourceExists
+	}
+
+	return "", 0
 }
 
 func (t *CreateDNSRule) isDomainAlreadyExists(domainName string) (isExists bool, errorCode int) {

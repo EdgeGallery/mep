@@ -76,12 +76,12 @@ func (b *BoltDB) Open() error {
 	err = b.db.Update(func(tx *bolt.Tx) error {
 		bZone, err := tx.CreateBucketIfNotExists([]byte(ZoneConfig))
 		if err != nil {
-			log.Error("Failed to create the zone bucket.", err)
+			log.Error("Failed to create the zone bucket.", nil)
 			return fmt.Errorf("error creating zone bucket: %s", err)
 		}
 		_, err = bZone.CreateBucketIfNotExists([]byte(DefaultZone))
 		if err != nil {
-			log.Error("Failed to create the default(.) zone bucket.", err)
+			log.Error("Failed to create the default(.) zone bucket.", nil)
 			return fmt.Errorf("error creating default zone(.) bucket: %s", err)
 		}
 		return nil
@@ -190,7 +190,7 @@ func (b *BoltDB) getRRFromZoneBucket(zoneBkt *bolt.Bucket, dnsCfgKeyBytes []byte
 	}
 	for _, pointToIP := range dnsCfg.PointTo {
 		records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: dns.TypeA,
-			Class: dns.ClassINET, Ttl: b.TTL}, A: net.ParseIP(pointToIP)})
+			Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, A: net.ParseIP(pointToIP)})
 	}
 	return records
 }

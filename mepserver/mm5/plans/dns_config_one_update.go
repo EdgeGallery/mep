@@ -83,8 +83,9 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	if len(dnsConfigInput.DnsRuleId) != 0 && t.DNSRuleId != dnsConfigInput.DnsRuleId {
-		t.SetFirstErrorCode(meputil.ParseInfoErr, "dns identifier miss-match")
+	errorString, errorCode := t.validateInputs(dnsConfigInput, dnsRuleOnDataStore)
+	if errorCode != 0 {
+		t.SetFirstErrorCode(workspace.ErrCode(errorCode), errorString)
 		return workspace.TaskFinish
 	}
 
@@ -93,10 +94,7 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 		t.HttpRsp = dnsRuleOnDataStore
 		return workspace.TaskFinish
 	}
-	if dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState {
-		t.SetFirstErrorCode(meputil.ParseInfoErr, "invalid dns state input")
-		return workspace.TaskFinish
-	}
+
 	errCode, errString := t.updateDnsRecordToRemoteServer(dnsRuleOnDataStore, dnsConfigInput)
 	if errCode != 0 {
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), errString)
@@ -116,6 +114,26 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 		dnsRuleOnDataStore.TTL,
 		dnsRuleOnDataStore.State)
 	return workspace.TaskFinish
+}
+
+func (t *DNSRuleUpdate) validateInputs(dnsConfigInput *models.DnsConfigRule,
+	dnsRuleOnDataStore *dns.RuleEntry) (errorString string, errorCode int) {
+
+	if len(dnsConfigInput.DnsRuleId) != 0 && t.DNSRuleId != dnsConfigInput.DnsRuleId {
+		return "dns identifier miss-match", meputil.ParseInfoErr
+	}
+
+	if dnsConfigInput.DomainName != dnsRuleOnDataStore.DomainName ||
+		dnsConfigInput.IpAddress != dnsRuleOnDataStore.IpAddress ||
+		dnsConfigInput.IpAddressType != dnsRuleOnDataStore.IpAddressType {
+		return "update supported only for state", meputil.ParseInfoErr
+	}
+
+	if dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState {
+		return "invalid dns state input", meputil.ParseInfoErr
+	}
+
+	return "", 0
 }
 
 // Update the dns modification request to the remote dns server

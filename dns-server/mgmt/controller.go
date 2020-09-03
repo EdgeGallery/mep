@@ -73,7 +73,7 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 		for _, rr := range *zr.RR {
 			err := e.dataStore.SetResourceRecord(zr.Zone, &rr)
 			if err != nil {
-				log.Error("Failed to set the zone entries.", err)
+				log.Error("Failed to set the zone entries.", nil)
 				return c.String(http.StatusInternalServerError, err.Error())
 			}
 			log.Debugf("New resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
@@ -93,7 +93,7 @@ func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
 	}
 	err := e.dataStore.DelResourceRecord(fqdn, rrtype)
 	if err != nil {
-		log.Error("Failed to get the zone entry.", err)
+		log.Error("Failed to get the zone entry.", nil)
 		return c.String(http.StatusInternalServerError, "Error in retrieving the data.")
 	}
 	return c.String(http.StatusOK, "Success")

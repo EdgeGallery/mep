@@ -89,13 +89,13 @@ func (s *Server) start(dns *dns.Server) {
 func (s *Server) Stop() {
 	err := s.dataStore.Close()
 	if err != nil {
-		log.Error("Failed to close the data store.", err)
+		log.Error("Failed to close the data store.", nil)
 	}
 
 	if s.udpServer != nil {
 		err = s.udpServer.Shutdown()
 		if err != nil {
-			log.Error("Failed to stop the dns udp server.", err)
+			log.Error("Failed to stop the dns udp server.", nil)
 		}
 	}
 
@@ -137,15 +137,19 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 		s.writeErrorResponse(w, req, dns.RcodeFormatError)
 		return
 	}
+	if len(req.Question[0].Name) == 0 || len(req.Question[0].Name) > util.MaxDnsQuestionLength {
+		s.writeErrorResponse(w, req, dns.RcodeFormatError)
+		return
+	}
 	if req.Opcode == dns.OpcodeQuery {
-		log.Debugf("Query lookup (%s)", req.Question[0].String())
+		// log.Debugf("Query lookup (%s)", req.Question[0].String())
 		// Match data from db
 		rrs, err := s.dataStore.GetResourceRecord(&req.Question[0])
 		if err != nil {
 			respMsg, err := s.forward(req)
 			if err != nil {
 				s.writeErrorResponse(w, req, dns.RcodeServerFailure)
-				log.Debugf("Failed to find entry: %v", err)
+				// log.Debugf("Failed to find entry: %v", err)
 				return
 			}
 			err = w.WriteMsg(respMsg)
@@ -163,7 +167,6 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 		s.writeSuccessResponse(rrs, w, req)
 		return
 	} else {
-		log.Debugf("Unsupported DNS OpCode %s", dns.OpcodeToString[req.Opcode])
 		s.writeErrorResponse(w, req, dns.RcodeRefused)
 		return
 	}

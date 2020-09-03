@@ -64,6 +64,11 @@ const (
 	InactiveState = "INACTIVE"
 )
 
+const (
+	IPv4Type = "IP_V4"
+	IPv6Type = "IP_V6"
+)
+
 const Uris string = "uris"
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
@@ -90,3 +95,12 @@ const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUy
 const EndDNSRuleKeyPath string = "/cse-sr/etsi/dns-rule/"
 
 const ErrorRequestBodyMessage = "request body invalid"
+
+// As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
+// one length and one null terminating character. Hence it is limited as 253.
+const MaxFQDNLength = 253
+
+// Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
+const MaxIPLength = 45
+
+const MaxDNSRuleId = 36
