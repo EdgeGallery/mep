@@ -30,4 +30,8 @@ const (
 	DefaultIP             = "0.0.0.0"
 )
 
-const MaxDnsQuestionLength = 254
+const MaxDnsFQDNLength = 253
+const MaxDnsQuestionLength = MaxDnsFQDNLength + 1
+
+// Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
+const MaxIPLength = 45

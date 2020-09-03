@@ -25,6 +25,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 
 	"dns-server/datastore"
+	"dns-server/util"
 )
 
 type Controller struct {
@@ -64,6 +65,10 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 		log.Error("Error in parsing the rr post request body.", nil)
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
+	if err := e.validateSetRecordInput(zrs); err != nil {
+		log.Error("Error in validating the rr post request body.", err)
+		return c.String(http.StatusBadRequest, "invalid input!")
+	}
 
 	// Store in DB
 	for _, zr := range *zrs {
@@ -83,6 +88,35 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 
 	return c.String(http.StatusOK, "success in adding/updating rr entry.")
 
+}
+
+func (e *Controller) validateSetRecordInput(zrs *[]datastore.ZoneEntry) error {
+	for _, zr := range *zrs {
+		if len(zr.Zone) >= util.MaxDnsFQDNLength {
+			return fmt.Errorf("invalid zone value")
+		}
+		for _, rr := range *zr.RR {
+			if err := e.validateResourceRecords(&rr); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (e *Controller) validateResourceRecords(rr *datastore.ResourceRecord) error {
+	if rr.TTL == 0 ||
+		len(rr.Name) == 0 || len(rr.Name) > util.MaxDnsFQDNLength || len(rr.RData) == 0 {
+		return fmt.Errorf("invalid resource record value")
+	}
+	for _, rData := range rr.RData {
+		if len(rData) == 0 ||
+			len(rData) > util.MaxIPLength ||
+			nil == net.ParseIP(rData) {
+			return fmt.Errorf("invalid resource record value")
+		}
+	}
+	return nil
 }
 
 func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {

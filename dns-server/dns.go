@@ -133,14 +133,11 @@ func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
 // Handle DNS Query matching
 func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 
-	if len(req.Question) != 1 {
+	if !s.validateQuestion(req) {
 		s.writeErrorResponse(w, req, dns.RcodeFormatError)
 		return
 	}
-	if len(req.Question[0].Name) == 0 || len(req.Question[0].Name) > util.MaxDnsQuestionLength {
-		s.writeErrorResponse(w, req, dns.RcodeFormatError)
-		return
-	}
+
 	if req.Opcode == dns.OpcodeQuery {
 		// log.Debugf("Query lookup (%s)", req.Question[0].String())
 		// Match data from db
@@ -170,6 +167,17 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 		s.writeErrorResponse(w, req, dns.RcodeRefused)
 		return
 	}
+}
+
+// Validate the input question
+func (s *Server) validateQuestion(req *dns.Msg) bool {
+	if len(req.Question) != 1 {
+		return false
+	}
+	if len(req.Question[0].Name) == 0 || len(req.Question[0].Name) > util.MaxDnsQuestionLength {
+		return false
+	}
+	return true
 }
 
 func (s *Server) writeErrorResponse(w dns.ResponseWriter, req *dns.Msg, rc int) {
