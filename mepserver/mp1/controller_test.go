@@ -41,8 +41,23 @@ type mockHttpWriter struct {
 	response []byte
 }
 
-const DefaultAppInstanceId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
-const DnsRuleId = "7d71e54e-81f3-47bb-a2fc-b565a326d794"
+const defaultAppInstanceId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+const dnsRuleId = "7d71e54e-81f3-47bb-a2fc-b565a326d794"
+
+const panicFormatString = "Panic: %v"
+const getDnsRulesUrlFormat = "/mepcfg/mec_app_config/v1/rules/%s/dns_rules"
+const getDnsRuleUrlFormat = "/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s"
+const appInstanceQueryFormat = ":appInstanceId=%s&;"
+const appIdAndDnsRuleIdQueryFormat = ":appInstanceId=%s&;:dnsRuleId=%s&;"
+const appInstanceIdHeader = "X-AppinstanceID"
+const responseStatusHeader = "X-Response-Status"
+const responseCheckFor200 = "Response status code must be 200"
+const responseCheckFor400 = "Response status code must be 404"
+const errorWriteRespErr = "Write Response Error"
+const exampleDomainName = "www.example.com"
+const exampleIPAddress = "179.138.147.240"
+const defaultTTL = 30
+const TTL35 = 35
 
 func (m *mockHttpWriter) Header() http.Header {
 	// Get the argument inputs
@@ -68,11 +83,19 @@ func (m *mockHttpWriter) WriteHeader(statusCode int) {
 	return
 }
 
+type dnsCreateRule struct {
+	DomainName    string `json:"domainName"`
+	IpAddressType string `json:"ipAddressType"`
+	IpAddress     string `json:"ipAddress"`
+	TTL           int    `json:"ttl"`
+	State         string `json:"state"`
+}
+
 // Query dns rules request in mp1 interface
 func TestGetDnsRules(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -80,10 +103,10 @@ func TestGetDnsRules(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules", DefaultAppInstanceId),
+		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;", DefaultAppInstanceId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -96,10 +119,10 @@ func TestGetDnsRules(t *testing.T) {
 
 	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
-		records[DnsRuleId] = outBytes
+		records[dnsRuleId] = outBytes
 		return records, 0
 	})
 	defer patches.Reset()
@@ -107,8 +130,8 @@ func TestGetDnsRules(t *testing.T) {
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[13].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 
@@ -118,7 +141,7 @@ func TestGetDnsRules(t *testing.T) {
 func TestGetEmptyDnsRules(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -126,10 +149,10 @@ func TestGetEmptyDnsRules(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules", DefaultAppInstanceId),
+		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;", DefaultAppInstanceId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -141,8 +164,8 @@ func TestGetEmptyDnsRules(t *testing.T) {
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[13].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 
@@ -152,7 +175,7 @@ func TestGetEmptyDnsRules(t *testing.T) {
 func TestGetEmptyDnsRulesAppInstanceIdUnMatched(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -160,10 +183,10 @@ func TestGetEmptyDnsRulesAppInstanceIdUnMatched(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules", DefaultAppInstanceId),
+		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;", DefaultAppInstanceId)
-	getRequest.Header.Set("X-AppinstanceID", "wrong-app-instance-id")
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, "wrong-app-instance-id")
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -177,7 +200,7 @@ func TestGetEmptyDnsRulesAppInstanceIdUnMatched(t *testing.T) {
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[13].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "401", responseHeader.Get("X-Response-Status"),
+	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
 		"Response status code must be 401 Unauthorized")
 
 	mockWriter.AssertExpectations(t)
@@ -187,7 +210,7 @@ func TestGetEmptyDnsRulesAppInstanceIdUnMatched(t *testing.T) {
 func TestGetEmptyDnsRulesAppInstanceIdInvalid(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -197,10 +220,10 @@ func TestGetEmptyDnsRulesAppInstanceIdInvalid(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules", invalidAppInstanceId),
+		fmt.Sprintf(getDnsRulesUrlFormat, invalidAppInstanceId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;", invalidAppInstanceId)
-	getRequest.Header.Set("X-AppinstanceID", invalidAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, invalidAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, invalidAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -214,7 +237,7 @@ func TestGetEmptyDnsRulesAppInstanceIdInvalid(t *testing.T) {
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[13].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "400", responseHeader.Get("X-Response-Status"),
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
 		"Response status code must be 400 Unauthorized")
 
 	mockWriter.AssertExpectations(t)
@@ -225,7 +248,7 @@ func TestGetEmptyDnsRulesAppInstanceIdInvalid(t *testing.T) {
 func TestGetSingleDnsRule(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -233,10 +256,10 @@ func TestGetSingleDnsRule(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -248,7 +271,7 @@ func TestGetSingleDnsRule(t *testing.T) {
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -258,8 +281,8 @@ func TestGetSingleDnsRule(t *testing.T) {
 	// 14 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[14].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 
@@ -269,7 +292,7 @@ func TestGetSingleDnsRule(t *testing.T) {
 func TestGetSingleDnsRuleNotFound(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -277,10 +300,10 @@ func TestGetSingleDnsRuleNotFound(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -294,8 +317,8 @@ func TestGetSingleDnsRuleNotFound(t *testing.T) {
 	// 14 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[14].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "404", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 404")
+	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -304,7 +327,7 @@ func TestGetSingleDnsRuleNotFound(t *testing.T) {
 func TestGetSingleDnsRuleNoId(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -312,10 +335,10 @@ func TestGetSingleDnsRuleNoId(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, ""),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, ""),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, "")
-	getRequest.Header.Set("X-AppinstanceID", "")
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, "")
+	getRequest.Header.Set(appInstanceIdHeader, "")
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -329,8 +352,8 @@ func TestGetSingleDnsRuleNoId(t *testing.T) {
 	// 14 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[14].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "401", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 404")
+	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -339,19 +362,27 @@ func TestGetSingleDnsRuleNoId(t *testing.T) {
 func TestPutSingleDnsRule(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
 	service := Mp1Service{}
 
+	createRule := dnsCreateRule{
+		DomainName:    exampleDomainName,
+		IpAddressType: util.IPv4Type,
+		IpAddress:     exampleIPAddress,
+		TTL:           defaultTTL,
+		State:         util.InactiveState,
+	}
+	createRuleBytes, _ := json.Marshal(createRule)
+
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
-		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"INACTIVE\"}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
+		bytes.NewReader(createRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -364,7 +395,7 @@ func TestPutSingleDnsRule(t *testing.T) {
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -374,8 +405,8 @@ func TestPutSingleDnsRule(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -384,19 +415,27 @@ func TestPutSingleDnsRule(t *testing.T) {
 func TestPutSingleDnsRuleActive(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
 	service := Mp1Service{}
 
+	createRule := dnsCreateRule{
+		DomainName:    exampleDomainName,
+		IpAddressType: util.IPv4Type,
+		IpAddress:     exampleIPAddress,
+		TTL:           defaultTTL,
+		State:         util.ActiveState,
+	}
+	createRuleBytes, _ := json.Marshal(createRule)
+
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
-		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"ACTIVE\"}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
+		bytes.NewReader(createRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -412,12 +451,12 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, err2 := w.Write([]byte(""))
 		if err2 != nil {
-			t.Error("Write Response Error")
+			t.Error(errorWriteRespErr)
 		}
 	}))
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -433,8 +472,8 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -443,19 +482,27 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 func TestPutSingleDnsRuleInactive(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
 	service := Mp1Service{}
 
+	createRule := dnsCreateRule{
+		DomainName:    exampleDomainName,
+		IpAddressType: util.IPv4Type,
+		IpAddress:     exampleIPAddress,
+		TTL:           defaultTTL,
+		State:         util.InactiveState,
+	}
+	createRuleBytes, _ := json.Marshal(createRule)
+
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
-		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"INACTIVE\"}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
+		bytes.NewReader(createRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -471,12 +518,12 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, err2 := w.Write([]byte(""))
 		if err2 != nil {
-			t.Error("Write Response Error")
+			t.Error(errorWriteRespErr)
 		}
 	}))
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.ActiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -492,8 +539,8 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 200")
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -502,19 +549,27 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
 	service := Mp1Service{}
 
+	createRule := dnsCreateRule{
+		DomainName:    exampleDomainName,
+		IpAddressType: util.IPv4Type,
+		IpAddress:     exampleIPAddress,
+		TTL:           defaultTTL,
+		State:         util.ActiveState,
+	}
+	createRuleBytes, _ := json.Marshal(createRule)
+
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
-		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"ACTIVE\"}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
+		bytes.NewReader(createRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -526,7 +581,7 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 	mockWriter.On("WriteHeader", 503)
 
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -536,7 +591,7 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "503", responseHeader.Get("X-Response-Status"),
+	assert.Equal(t, "503", responseHeader.Get(responseStatusHeader),
 		"Response status code miss-match")
 
 	mockWriter.AssertExpectations(t)
@@ -546,19 +601,27 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
 	service := Mp1Service{}
 
+	createRule := dnsCreateRule{
+		DomainName:    exampleDomainName,
+		IpAddressType: util.IPv4Type,
+		IpAddress:     exampleIPAddress,
+		TTL:           defaultTTL,
+		State:         util.ActiveState,
+	}
+	createRuleBytes, _ := json.Marshal(createRule)
+
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
-		bytes.NewReader([]byte("{\"domainName\": \"www.example.com\",\"ipAddressType\": \"IP_V4\",\"ipAddress\":"+
-			" \"179.138.147.240\",\"ttl\": 30,\"state\": \"ACTIVE\"}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
+		bytes.NewReader(createRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -573,12 +636,12 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err2 := w.Write([]byte(""))
 		if err2 != nil {
-			t.Error("Write Response Error")
+			t.Error(errorWriteRespErr)
 		}
 	}))
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: "www.example.com", IpAddressType: "IP_V4", IpAddress: "179.138.147.240",
+		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
@@ -594,7 +657,7 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "503", responseHeader.Get("X-Response-Status"),
+	assert.Equal(t, "503", responseHeader.Get(responseStatusHeader),
 		"Response status code miss-match")
 
 	mockWriter.AssertExpectations(t)
@@ -604,7 +667,7 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 func TestPutSingleDnsRuleNotFound(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -612,10 +675,10 @@ func TestPutSingleDnsRuleNotFound(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
 		bytes.NewReader([]byte("{}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -629,8 +692,8 @@ func TestPutSingleDnsRuleNotFound(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "404", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 404")
+	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -639,7 +702,7 @@ func TestPutSingleDnsRuleNotFound(t *testing.T) {
 func TestPutSingleDnsRuleBodyParseError(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -647,10 +710,10 @@ func TestPutSingleDnsRuleBodyParseError(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -664,8 +727,8 @@ func TestPutSingleDnsRuleBodyParseError(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "400", responseHeader.Get("X-Response-Status"),
-		"Response status code must be 404")
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
 
 	mockWriter.AssertExpectations(t)
 }
@@ -674,7 +737,7 @@ func TestPutSingleDnsRuleBodyParseError(t *testing.T) {
 func TestPutSingleDnsRuleOverLengthBody(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("Panic: %v", r)
+			t.Errorf(panicFormatString, r)
 		}
 	}()
 
@@ -687,10 +750,10 @@ func TestPutSingleDnsRuleOverLengthBody(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf("/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s", DefaultAppInstanceId, DnsRuleId),
+		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
 		bytes.NewReader([]byte(messageBody)))
-	getRequest.URL.RawQuery = fmt.Sprintf(":appInstanceId=%s&;:dnsRuleId=%s&;", DefaultAppInstanceId, DnsRuleId)
-	getRequest.Header.Set("X-AppinstanceID", DefaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
@@ -704,7 +767,7 @@ func TestPutSingleDnsRuleOverLengthBody(t *testing.T) {
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "400", responseHeader.Get("X-Response-Status"),
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
 		"Response status code must be 400")
 
 	mockWriter.AssertExpectations(t)
