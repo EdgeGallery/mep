@@ -203,8 +203,13 @@ func (t *CreateDNSRule) OnRequest(data string) workspace.TaskCode {
 
 	dnsAgent := dns.NewRestClient()
 
+	rrType := meputil.RRTypeA
+	if dnsConfigInput.IpAddressType == meputil.IPv6Type {
+		rrType = meputil.RRTypeAAAA
+	}
+
 	httpResp, err := dnsAgent.SetResourceRecordTypeA(
-		dnsConfigInput.DomainName, "A", "IN", []string{dnsConfigInput.IpAddress},
+		dnsConfigInput.DomainName, rrType, meputil.RRClassIN, []string{dnsConfigInput.IpAddress},
 		uint32(dnsConfigInput.TTL))
 	if err != nil || !meputil.IsHttpStatusOK(httpResp.StatusCode) {
 		if err != nil {

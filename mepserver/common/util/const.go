@@ -104,3 +104,20 @@ const MaxFQDNLength = 253
 const MaxIPLength = 45
 
 const MaxDNSRuleId = 36
+
+const MaxPortNumber = 65535
+const MaxPortLength = 5
+
+const (
+	DefaultDnsHost           = "mep-dns"
+	DefaultDnsManagementPort = 8080
+)
+
+const (
+	RRTypeA    = "A"
+	RRTypeAAAA = "AAAA"
+)
+
+const (
+	RRClassIN = "IN"
+)

@@ -60,10 +60,15 @@ func (t *DNSRuleDelete) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	rrType := util.RRTypeA
+	if dnsRule.IpAddressType == util.IPv6Type {
+		rrType = util.RRTypeAAAA
+	}
+
 	// Delete the dns entry on remote dns server only if it was active
 	if dnsRule.State == util.ActiveState {
 		dnsAgent := dns.NewRestClient()
-		httpResp, err := dnsAgent.DeleteResourceRecordTypeA(dnsRule.DomainName, "A")
+		httpResp, err := dnsAgent.DeleteResourceRecordTypeA(dnsRule.DomainName, rrType)
 		if err != nil {
 			log.Errorf(nil, "dns rule(app-id: %s, dns-rule-id: %s) delete fail on dns server!",
 				t.AppInstanceId, t.DNSRuleId)

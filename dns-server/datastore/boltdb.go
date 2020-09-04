@@ -46,7 +46,7 @@ type DNSConfigRRValue struct {
 	Ttl     uint32   `json:"ttl"`
 }
 
-var rrTypeMap = map[string]uint16{"A": dns.TypeA}
+var rrTypeMap = map[string]uint16{"A": dns.TypeA, "AAAA": dns.TypeAAAA}
 var rrClassMap = map[string]uint16{"IN": dns.ClassINET, "CS": dns.ClassCSNET, "CH": dns.ClassCHAOS,
 	"HS": dns.ClassHESIOD, "*": dns.ClassANY}
 
@@ -189,8 +189,13 @@ func (b *BoltDB) getRRFromZoneBucket(zoneBkt *bolt.Bucket, dnsCfgKeyBytes []byte
 		return records
 	}
 	for _, pointToIP := range dnsCfg.PointTo {
-		records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: dns.TypeA,
-			Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, A: net.ParseIP(pointToIP)})
+		if question.Qtype == dns.TypeA {
+			records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: question.Qtype,
+				Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, A: net.ParseIP(pointToIP)})
+		} else if question.Qtype == dns.TypeAAAA {
+			records = append(records, &dns.AAAA{Hdr: dns.RR_Header{Name: question.Name, Rrtype: question.Qtype,
+				Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, AAAA: net.ParseIP(pointToIP)})
+		}
 	}
 	return records
 }

@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -31,8 +33,28 @@ import (
 	meputil "mepserver/common/util"
 )
 
-const RemoteServerHost = "mep-dns"
-const RemoteServerPort = 8080
+var remoteServerHost = meputil.DefaultDnsHost
+var remoteServerPort = meputil.DefaultDnsManagementPort
+
+func init() {
+	host := os.Getenv("DNS_SERVER_HOST")
+	if len(host) > meputil.MaxFQDNLength {
+		log.Warn("invalid dns remote server host configured, reset back to default")
+	} else {
+		remoteServerHost = host
+	}
+
+	port := os.Getenv("DNS_SERVER_PORT")
+	if len(port) > meputil.MaxPortLength {
+		log.Warn("invalid dns remote server port configured, reset back to default")
+	} else if num, err := strconv.Atoi(port); err == nil {
+		if num <= 0 || num > meputil.MaxPortNumber {
+			log.Warn("invalid dns remote server port range, reset back to default")
+		} else {
+			remoteServerPort = num
+		}
+	}
+}
 
 type ResourceRecord struct {
 	Name  string   `json:"name"`
@@ -53,7 +75,7 @@ type RestClient struct {
 }
 
 func NewRestClient() *RestClient {
-	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", RemoteServerHost, RemoteServerPort))
+	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", remoteServerHost, remoteServerPort))
 	if err != nil {
 		log.Errorf(nil, "could not parse the DNS server endpoint.")
 		return &RestClient{}

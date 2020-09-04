@@ -148,14 +148,19 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(dnsRuleOnDataStore *dns.Ru
 		return errCode, errString
 	}
 
+	rrType := meputil.RRTypeA
+	if dnsRuleOnDataStore.IpAddressType == meputil.IPv6Type {
+		rrType = meputil.RRTypeAAAA
+	}
+
 	// Update the DNS server as per the new configurations
 	dnsAgent := dns.NewRestClient()
 	var httpResp *http.Response
 	if dnsConfigInput.State == meputil.ActiveState {
-		httpResp, err = dnsAgent.SetResourceRecordTypeA(dnsRuleOnDataStore.DomainName, "A", "IN",
+		httpResp, err = dnsAgent.SetResourceRecordTypeA(dnsRuleOnDataStore.DomainName, rrType, meputil.RRClassIN,
 			[]string{dnsRuleOnDataStore.IpAddress}, uint32(dnsRuleOnDataStore.TTL))
 	} else {
-		httpResp, err = dnsAgent.DeleteResourceRecordTypeA(dnsRuleOnDataStore.DomainName, "A")
+		httpResp, err = dnsAgent.DeleteResourceRecordTypeA(dnsRuleOnDataStore.DomainName, rrType)
 	}
 	if err != nil {
 		log.Errorf(nil, "dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server!",
