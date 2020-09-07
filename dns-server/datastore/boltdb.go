@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/miekg/dns"
 	bolt "go.etcd.io/bbolt"
 )
@@ -95,7 +95,7 @@ func (b *BoltDB) Close() error {
 	if b.db != nil {
 		err := b.db.Close()
 		if err != nil {
-			log.Errorf(nil, "Failed to close the bolt db(%s).", b.FileName)
+			log.Errorf( "Failed to close the bolt db(%s).", b.FileName)
 			return err
 		}
 	}

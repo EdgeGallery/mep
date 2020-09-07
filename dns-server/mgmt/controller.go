@@ -20,9 +20,9 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	log "github.com/sirupsen/logrus"
 
 	"dns-server/datastore"
 	"dns-server/util"
