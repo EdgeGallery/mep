@@ -24,7 +24,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	log "github.com/sirupsen/logrus"
 
 	"dns-server/datastore"
 	"dns-server/mgmt"
@@ -46,7 +46,7 @@ type InputParameters struct {
 // Input flag parameters registration
 func registerInputParameters(inParam *InputParameters) {
 	if inParam == nil {
-		log.Fatalf(nil, "Input config is not ready yet.")
+		log.Fatalf( "Input config is not ready yet.")
 		return
 	}
 	inParam.dbName = flag.String("db", "dbEgDns", "Database name")
@@ -69,55 +69,55 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	// Validate db name
 	if len(*inParam.dbName) >= util.MaxDbNameLength {
 		err := fmt.Errorf("error: db name should be less than 256")
-		log.Fatalf(err, "Failed to parse db name.")
+		log.Fatalf("Failed to parse db name(%s).", err.Error())
 	}
 	if strings.ContainsAny(*inParam.dbName, util.DbStringExceptions) {
 		err := fmt.Errorf("error: db name should be a single world and should not have \"%s\"",
 			util.DbStringExceptions)
-		log.Fatalf(err, "Failed to parse db name(%s).", *inParam.dbName)
+		log.Fatalf( "Failed to parse db name(%s). %s", *inParam.dbName, err.Error())
 	}
 
 	// Validate DNS port range
 	if *inParam.port > util.MaxPortNumber || *inParam.port == 0 {
 		err := fmt.Errorf("error: port number not in valid range")
-		log.Fatalf(err, "Failed to parse port number.")
+		log.Fatalf( "Failed to parse port number(%s).", err.Error())
 	}
 
 	// Validate DNS management port range
 	if *inParam.mgmtPort > util.MaxPortNumber || *inParam.mgmtPort == 0 {
 		err := fmt.Errorf("error: management port number not in valid range")
-		log.Fatalf(err, "Failed to parse management port number.")
+		log.Fatalf( "Failed to parse management port number(%s).", err.Error())
 	}
 	if *inParam.port == *inParam.mgmtPort {
 		err := fmt.Errorf("error: cannot use same port number for dns and management")
-		log.Fatalf(err, "Port number conflict.")
+		log.Fatalf( "Port number conflict(%s).", err.Error())
 	}
 
 	// Validate connTimeOut range
 	if *inParam.connTimeOut > util.MaxConnTimeout || *inParam.connTimeOut < util.MinConnTimeout {
 		err := fmt.Errorf("error: connection timeout not in valid range(2~50)")
-		log.Fatalf(err, "Failed to parse connection timeout input.")
+		log.Fatalf( "Failed to parse connection timeout input(%s).", err.Error())
 	}
 
 	// Validate IP address
 	ipAdd := net.ParseIP(*inParam.ipAddString)
 	if ipAdd == nil {
 		err := fmt.Errorf("error: parsing ip address failed, not in ipv4/ipv6 format")
-		log.Fatalf(err, "Failed to parse ip address(%s).", *inParam.ipAddString)
+		log.Fatalf( "Failed to parse ip address(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
 	// Validate Management IP address
 	ipMgmtAdd := net.ParseIP(*inParam.ipMgmtAddString)
 	if ipMgmtAdd == nil {
 		err := fmt.Errorf("error: parsing management ip address failed, not in ipv4/ipv6 format")
-		log.Fatalf(err, "Failed to parse management ip address(%s).", *inParam.ipMgmtAddString)
+		log.Fatalf( "Failed to parse management ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
 	// Validate forwarder
 	forwarderAdd := net.ParseIP(*inParam.forwarder)
 	if forwarderAdd == nil {
 		err := fmt.Errorf("error: parsing forwarder failed, not in ipv4/ipv6 format")
-		log.Fatalf(err, "Failed to parse forwarder address(%s).", *inParam.forwarder)
+		log.Fatalf( "Failed to parse forwarder address(%s). %s", *inParam.forwarder, err.Error())
 	}
 
 	return &Config{dbName: *inParam.dbName,

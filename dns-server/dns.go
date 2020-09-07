@@ -21,7 +21,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/miekg/dns"
 
 	"dns-server/datastore"
@@ -81,7 +81,7 @@ func (s *Server) Run() error {
 func (s *Server) start(dns *dns.Server) {
 	err := dns.ListenAndServe()
 	if err != nil {
-		log.Fatalf(err, "Failed to listen dns %s server on %s", dns.Net, dns.Addr)
+		log.Fatalf( "Failed to listen dns %s server on %s. (%s)", dns.Net, dns.Addr, err.Error())
 	}
 	log.Infof("Dns %s server now running on %s.", dns.Net, dns.Addr, dns.ReusePort)
 }
@@ -151,7 +151,7 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 			}
 			err = w.WriteMsg(respMsg)
 			if err != nil {
-				log.Errorf(nil, "Failed to send a response for query")
+				log.Errorf( "Failed to send a response for query")
 			}
 			return
 		}
@@ -187,7 +187,7 @@ func (s *Server) writeErrorResponse(w dns.ResponseWriter, req *dns.Msg, rc int) 
 
 	err := w.WriteMsg(response)
 	if err != nil {
-		log.Errorf(nil, "Failed to send error response for query")
+		log.Errorf( "Failed to send error response for query")
 	}
 }
 
@@ -199,6 +199,6 @@ func (s *Server) writeSuccessResponse(answer *[]dns.RR, w dns.ResponseWriter, re
 
 	err := w.WriteMsg(response)
 	if err != nil {
-		log.Errorf(nil, "Failed to send success response for query")
+		log.Errorf( "Failed to send success response for query")
 	}
 }
