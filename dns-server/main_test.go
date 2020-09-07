@@ -33,9 +33,9 @@ var dbName = "test_db"
 var port uint = util.DefaultDnsPort
 var mgmtPort uint = util.DefaultManagementPort
 var connTimeOut uint = util.DefaultConnTimeout
-var ipAddString = "0.0.0.0"
-var ipMgmtAddString = "0.0.0.0"
-var forwarder = "8.8.8.8"
+var ipAddString = util.DefaultIP
+var ipMgmtAddString = util.DefaultIP
+var forwarder = util.DefaultIP
 var loadBalance = false
 var epanic = "Panic expected"
 var finish = "Finished processing"
@@ -68,7 +68,7 @@ func TestMainDnsServer(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -160,7 +160,7 @@ func TestMainDnsServer1(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -252,7 +252,7 @@ func TestMainDnsServer2(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -346,7 +346,7 @@ func TestMainDnsServer3(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -438,7 +438,7 @@ func TestMainDnsServer4(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -530,7 +530,7 @@ func TestMainDnsServer5(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -623,7 +623,7 @@ func TestMainDnsServer6(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 
@@ -717,7 +717,7 @@ func TestMainDnsServer7(t *testing.T) {
 	})
 	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { //Empty Impl
+	patch4 := gomonkey.ApplyFunc(waitForSignal, func() { // Empty Impl
 	})
 	defer patch4.Reset()
 

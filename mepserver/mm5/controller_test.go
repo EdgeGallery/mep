@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -58,9 +59,14 @@ const errorStateMissMatch = "State miss-match in the response"
 const errorWriteRespErr = "Write Response Error"
 const errorRspMissMatch = "Miss-match in the response"
 const exampleDomainName = "www.example.com"
-const exampleIPAddress = "179.138.147.240"
 const defaultTTL = 30
 const TTL35 = 35
+const maxIPVal = 255
+const ipAddFormatter = "%d.%d.%d.%d"
+
+// Generate test IP, instead of hard coding them
+var exampleIPAddress = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
+	rand.Intn(maxIPVal))
 
 type mockHttpWriter struct {
 	mock.Mock
@@ -501,8 +507,8 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 		assert.Equal(t, nil, err, "Read http response failed")
 		defer r.Body.Close()
 		fmt.Printf("Input Data: %s \n", inputData)
-		assert.Equal(t, string(inputData), "[{\"zone\":\".\",\"rr\":[{\"name\":\"www.example.com.\","+
-			"\"type\":\"A\",\"class\":\"IN\",\"ttl\":35,\"rData\":[\"179.138.147.240\"]}]}]",
+		assert.Equal(t, string(inputData), fmt.Sprintf("[{\"zone\":\".\",\"rr\":[{\"name\":\"www.example.com.\","+
+			"\"type\":\"A\",\"class\":\"IN\",\"ttl\":35,\"rData\":[\"%s\"]}]}]", exampleIPAddress),
 			"DNS request issues")
 
 		w.WriteHeader(http.StatusOK)

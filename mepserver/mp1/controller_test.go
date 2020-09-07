@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -55,9 +56,13 @@ const responseCheckFor200 = "Response status code must be 200"
 const responseCheckFor400 = "Response status code must be 404"
 const errorWriteRespErr = "Write Response Error"
 const exampleDomainName = "www.example.com"
-const exampleIPAddress = "179.138.147.240"
 const defaultTTL = 30
-const TTL35 = 35
+const maxIPVal = 255
+const ipAddFormatter = "%d.%d.%d.%d"
+
+// Generate test IP, instead of hard coding them
+var exampleIPAddress = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
+	rand.Intn(maxIPVal))
 
 func (m *mockHttpWriter) Header() http.Header {
 	// Get the argument inputs
@@ -112,9 +117,9 @@ func TestGetDnsRules(t *testing.T) {
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("[{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\","+
-		"\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"179.138.147.240\","+
-		"\"ttl\":30,\"state\":\"INACTIVE\"}]\n")).Return(0, nil)
+	mockWriter.On("Write", []byte(fmt.Sprintf("[{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\","+
+		"\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\","+
+		"\"ttl\":30,\"state\":\"INACTIVE\"}]\n", exampleIPAddress))).Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
@@ -265,9 +270,9 @@ func TestGetSingleDnsRule(t *testing.T) {
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\","+
-		"\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"179.138.147.240\","+
-		"\"ttl\":30,\"state\":\"INACTIVE\"}\n")).Return(0, nil)
+	mockWriter.On("Write", []byte(fmt.Sprintf("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\","+
+		"\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\","+
+		"\"ttl\":30,\"state\":\"INACTIVE\"}\n", exampleIPAddress))).Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
@@ -389,8 +394,8 @@ func TestPutSingleDnsRule(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"179.138.147.240\","+
-			"\"ttl\":30,\"state\":\"INACTIVE\"}\n")).
+		[]byte(fmt.Sprintf("{\"domainName\":\"www.example.com\",\"ipAddressType\":\"IP_V4\","+
+			"\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"INACTIVE\"}\n", exampleIPAddress))).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -442,8 +447,8 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\","+
-			"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"179.138.147.240\",\"ttl\":30,\"state\":\"ACTIVE\"}\n")).
+		[]byte(fmt.Sprintf("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\","+
+			"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"ACTIVE\"}\n", exampleIPAddress))).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -509,8 +514,9 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\","+
-			"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"179.138.147.240\",\"ttl\":30,\"state\":\"INACTIVE\"}\n")).
+		[]byte(fmt.Sprintf("{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\","+
+			"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"INACTIVE\"}\n",
+			exampleIPAddress))).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 

@@ -16,10 +16,15 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"net"
 	"os"
+	"reflect"
 	"testing"
+	"time"
 
+	"github.com/agiledragon/gomonkey"
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
 
@@ -29,13 +34,22 @@ import (
 )
 
 const (
-	DefaultTestForwarder = "8.8.8.8"
-	TestDomainServer     = "www.edgegallery.org."
-	ErrorForwarding      = "Error in forwarding"
-	ErrorInResponse      = "Error in response"
-	PanicImplement       = "implement me"
-	ExampleDomain        = "www.example.com."
+	testDomainServer  = "www.edgegallery.org."
+	testInvalidDomain = "www.example12dvfse5652.com."
+	errorForwarding   = "Error in forwarding"
+	errorInResponse   = "Error in response"
+	panicImplement    = "implement me"
+	exampleDomain     = "www.example.com."
+	maxIPVal          = 255
+	ipAddFormatter    = "%d.%d.%d.%d"
 )
+
+// Generate test IP, instead of hard coding them
+var dnsConfigTestIP1 = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
+	rand.Intn(maxIPVal))
+
+var defaultTestForwarder = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
+	rand.Intn(maxIPVal))
 
 func TestForward(t *testing.T) {
 	defer func() {
@@ -52,7 +66,7 @@ func TestForward(t *testing.T) {
 	var connTimeOut uint = util.DefaultConnTimeout
 	var ipAddString = util.DefaultIP
 	var ipMgmtAddString = util.DefaultIP
-	var forwarder = DefaultTestForwarder
+	var forwarder = defaultTestForwarder
 	var loadBalance = false
 	parameters := &InputParameters{&dbName, &port, &mgmtPort, &connTimeOut,
 		&ipAddString, &ipMgmtAddString, &forwarder, &loadBalance}
@@ -67,11 +81,22 @@ func TestForward(t *testing.T) {
 		dnsMsg.Id = dns.Id()
 		dnsMsg.RecursionDesired = true
 		dnsMsg.Question = make([]dns.Question, 1)
-		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		dnsMsg.Question[0] = dns.Question{Name: testDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+
+		var c *dns.Client
+		patch1 := gomonkey.ApplyMethod(reflect.TypeOf(c), "Exchange", func(client *dns.Client, m *dns.Msg,
+			address string) (r *dns.Msg, rtt time.Duration, err error) {
+			m.Rcode = dns.RcodeSuccess
+			m.Answer = make([]dns.RR, 1)
+			m.Answer[0] = &dns.A{Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: m.Question[0].Qtype,
+				Class: dns.ClassINET, Ttl: 30}, A: net.ParseIP(dnsConfigTestIP1)}
+			return m, 10, nil
+		})
+		defer patch1.Reset()
 
 		rsp, err := dnsServer.forward(dnsMsg)
-		assert.Equal(t, nil, err, ErrorForwarding)
-		assert.Contains(t, rsp.Answer[0].String(), TestDomainServer, ErrorForwarding)
+		assert.Equal(t, nil, err, errorForwarding)
+		assert.Contains(t, rsp.Answer[0].String(), testDomainServer, errorForwarding)
 	})
 
 	t.Run("NonExistingDomainName", func(t *testing.T) {
@@ -80,26 +105,37 @@ func TestForward(t *testing.T) {
 		dnsMsg.RecursionDesired = true
 		dnsMsg.Question = make([]dns.Question, 1)
 		dnsMsg.Question[0] = dns.Question{Name: "www.edgegallery0000111.org.", Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		var c *dns.Client
+		patch1 := gomonkey.ApplyMethod(reflect.TypeOf(c), "Exchange", func(client *dns.Client, m *dns.Msg,
+			address string) (r *dns.Msg, rtt time.Duration, err error) {
+			m.Rcode = dns.RcodeServerFailure
+			m.Answer = make([]dns.RR, 1)
+			m.Answer[0] = &dns.A{Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: m.Question[0].Qtype,
+				Class: dns.ClassINET, Ttl: 30}, A: net.ParseIP(dnsConfigTestIP1)}
+			return m, 10, nil
+		})
+		defer patch1.Reset()
+
 		_, err := dnsServer.forward(dnsMsg)
-		assert.NotEqual(t, nil, err, ErrorForwarding)
+		assert.NotEqual(t, nil, err, errorForwarding)
 		assert.EqualError(t, err, "forward of request \"www.edgegallery0000111.org.\" was not "+
-			"accepted", ErrorForwarding)
+			"accepted", errorForwarding)
 	})
 
 	t.Run("WrongForwardAddress", func(t *testing.T) {
 		config.forwarder = net.ParseIP("0.0.0.0")
-		defer func() { config.forwarder = net.ParseIP(DefaultTestForwarder) }()
+		defer func() { config.forwarder = net.ParseIP(defaultTestForwarder) }()
 
 		dnsMsg := new(dns.Msg)
 		dnsMsg.Id = dns.Id()
 		dnsMsg.RecursionDesired = true
 		dnsMsg.Question = make([]dns.Question, 1)
-		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		dnsMsg.Question[0] = dns.Question{Name: testDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 
 		_, err := dnsServer.forward(dnsMsg)
-		assert.NotEqual(t, nil, err, ErrorForwarding)
+		assert.NotEqual(t, nil, err, errorForwarding)
 		assert.EqualError(t, err, "could not resolve the request \"www.edgegallery.org.\" and no forwarder is "+
-			"configured", ErrorForwarding)
+			"configured", errorForwarding)
 	})
 
 }
@@ -111,11 +147,11 @@ type mockDnsRespWriter struct {
 }
 
 func (m *mockDnsRespWriter) LocalAddr() net.Addr {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) RemoteAddr() net.Addr {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) WriteMsg(msg *dns.Msg) error {
@@ -125,23 +161,23 @@ func (m *mockDnsRespWriter) WriteMsg(msg *dns.Msg) error {
 }
 
 func (m *mockDnsRespWriter) Write(bytes []byte) (int, error) {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) Close() error {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) TsigStatus() error {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) TsigTimersOnly(b bool) {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func (m *mockDnsRespWriter) Hijack() {
-	panic(PanicImplement)
+	panic(panicImplement)
 }
 
 func TestHandleDNS(t *testing.T) {
@@ -159,7 +195,7 @@ func TestHandleDNS(t *testing.T) {
 	var connTimeOut uint = util.DefaultConnTimeout
 	var ipAddString = util.DefaultIP
 	var ipMgmtAddString = util.DefaultIP
-	var forwarder = DefaultTestForwarder
+	var forwarder = defaultTestForwarder
 	var loadBalance = false
 	parameters := &InputParameters{&dbName, &port, &mgmtPort, &connTimeOut,
 		&ipAddString, &ipMgmtAddString, &forwarder, &loadBalance}
@@ -172,36 +208,53 @@ func TestHandleDNS(t *testing.T) {
 	err := store.Open()
 	assert.Equal(t, nil, err, "Error in opening the db")
 	defer store.Close()
-	rrecord := datastore.ResourceRecord{Name: ExampleDomain, Type: "A", Class: "IN", TTL: 30,
-		RData: []string{"179.138.147.240"}}
+	rrecord := datastore.ResourceRecord{Name: exampleDomain, Type: "A", Class: "IN", TTL: 30,
+		RData: []string{dnsConfigTestIP1}}
 	err = store.SetResourceRecord(".", &rrecord)
 	assert.Equal(t, nil, err, "Error in setting the record")
 
+	var c *dns.Client
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(c), "Exchange", func(client *dns.Client, m *dns.Msg,
+		address string) (r *dns.Msg, rtt time.Duration, err error) {
+		m.Rcode = dns.RcodeSuccess
+		if m.Question[0].Name == testInvalidDomain {
+			m.Rcode = dns.RcodeServerFailure
+		}
+
+		m.Answer = make([]dns.RR, 1)
+		m.Answer[0] = &dns.A{Hdr: dns.RR_Header{Name: m.Question[0].Name, Rrtype: m.Question[0].Qtype,
+			Class: dns.ClassINET, Ttl: 30}, A: net.ParseIP(dnsConfigTestIP1)}
+		return m, 10, nil
+	})
+	defer patch1.Reset()
+
 	t.Run("BasicTest", func(t *testing.T) {
-		req := &dns.Msg{Question: []dns.Question{{Name: ExampleDomain,
+		req := &dns.Msg{Question: []dns.Question{{Name: exampleDomain,
 			Qtype:  dns.TypeA,
 			Qclass: dns.ClassINET}}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, ErrorInResponse)
-		assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), ErrorInResponse)
+		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, errorInResponse)
+		assert.Equal(t, fmt.Sprintf("www.example.com.\t30\tIN\tA\t%s", dnsConfigTestIP1),
+			mockDnsWriter.rspMsg.Answer[0].String(),
+			errorInResponse)
 	})
 
 	t.Run("QuestionEmpty", func(t *testing.T) {
 		req := &dns.Msg{Question: []dns.Question{}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeFormatError, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
+		assert.Equal(t, dns.RcodeFormatError, mockDnsWriter.rspMsg.Rcode, errorInResponse)
 	})
 
 	t.Run("OpCodeError", func(t *testing.T) {
-		req := &dns.Msg{Question: []dns.Question{{Name: ExampleDomain,
+		req := &dns.Msg{Question: []dns.Question{{Name: exampleDomain,
 			Qtype:  dns.TypeA,
 			Qclass: dns.ClassINET}}}
 		req.Opcode = dns.OpcodeStatus
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeRefused, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
+		assert.Equal(t, dns.RcodeRefused, mockDnsWriter.rspMsg.Rcode, errorInResponse)
 	})
 
 	t.Run("NonExistingQuery", func(t *testing.T) {
@@ -210,7 +263,7 @@ func TestHandleDNS(t *testing.T) {
 			Qclass: dns.ClassINET}}}
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, req)
-		assert.Equal(t, dns.RcodeServerFailure, mockDnsWriter.rspMsg.Rcode, ErrorInResponse)
+		assert.Equal(t, dns.RcodeServerFailure, mockDnsWriter.rspMsg.Rcode, errorInResponse)
 	})
 
 	t.Run("ForwardingQuery", func(t *testing.T) {
@@ -218,13 +271,13 @@ func TestHandleDNS(t *testing.T) {
 		dnsMsg.Id = dns.Id()
 		dnsMsg.RecursionDesired = true
 		dnsMsg.Question = make([]dns.Question, 1)
-		dnsMsg.Question[0] = dns.Question{Name: TestDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
+		dnsMsg.Question[0] = dns.Question{Name: testDomainServer, Qtype: dns.TypeA, Qclass: dns.ClassINET}
 
 		mockDnsWriter := &mockDnsRespWriter{}
 		dnsServer.handleDNS(mockDnsWriter, dnsMsg)
-		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, ErrorInResponse)
-		// assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), ErrorInResponse)
-		assert.Contains(t, mockDnsWriter.rspMsg.Answer[0].String(), TestDomainServer, ErrorInResponse)
+		assert.NotEqual(t, nil, mockDnsWriter.rspMsg, errorInResponse)
+		// assert.Equal(t, "www.example.com.\t30\tIN\tA\t179.138.147.240", mockDnsWriter.rspMsg.Answer[0].String(), errorInResponse)
+		assert.Contains(t, mockDnsWriter.rspMsg.Answer[0].String(), testDomainServer, errorInResponse)
 	})
 
 }
