@@ -60,6 +60,24 @@ func (e *Controller) StopController() error {
 }
 
 func (e *Controller) handleSetResourceRecords(c echo.Context) error {
+	// Input Example:
+	// 	[
+	// 	{
+	// 		"zone": ".",
+	// 		"rr": [
+	// 		{
+	// 			"name": "www.example.com.",
+	// 			"type": "A",
+	// 			"class": "IN",
+	// 			"ttl": 30,
+	// 			"rData": [
+	// 				"172.168.15.101"
+	// 		]
+	// 		}
+	// 	]
+	// 	}
+	// ]
+
 	zrs := new([]datastore.ZoneEntry)
 	if err := c.Bind(zrs); err != nil {
 		log.Error("Error in parsing the rr post request body.", nil)
@@ -91,6 +109,23 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 }
 
 func (e *Controller) validateSetRecordInput(zrs *[]datastore.ZoneEntry) error {
+	// Validate input
+	// 	[
+	// 	{
+	// 		"zone": ".",
+	// 		"rr": [
+	// 		{
+	// 			"name": "www.example.com.",
+	// 			"type": "A",
+	// 			"class": "IN",
+	// 			"ttl": 30,
+	// 			"rData": [
+	// 				"172.168.15.101"
+	// 		]
+	// 		}
+	// 	]
+	// 	}
+	// ]
 	for _, zr := range *zrs {
 		if len(zr.Zone) >= util.MaxDnsFQDNLength {
 			return fmt.Errorf("invalid zone value")

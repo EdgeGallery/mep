@@ -18,7 +18,7 @@ package util
 const (
 	DbStringExceptions    = "/.\\"
 	DefaultDnsPort        = 53
-	DefaultManagementPort = 80
+	DefaultManagementPort = 8080
 	DefaultConnTimeout    = 2
 	MinConnTimeout        = 2
 	MaxConnTimeout        = 50
