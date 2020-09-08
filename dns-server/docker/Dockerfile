@@ -52,11 +52,8 @@ WORKDIR $HOME
 
 # Copy in the application exe.
 COPY --from=builder $HOME/dnsserver $HOME/bin
-COPY --from=builder $HOME/conf/ $HOME/conf/
 
 RUN chmod 750 $HOME &&\
-    chmod 750 $HOME/conf &&\
-    chmod 640 $HOME/conf/app.conf &&\
     chmod 550 -R $HOME/bin/ &&\
     mkdir -p -m 750 $HOME/log &&\
     chown -hR $USER_NAME:$GROUP_NAME $HOME
