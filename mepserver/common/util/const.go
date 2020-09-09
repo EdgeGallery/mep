@@ -109,7 +109,7 @@ const MaxPortNumber = 65535
 const MaxPortLength = 5
 
 const (
-	DefaultDnsHost           = "mep-dns"
+	DefaultDnsHost           = "dns-service"
 	DefaultDnsManagementPort = 8080
 )
 
