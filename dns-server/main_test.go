@@ -16,13 +16,14 @@
 package main
 
 import (
-	"log"
 	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/agiledragon/gomonkey"
+	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 
 	"dns-server/datastore"
 	"dns-server/mgmt"
@@ -38,10 +39,12 @@ var ipMgmtAddString = util.DefaultIP
 var forwarder = util.DefaultIP
 var loadBalance = false
 var epanic = "Panic expected"
+var eerror = "Error expected"
+var panicProblem = "a problem"
 var finish = "Finished processing"
 
 func TestMainDnsServer(t *testing.T) {
-	var panic = "Panic: "
+	var panicString = "Panic: "
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -72,14 +75,20 @@ func TestMainDnsServer(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("ManagementPortNumber0", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse management port number." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicString, r)
 			}
 		}()
 		var invalidPortNo uint = 0
@@ -107,8 +116,8 @@ func TestMainDnsServer(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse management port number." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicString, r)
 			}
 		}()
 		var invalidPortNo uint = 65536
@@ -133,7 +142,7 @@ func TestMainDnsServer(t *testing.T) {
 }
 
 func TestMainDnsServer1(t *testing.T) {
-	var panic = "Panic :"
+	var panicSting = "Panic :"
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -164,14 +173,20 @@ func TestMainDnsServer1(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("ForwardIPAddressParsing", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse forwarder address(127.0.0.256)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = "127.0.0.256"
@@ -200,8 +215,8 @@ func TestMainDnsServer1(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Port number conflict." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		parameters := InputParameters{&dbName, &port, &port, &connTimeOut,
@@ -225,7 +240,7 @@ func TestMainDnsServer1(t *testing.T) {
 }
 
 func TestMainDnsServer2(t *testing.T) {
-	var panic = "Panic:"
+	var panicSting = "Panic:"
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -256,14 +271,20 @@ func TestMainDnsServer2(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("InvalidDbName", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse db name(test.db)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 
@@ -293,8 +314,8 @@ func TestMainDnsServer2(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse management ip address(127.0.0.256)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = "127.0.0.256"
@@ -319,7 +340,7 @@ func TestMainDnsServer2(t *testing.T) {
 }
 
 func TestMainDnsServer3(t *testing.T) {
-	var panic = " Panic:"
+	var panicSting = " Panic:"
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -350,14 +371,20 @@ func TestMainDnsServer3(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("DnsIPAddressParsing3", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse ip address(128.15.47.299)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = "128.15.47.299"
@@ -385,8 +412,8 @@ func TestMainDnsServer3(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse ip address(1::2lkh)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = "1::2lkh"
@@ -411,7 +438,7 @@ func TestMainDnsServer3(t *testing.T) {
 }
 
 func TestMainDnsServer4(t *testing.T) {
-	var panic = "Panic : "
+	var panicSting = "Panic : "
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -442,14 +469,20 @@ func TestMainDnsServer4(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("DnsIPAddressParsing1", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse ip address()." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = ""
@@ -477,8 +510,8 @@ func TestMainDnsServer4(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse ip address(a)." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidIpAdd = "a"
@@ -503,7 +536,7 @@ func TestMainDnsServer4(t *testing.T) {
 }
 
 func TestMainDnsServer5(t *testing.T) {
-	var panic = " Panic :"
+	var panicSting = " Panic :"
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -534,11 +567,17 @@ func TestMainDnsServer5(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("DefaultParameters", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r != nil {
-				t.Errorf("%s %v", panic, r)
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		parameters := InputParameters{&dbName, &port, &mgmtPort, &connTimeOut,
@@ -566,8 +605,8 @@ func TestMainDnsServer5(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse db name." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 
@@ -596,7 +635,7 @@ func TestMainDnsServer5(t *testing.T) {
 }
 
 func TestMainDnsServer6(t *testing.T) {
-	var panic = " Panic: "
+	var panicSting = " Panic: "
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -627,14 +666,20 @@ func TestMainDnsServer6(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("PortNumber0", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse port number." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidPortNo uint = 0
@@ -663,8 +708,8 @@ func TestMainDnsServer6(t *testing.T) {
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse port number." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidPortNo uint = 65536
@@ -690,7 +735,7 @@ func TestMainDnsServer6(t *testing.T) {
 }
 
 func TestMainDnsServer7(t *testing.T) {
-	var panic = " Panic : "
+	var panicSting = " Panic : "
 	defer func() {
 		_ = os.RemoveAll(datastore.DBPath)
 	}()
@@ -721,14 +766,20 @@ func TestMainDnsServer7(t *testing.T) {
 	})
 	defer patch4.Reset()
 
+	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
+		assert.Equal(t, 1, code, eerror)
+		panic(panicProblem)
+	})
+	defer patch6.Reset()
+
 	t.Run("InvalidConnectionTimeoutValue", func(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
 				t.Errorf("%s", epanic)
 			}
-			if r != "Failed to parse connection timeout input." {
-				t.Errorf("%s %v", panic, r)
+			if r != panicProblem {
+				t.Errorf("%s %v", panicSting, r)
 			}
 		}()
 		var invalidConnT uint = 0
