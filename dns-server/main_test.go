@@ -38,8 +38,8 @@ var ipAddString = util.DefaultIP
 var ipMgmtAddString = util.DefaultIP
 var forwarder = util.DefaultIP
 var loadBalance = false
-var epanic = "Panic expected"
-var eerror = "Error expected"
+var ePanic = "Panic expected"
+var eError = "Error expected"
 var panicProblem = "a problem"
 var finish = "Finished processing"
 
@@ -76,7 +76,7 @@ func TestMainDnsServer(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -85,7 +85,7 @@ func TestMainDnsServer(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicString, r)
@@ -114,7 +114,7 @@ func TestMainDnsServer(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicString, r)
@@ -174,7 +174,7 @@ func TestMainDnsServer1(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -183,7 +183,7 @@ func TestMainDnsServer1(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -213,7 +213,7 @@ func TestMainDnsServer1(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -272,7 +272,7 @@ func TestMainDnsServer2(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -281,7 +281,7 @@ func TestMainDnsServer2(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -312,7 +312,7 @@ func TestMainDnsServer2(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -372,7 +372,7 @@ func TestMainDnsServer3(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -381,7 +381,7 @@ func TestMainDnsServer3(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -410,7 +410,7 @@ func TestMainDnsServer3(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -470,7 +470,7 @@ func TestMainDnsServer4(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -479,7 +479,7 @@ func TestMainDnsServer4(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -508,7 +508,7 @@ func TestMainDnsServer4(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -568,7 +568,7 @@ func TestMainDnsServer5(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -603,7 +603,7 @@ func TestMainDnsServer5(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -667,7 +667,7 @@ func TestMainDnsServer6(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -676,7 +676,7 @@ func TestMainDnsServer6(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -706,7 +706,7 @@ func TestMainDnsServer6(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
@@ -767,7 +767,7 @@ func TestMainDnsServer7(t *testing.T) {
 	defer patch4.Reset()
 
 	patch6 := gomonkey.ApplyFunc(os.Exit, func(code int) { // Empty Impl
-		assert.Equal(t, 1, code, eerror)
+		assert.Equal(t, 1, code, eError)
 		panic(panicProblem)
 	})
 	defer patch6.Reset()
@@ -776,7 +776,7 @@ func TestMainDnsServer7(t *testing.T) {
 		defer func() {
 			r := recover()
 			if r == nil {
-				t.Errorf("%s", epanic)
+				t.Errorf("%s", ePanic)
 			}
 			if r != panicProblem {
 				t.Errorf("%s %v", panicSting, r)
