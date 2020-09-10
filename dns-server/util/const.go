@@ -28,6 +28,7 @@ const (
 	DNSUDPPacketSize      = 65535
 	ForwardRetryCount     = 3
 	DefaultIP             = "0.0.0.0"
+	MaxPacketSize         = "4K"
 )
 
 const MaxDnsFQDNLength = 253

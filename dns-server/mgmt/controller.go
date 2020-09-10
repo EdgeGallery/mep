@@ -40,6 +40,7 @@ func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, 
 	// Middleware
 	e.echo.Use(middleware.Logger())
 	e.echo.Use(middleware.Recover())
+	e.echo.Use(middleware.BodyLimit(util.MaxPacketSize))
 
 	// Routes
 	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord", e.handleSetResourceRecords)
