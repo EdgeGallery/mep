@@ -10,7 +10,7 @@ replace (
 )
 
 require (
-	github.com/agiledragon/gomonkey v2.0.2+incompatible
+	github.com/agiledragon/gomonkey v2.0.1+incompatible
 	github.com/apache/servicecomb-service-center v0.0.0-20191027084911-c2dc0caef706
 	github.com/go-chassis/paas-lager v1.1.1 // indirect
 	github.com/go-mesh/openlogging v1.0.1 // indirect

@@ -7,6 +7,8 @@ github.com/Shopify/sarama v1.18.0 h1:Ha2FAOngREft7C44ouUXDxSZ/Y/77IDCMV1YS4AnUkI
 github.com/Shopify/sarama v1.18.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/toxiproxy v2.1.4+incompatible h1:TKdv8HiTLgE5wdJuEML90aBgNWsokNbMijUGhmcoBJc=
 github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMxUHB2q5Ap20/P/eIdh4G0pI=
+github.com/agiledragon/gomonkey v2.0.1+incompatible h1:DIQT3ZshgGz9pTwBddRSZWDutIRPx2d7UzmjzgWo9q0=
+github.com/agiledragon/gomonkey v2.0.1+incompatible/go.mod h1:2NGfXu1a80LLr2cmWXGBDaHEjb1idR6+FVlX5T3D9hw=
 github.com/agiledragon/gomonkey v2.0.2+incompatible h1:eXKi9/piiC3cjJD1658mEE2o3NjkJ5vDLgYjCQu0Xlw=
 github.com/agiledragon/gomonkey v2.0.2+incompatible/go.mod h1:2NGfXu1a80LLr2cmWXGBDaHEjb1idR6+FVlX5T3D9hw=
 github.com/apache/servicecomb-service-center v0.0.0-20191027084911-c2dc0caef706 h1:1Hl0mbyGTW6r7eFxohtbLpPW6ylyI7l2tKa9JtegGSU=
