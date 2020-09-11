@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// Package path implements rest api route controller
-package mp1
+// Package path implements new workspace for Mm5
+package mm5
 
 import (
 	"net/http"
@@ -33,19 +33,14 @@ type MepSpace struct {
 	W http.ResponseWriter `json:"w"`
 
 	Ctx           context.Context `json:"ctx"`
-	ServiceId     string          `json:"serviceId"`
 	RestBody      interface{}     `json:"restBody"`
 	AppInstanceId string          `json:"appInstanceId"`
-	InstanceId    string          `json:"instanceId"`
-	SubscribeId   string          `json:"subscribeId"`
 	DNSRuleId     string          `json:"dnsRuleId"`
-
-	QueryParam url.Values `json:"queryParam"`
-
-	CoreRequest interface{}     `json:"coreRequest"`
-	CoreRsp     interface{}     `json:"coreRsp"`
-	HttPErrInf  *proto.Response `json:"httpErrInf"`
-	HttPRsp     interface{}     `json:"httpRsp"`
+	QueryParam    url.Values      `json:"queryParam"`
+	CoreRequest   interface{}     `json:"coreRequest"`
+	CoreRsp       interface{}     `json:"coreRsp"`
+	HttPErrInf    *proto.Response `json:"httpErrInf"`
+	HttPRsp       interface{}     `json:"httpRsp"`
 }
 
 // new a work space

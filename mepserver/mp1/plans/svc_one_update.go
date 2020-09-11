@@ -19,14 +19,15 @@ package plans
 
 import (
 	"context"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
 
-	"mepserver/mp1/arch/workspace"
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
-	meputil "mepserver/mp1/util"
 )
 
 type UpdateInstance struct {

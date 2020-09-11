@@ -29,9 +29,9 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
-	"mepserver/mp1/arch/workspace"
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
-	meputil "mepserver/mp1/util"
 )
 
 type DiscoverDecode struct {
@@ -137,8 +137,8 @@ func (t *DiscoverService) filterAppInstanceId() {
 func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.FindInstancesRequest)
 	if !ok {
-		log.Error("cast to request fail", nil)
-		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to request fail")
+		log.Error("cast input to find-instance-request failed", nil)
+		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance request failed")
 		return workspace.TaskFinish
 	}
 	log.Debugf("query request arrived to fetch all the service information with appId %s.", req.AppId)
@@ -186,8 +186,8 @@ type ToStrDiscover struct {
 func (t *ToStrDiscover) OnRequest(data string) workspace.TaskCode {
 	value, ok := t.CoreRsp.(*proto.FindInstancesResponse)
 	if !ok {
-		log.Error("cast to request fail", nil)
-		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to request fail")
+		log.Error("cast input to find-instance-response failed", nil)
+		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance response failed")
 		return workspace.TaskFinish
 	}
 	t.HttpErrInf, t.HttpRsp = Mp1CvtSrvDiscover(value)

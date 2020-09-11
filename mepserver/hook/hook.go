@@ -19,9 +19,10 @@ package hook
 
 import (
 	"context"
-	"mepserver/mp1/util"
 	"sync"
 	"time"
+
+	"mepserver/common/util"
 
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/proto"

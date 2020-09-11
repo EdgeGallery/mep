@@ -23,10 +23,11 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
-	"mepserver/mp1/arch/workspace"
+	"mepserver/common"
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
 	"mepserver/mp1/plans"
-	meputil "mepserver/mp1/util"
 )
 
 type APIHookFunc func() models.EndPointInfo
@@ -61,33 +62,37 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		// appSubscriptions
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppSubscribePath, Func: doAppSubscribe},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath, Func: getAppSubscribes},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath + "/:subscriptionId", Func: getOneAppSubscribe},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppSubscribePath + "/:subscriptionId",
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath + meputil.SubscriptionIdPath,
+			Func: getOneAppSubscribe},
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppSubscribePath + meputil.SubscriptionIdPath,
 			Func: delOneAppSubscribe},
 		// appServices
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppServicesPath, Func: serviceRegister},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath, Func: serviceDiscover},
-		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + "/:serviceId", Func: serviceUpdate},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + "/:serviceId", Func: getOneService},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppServicesPath + "/:serviceId", Func: serviceDelete},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceUpdate},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: getOneService},
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceDelete},
 		// MEC Application Support API - appSubscriptions
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.EndAppSubscribePath, Func: appEndSubscribe},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath, Func: getAppEndSubscribes},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath + "/:subscriptionId",
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath + meputil.SubscriptionIdPath,
 			Func: getEndAppOneSubscribe},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.EndAppSubscribePath + "/:subscriptionId",
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.EndAppSubscribePath + meputil.SubscriptionIdPath,
 			Func: delEndAppOneSubscribe},
+		// DNS
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath, Func: getDnsRules},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
 	}
 }
 
 func appEndSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		(&plans.DecodeRestReq{}).WithBody(&models.AppTerminationNotificationSubscription{}),
+	workPlan.Try((&plans.DecodeRestReq{}).WithBody(&models.AppTerminationNotificationSubscription{}),
 		(&plans.AppSubscribeLimit{}).WithType(meputil.AppTerminationNotificationSubscription),
 		(&plans.SubscribeIst{}).WithType(meputil.AppTerminationNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusCreated})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusCreated})
 
 	workspace.WkRun(workPlan)
 }
@@ -98,7 +103,7 @@ func getAppEndSubscribes(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.GetSubscribes{}).WithType(meputil.AppTerminationNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -109,7 +114,7 @@ func getEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.GetOneSubscribe{}).WithType(meputil.AppTerminationNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -120,7 +125,7 @@ func delEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.DelOneSubscribe{}).WithType(meputil.AppTerminationNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusNoContent})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 
 	workspace.WkRun(workPlan)
 }
@@ -132,7 +137,7 @@ func doAppSubscribe(w http.ResponseWriter, r *http.Request) {
 		(&plans.DecodeRestReq{}).WithBody(&models.SerAvailabilityNotificationSubscription{}),
 		(&plans.AppSubscribeLimit{}).WithType(meputil.SerAvailabilityNotificationSubscription),
 		(&plans.SubscribeIst{}).WithType(meputil.SerAvailabilityNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusCreated})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusCreated})
 
 	workspace.WkRun(workPlan)
 }
@@ -143,7 +148,7 @@ func getAppSubscribes(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.GetSubscribes{}).WithType(meputil.SerAvailabilityNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -154,7 +159,7 @@ func getOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.GetOneSubscribe{}).WithType(meputil.SerAvailabilityNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -165,7 +170,7 @@ func delOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		(&plans.DelOneSubscribe{}).WithType(meputil.SerAvailabilityNotificationSubscription))
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusNoContent})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 
 	workspace.WkRun(workPlan)
 }
@@ -178,7 +183,7 @@ func serviceRegister(w http.ResponseWriter, r *http.Request) {
 		&plans.RegisterLimit{},
 		&plans.RegisterServiceId{},
 		&plans.RegisterServiceInst{})
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusCreated})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusCreated})
 
 	workspace.WkRun(workPlan)
 }
@@ -191,7 +196,7 @@ func serviceDiscover(w http.ResponseWriter, r *http.Request) {
 		&DiscoverService{},
 		&ToStrDiscover{},
 		&RspHook{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -202,7 +207,7 @@ func serviceUpdate(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		(&plans.DecodeRestReq{}).WithBody(&models.ServiceInfo{}),
 		&plans.UpdateInstance{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
@@ -213,7 +218,7 @@ func getOneService(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.GetOneDecode{},
 		&plans.GetOneInstance{})
-	workPlan.Finally(&plans.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 
@@ -225,7 +230,39 @@ func serviceDelete(w http.ResponseWriter, r *http.Request) {
 	workPlan.Try(
 		&plans.DecodeRestReq{},
 		&plans.DeleteService{})
-	workPlan.Finally(&plans.SendHttpRsp{StatusCode: http.StatusNoContent})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
+
+	workspace.WkRun(workPlan)
+}
+
+func getDnsRules(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeDnsRestReq{},
+		&plans.DNSRulesGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func getDnsRule(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeDnsRestReq{},
+		&plans.DNSRuleGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		(&plans.DecodeDnsRestReq{}).WithBody(&models.DnsRule{}),
+		&plans.DNSRuleUpdate{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }

@@ -18,8 +18,9 @@
 package util
 
 import (
-	"mepserver/mp1/arch/workspace"
 	"time"
+
+	"mepserver/common/arch/workspace"
 )
 
 const (
@@ -38,15 +39,34 @@ const (
 	SerErrServiceInstanceFailed                   = 13
 	RequestParamErr                               = 14
 	SubscriptionErr                               = 15
+	ResourceExists                                = 16
 )
 
 const (
 	RootPath            = "/mep"
+	Mm5RootPath         = "/mepcfg"
 	MecServicePath      = "/mec_service_mgmt/v1"
 	MecAppSupportPath   = "/mec_app_support/v1"
+	MecRuleConfigPath   = "/mec_app_config/v1"
 	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
 	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
+	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
+	DNSConfigRulesPath  = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
+
+	DNSRuleIdPath      = "/:dnsRuleId"
+	SubscriptionIdPath = "/:subscriptionId"
+	ServiceIdPath      = "/:serviceId"
+)
+
+const (
+	ActiveState   = "ACTIVE"
+	InactiveState = "INACTIVE"
+)
+
+const (
+	IPv4Type = "IP_V4"
+	IPv6Type = "IP_V6"
 )
 
 const Uris string = "uris"
@@ -71,3 +91,33 @@ const pwdCount int = 2
 const HookTimerLimit time.Duration = 5
 
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
+
+const EndDNSRuleKeyPath string = "/cse-sr/etsi/dns-rule/"
+
+const ErrorRequestBodyMessage = "request body invalid"
+
+// As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
+// one length and one null terminating character. Hence it is limited as 253.
+const MaxFQDNLength = 253
+
+// Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
+const MaxIPLength = 45
+
+const MaxDNSRuleId = 36
+
+const MaxPortNumber = 65535
+const MaxPortLength = 5
+
+const (
+	DefaultDnsHost           = "dns-service"
+	DefaultDnsManagementPort = 8080
+)
+
+const (
+	RRTypeA    = "A"
+	RRTypeAAAA = "AAAA"
+)
+
+const (
+	RRClassIN = "IN"
+)

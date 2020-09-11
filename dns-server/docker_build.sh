@@ -14,4 +14,4 @@
 # limitations under the License.
 
 MEP_VERSION=latest
-docker build --no-cache -t edgegallery/mep:${MEP_VERSION} -f docker/Dockerfile .
+docker build --no-cache -t edgegallery/mep-dns-server:${MEP_VERSION} -f docker/Dockerfile .

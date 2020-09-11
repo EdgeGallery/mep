@@ -126,7 +126,7 @@ func HttpErrResponse(w http.ResponseWriter, statusCode int, obj interface{}) {
 		log.Errorf(nil, "json masrshalling failed")
 		return
 	}
-	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(http.StatusOK))
+	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(statusCode))
 	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_JSON)
 	w.WriteHeader(statusCode)
 	_, err = fmt.Fprintln(w, string(objJSON))
@@ -619,4 +619,16 @@ func GetCertPwd() ([]byte, error) {
 	}
 	log.Info("Succeed to decrypt cert password.")
 	return certPwd, nil
+}
+
+// Generate a strong ETag for the http message header. Using sha256
+// hashing for generating the code.
+// Example: etag -> "958028a29507104f180515b53eb29bdc15d1212679e6c2c8074782c3c1db1868"
+func GenerateStrongETag(body []byte) string {
+	return fmt.Sprintf("\"%x\"", sha256.Sum256(body))
+}
+
+// Checks whether the status code is in the success range from 200 to 299
+func IsHttpStatusOK(statusCode int) bool {
+	return statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices
 }

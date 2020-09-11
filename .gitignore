@@ -1,7 +1,7 @@
 .idea/
 mepserver/.idea
 mepserver/data
-mepserver/*.log
+mepserver/log/*.log
 mepserver/etc
 dns-server/data
 mepauth/conf/*.crt

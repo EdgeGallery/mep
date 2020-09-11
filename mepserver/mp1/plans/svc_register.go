@@ -30,9 +30,10 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
-	"mepserver/mp1/arch/workspace"
+
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/models"
-	meputil "mepserver/mp1/util"
 )
 
 type DecodeRestReq struct {
@@ -181,8 +182,8 @@ func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
-		log.Error("get rest body failed", nil)
-		t.SetFirstErrorCode(1, "get rest body failed")
+		log.Error(meputil.ErrorRequestBodyMessage, nil)
+		t.SetFirstErrorCode(1, meputil.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
 	_, err := json.Marshal(serviceInfo)
@@ -225,8 +226,8 @@ type RegisterServiceInst struct {
 func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
-		log.Error("get rest body failed", nil)
-		t.SetFirstErrorCode(1, "get rest body failed")
+		log.Error(meputil.ErrorRequestBodyMessage, nil)
+		t.SetFirstErrorCode(1, meputil.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}

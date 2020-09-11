@@ -19,13 +19,14 @@ package plans
 
 import (
 	"context"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 
-	"mepserver/mp1/arch/workspace"
-	"mepserver/mp1/util"
+	"mepserver/common/arch/workspace"
+	"mepserver/common/util"
 )
 
 type DeleteService struct {

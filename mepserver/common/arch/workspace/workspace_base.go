@@ -37,7 +37,7 @@ type SpaceIf interface {
 type ErrCode int
 
 const (
-	TaskOK       ErrCode = iota
+	TaskOK ErrCode = iota
 	TaskFail
 )
 
