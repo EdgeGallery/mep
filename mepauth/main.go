@@ -63,7 +63,7 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
-	configFilePath := filepath.FromSlash("/usr/mep/mepauth.properties")
+	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
 		log.Error("Failed to read the config parameters from properties file")

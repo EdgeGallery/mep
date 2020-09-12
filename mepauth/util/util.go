@@ -50,8 +50,8 @@ const ComponentFilePath string = "cprop/c_properties"
 const SaltFilePath string = "sprop/s_properties"
 const EncryptedWorkKeyFilePath string = "wprop/w_properties"
 const WorkKeyNonceFilePath string = "wnprop/wn_properties"
-const EncryptedJwtPrivateKeyPwdFilePath string = "keys/encrypted_jwt_private_key_pwd"
-const JwtPrivateKeyPwdNonceFilePath string = "keys/jwt_private_key_nonce_pwd"
+const EncryptedJwtPrivateKeyPwdFilePath string = "encrypted_jwt_private_key_pwd"
+const JwtPrivateKeyPwdNonceFilePath string = "jwt_private_key_nonce_pwd"
 type AppConfigProperties map[string]*[]byte
 
 var KeyComponentFromUserStr *[]byte

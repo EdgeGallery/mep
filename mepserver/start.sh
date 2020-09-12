@@ -43,4 +43,10 @@ fi
 sed -i "s/^httpaddr.*=.*$/httpaddr = $(hostname)/g" conf/app.conf
 set -e
 umask 0027
+
+# mv secrets from temp dir to target dir
+if [ -d "/usr/mep/ssl_tmp/" ]; then
+  cp /usr/mep/ssl_tmp/* /usr/mep/ssl/
+fi
+
 $HOME/bin/app
