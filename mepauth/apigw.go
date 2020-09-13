@@ -83,14 +83,21 @@ func setApiGwConsumer(apiGwUrl string) error {
 }
 
 func setupKongMepServer(apiGwUrl string) error {
-	// add mep server service and route to kong
-	mepServerHost := util.GetAppConfig("mepserver_host")
+	// add mep server service and route to kong.
+	// since mep is also in the same pos, same ip address will work
+	mepServerHost := util.GetAppConfig("HTTPSAddr")
 	if len(mepServerHost) == 0 {
 		msg := "mep server host configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	err := addServiceRoute(util.MepserverName, "https://"+mepServerHost+"/"+util.MepserverRootPath)
+	mepServerPort := util.GetAppConfig("mepserver_port")
+	if len(mepServerPort) == 0 {
+		msg := "mep server port configuration is not set"
+		log.Error(msg)
+		return errors.New(msg)
+	}
+	err := addServiceRoute(util.MepserverName, "https://"+mepServerHost+":"+mepServerPort+"/"+util.MepserverRootPath)
 	if err != nil {
 		log.Error("Add mep server route to kong failed")
 		return err
@@ -142,17 +149,24 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	mepauthURL := "https://" + util.MepauthName + ":" + httpsPort
-	err := addServiceRoute(util.MepauthName, mepauthURL)
+	// Since kong is also deployed in same pod, it can reach by the ip address
+	mepAuthHost := util.GetAppConfig("HTTPSAddr")
+	if len(mepAuthHost) == 0 {
+		msg := "mep auth host configuration is not set"
+		log.Error(msg)
+		return errors.New(msg)
+	}
+	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
+	err := addServiceRoute(util.MepauthName, mepAuthURL)
 	if err != nil {
 		log.Error("Add mep server route to kong failed.")
 		return err
 	}
 	// enable mep auth rate-limiting plugin
 	mepAuthPluginURL := apiGwURL + "/services/" + util.MepauthName + "/plugins"
-	mepauthRatePluReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+	mepAuthRatePluReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
 		util.RateLimitPlugin, util.MepauthRateConf))
-	err = util.SendPostRequest(mepAuthPluginURL, mepauthRatePluReq)
+	err = util.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
 	if err != nil {
 		log.Error("Enable mep auth appid-header plugin failed.")
 		return err
