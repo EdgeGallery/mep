@@ -71,12 +71,8 @@ func main() {
 	}
 	// Clearing all the sensitive information on exit for error case. For the success case
 	// function handling the sensitive information will clear after the usage.
+	// clean of mepauth.properties file use kubectl apply -f empty-mepauth-prop.yaml
 	defer clearAppConfigOnExit(appConfig)
-	err = os.Truncate(configFilePath, 0)
-	if err != nil {
-		log.Error("Failed to clear the config file")
-		return
-	}
 	validation := util.ValidateInputArgs(appConfig)
 	if !validation {
 		return
