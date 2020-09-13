@@ -109,7 +109,7 @@ const MaxPortNumber = 65535
 const MaxPortLength = 5
 
 const (
-	DefaultDnsHost           = "dns-service"
+	DefaultDnsHost           = "localhost"
 	DefaultDnsManagementPort = 8080
 )
 
