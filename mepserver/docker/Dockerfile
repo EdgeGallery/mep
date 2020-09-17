@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.14.2-alpine3.11 as builder
+FROM golang:1.14.2 as builder
+
 
 ENV GOPROXY https://goproxy.io
 ENV GO111MODULE on
 ENV HOME=/usr/mep
 
-RUN apk update &&\
-    apk add --no-cache libc-dev gcc shadow
+RUN apt update &&\
+    apt install libc-dev gcc
 
 RUN mkdir -p $HOME
 
