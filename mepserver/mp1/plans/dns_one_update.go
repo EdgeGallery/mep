@@ -202,7 +202,13 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	if dnsRuleOnDataStore.State == dnsConfigInPut.State {
 		t.W.Header().Set("ETag", meputil.GenerateStrongETag(dnsRuleEntry))
-		t.HttpRsp = dnsRuleOnDataStore
+		t.HttpRsp = models.NewDnsRule(
+			t.DNSRuleId,
+			dnsRuleOnDataStore.DomainName,
+			dnsRuleOnDataStore.IpAddressType,
+			dnsRuleOnDataStore.IpAddress,
+			dnsRuleOnDataStore.TTL,
+			dnsRuleOnDataStore.State)
 		return workspace.TaskFinish
 	}
 
