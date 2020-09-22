@@ -85,7 +85,7 @@ func setApiGwConsumer(apiGwUrl string) error {
 func setupKongMepServer(apiGwUrl string) error {
 	// add mep server service and route to kong.
 	// since mep is also in the same pos, same ip address will work
-	mepServerHost := util.GetAppConfig("HTTPSAddr")
+	mepServerHost := util.GetAppConfig("mepserver_host")
 	if len(mepServerHost) == 0 {
 		msg := "mep server host configuration is not set"
 		log.Error(msg)
