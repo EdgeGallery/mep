@@ -24,13 +24,11 @@ func TestValidateAk(t *testing.T) {
 func TestValidateSk(t *testing.T) {
 	Convey("validate sk", t, func() {
 		validSk := []byte("DXPb4sqElKhcHe07Kw5uorayETwId1JOjjOIRomRs5wyszoCR5R7AtVa28KT3lSc")
-		ok, err := ValidateSk(&validSk)
-		So(ok, ShouldBeTrue)
+		err := ValidateSk(&validSk)
 		So(err, ShouldBeNil)
 		notValidSk := []byte("lessthan64strings")
-		ok, err = ValidateSk(&notValidSk)
-		So(ok, ShouldBeFalse)
-		So(err, ShouldBeNil)
+		err = ValidateSk(&notValidSk)
+		So(err, ShouldNotBeNil)
 	})
 }
 

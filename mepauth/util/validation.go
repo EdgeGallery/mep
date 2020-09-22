@@ -52,8 +52,12 @@ func ValidateAk(ak string) error {
 }
 
 // Validate Sk
-func ValidateSk(sk *[]byte) (bool, error) {
-	return regexp.Match(SkRegex, *sk)
+func ValidateSk(sk *[]byte) error {
+	isMatch, errMatch := regexp.Match(SkRegex, *sk)
+	if errMatch != nil || !isMatch {
+		return errors.New("validate sk failed")
+	}
+	return nil
 }
 
 // Validate Server Name

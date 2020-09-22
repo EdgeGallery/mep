@@ -41,8 +41,8 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		log.Error("Ak is invalid, appInstanceId is " + appInsID + ".")
 		return validateAkErr
 	}
-	skIsValid, validateSkErr := util.ValidateSk(sk)
-	if validateSkErr != nil || !skIsValid {
+	validateSkErr := util.ValidateSk(sk)
+	if validateSkErr != nil {
 		log.Error("Sk is invalid, appInstanceId is " + appInsID + ".")
 		return validateSkErr
 	}
