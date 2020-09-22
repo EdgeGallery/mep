@@ -14,4 +14,5 @@ require (
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	github.com/agiledragon/gomonkey v2.0.1+incompatible
 )
