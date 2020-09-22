@@ -54,7 +54,7 @@ sudo ./docker-build.sh
 ### 建立mep服务器
 
 ```
-cd mepauth
+cd mepserver
 sudo ./docker-build.sh
 ```
 
@@ -70,10 +70,11 @@ docker run -itd --name mepauth \
              -v ${MEP_CERTS_DIR}/mepserver_tls.crt:${MEPAUTH_SSL_DIR}/server.crt:ro \
              -v ${MEP_CERTS_DIR}/mepserver_tls.key:${MEPAUTH_SSL_DIR}/server.key:ro \
              -v ${MEP_CERTS_DIR}/ca.crt:${MEPAUTH_SSL_DIR}/ca.crt:ro \
-             -v ${MEPAUTH_CONF_PATH}:/usr/mep/mepauth.properties \
+             -v ${MEPAUTH_CONF_PATH}:/usr/mep/mprop/mepauth.properties \
              -e "MEPAUTH_APIGW_HOST=kong-service" \
              -e "MEPAUTH_APIGW_PORT=8444"  \
              -e "MEPAUTH_CERT_DOMAIN_NAME=${DOMAIN_NAME}" \
+             -e "MEPSERVER_HOST=mepserver" \
              edgegallery/mepauth:latest
 ```
 
