@@ -69,6 +69,14 @@ if [ ! "$valid_cert_host_name" -eq "0" ] ; then
    exit 1
 fi
 
+MEPSERVER_HOST="${MEPSERVER_HOST:-localhost}"
+validate_host_name "$MEPSERVER_HOST"
+valid_mepserver_host_name="$?"
+if [ ! "$valid_mepserver_host_name" -eq "0" ] ; then
+   echo "invalid mep server host name"
+   exit 1
+fi
+
 cd /usr/mep
 
 set +e
@@ -79,6 +87,7 @@ sed -i "s/^apigw_port.*=.*$/apigw_port = ${MEPAUTH_APIGW_PORT}/g" conf/app.conf
 sed -i "s/^server_name.*=.*$/server_name = ${MEPAUTH_CERT_DOMAIN_NAME}/g" conf/app.conf
 
 sed -i "s/^HTTPSAddr.*=.*$/HTTPSAddr = $(hostname -i)/g" conf/app.conf
+sed -i "s/^mepserver_host.*=.*$/mepserver_host = ${MEPSERVER_HOST}/g" conf/app.conf
 
 set -e
 
