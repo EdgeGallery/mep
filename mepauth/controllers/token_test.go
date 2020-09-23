@@ -294,7 +294,7 @@ func TestGenerateJwtToken(t *testing.T) {
 	}
 	err := beego.LoadAppConfig("ini", "../conf/app.conf")
 	if err != nil {
-		panic(err)
+		log.Error(err.Error())
 	}
 	Convey("generate jwt token", t, func(){
 		Convey("for success", func(){
