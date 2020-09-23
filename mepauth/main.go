@@ -19,10 +19,13 @@ package main
 import (
 	"bufio"
 	"bytes"
-	log "github.com/sirupsen/logrus"
-	"mepauth/controllers"
+	"io"
 	"os"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
+
+	"mepauth/controllers"
 
 	"github.com/astaxie/beego"
 
@@ -32,19 +35,9 @@ import (
 	"mepauth/util"
 )
 
-func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
+func scanConfig(r io.Reader) (util.AppConfigProperties, error) {
 	config := util.AppConfigProperties{}
-
-	if len(filename) == 0 {
-		return config, nil
-	}
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Error("Failed to open the file.")
-		return nil, err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if bytes.Contains(line, []byte("=")) {
@@ -54,7 +47,22 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 			config[string(key)] = &val
 		}
 	}
-	if err := scanner.Err(); err != nil {
+	return config, scanner.Err()
+}
+
+func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
+
+	if len(filename) == 0 {
+		return nil, nil
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Error("Failed to open the file.")
+		return nil, err
+	}
+	defer file.Close()
+	config, err := scanConfig(file)
+	if  err != nil {
 		log.Error("Failed to read the file.")
 		clearAppConfigOnExit(config)
 		return nil, err

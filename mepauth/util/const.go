@@ -39,7 +39,7 @@ const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUy
 const ValidationCounter int64 = 3
 const ValidateListClearTimer int64 = 300
 const BlockListClearTimer int64 = 900
-const specialCharRegex string = `^.*['~!@#$%^&*()-_=+\|[{}\];:'",<.>/?].*$`
+const specialCharRegex string = `^.*['~!@#$%^&*()\-_=+\|[{}\];:'",<.>/?].*$`
 const singleDigitRegex string = `^.*\d.*$`
 const lowerCaseRegex string = `^.*[a-z].*$`
 const upperCaseRegex string = `^.*[A-Z].*$`
