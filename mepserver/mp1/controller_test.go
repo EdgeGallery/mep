@@ -34,7 +34,7 @@ import (
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 	srv "github.com/apache/servicecomb-service-center/server/service"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
-	"github.com/prometheus/common/log"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1081,7 +1081,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 	respError := models.ProblemDetails{}
 
 	_ = json.Unmarshal(mockWriter.response, &respError)
-	log.Info(respError)
+	log.Info(respError.String())
 	assert.Equal(t, "Bad Request", respError.Title, "Expected error not returned")
 
 }
