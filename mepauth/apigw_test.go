@@ -114,6 +114,19 @@ func TestSetApiGwConsumer(t *testing.T) {
 			err := setApiGwConsumer("https://127.0.0.1:8444")
 			So(err, ShouldNotBeNil)
 		})
+		Convey("for fail - mepauth_key empty", func() {
+			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+				return nil
+			})
+			patches.ApplyFunc(util.GetPublicKey, func() ([]byte, error) {
+				return []byte("public_key"), nil
+			})
+			beego.AppConfig.Set("mepauth_key", "")
+			defer patches.Reset()
+			defer beego.AppConfig.Set("mepauth_key", "mepauth")
+			err := setApiGwConsumer("https://127.0.0.1:8444")
+			So(err, ShouldNotBeNil)
+		})
 	})
 }
 
@@ -162,7 +175,9 @@ func TestSetupKongMepAuth(t *testing.T) {
 			patches.ApplyFunc(addServiceRoute, func(_, _ string) error {
 				return nil
 			})
+			beego.AppConfig.Set("HTTPSAddr", "127.0.0.1")
 			defer patches.Reset()
+			defer beego.AppConfig.Set("HTTPSAddr", "")
 			err := setupKongMepAuth("https://127.0.0.1:8444", nil)
 			So(err, ShouldBeNil)
 		})
