@@ -26,6 +26,8 @@ import (
 	"mepauth/util"
 )
 
+const ServicesPath string = "/services"
+
 func initAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
@@ -103,7 +105,7 @@ func setupKongMepServer(apiGwUrl string) error {
 		return err
 	}
 	// enable mep server jwt plugin
-	mepserverPluginUrl := apiGwUrl + "/services/" + util.MepserverName + "/plugins"
+	mepserverPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, util.JwtPlugin)
 	err = util.SendPostRequest(mepserverPluginUrl, []byte(jwtConfig))
 	if err != nil {
@@ -163,7 +165,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		return err
 	}
 	// enable mep auth rate-limiting plugin
-	mepAuthPluginURL := apiGwURL + "/services/" + util.MepauthName + "/plugins"
+	mepAuthPluginURL := apiGwURL + ServicesPath + "/" + util.MepauthName + "/plugins"
 	mepAuthRatePluReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
 		util.RateLimitPlugin, util.MepauthRateConf))
 	err = util.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
@@ -217,7 +219,7 @@ func addServiceRoute(serviceName string, targetURL string) error {
 		return getApiGwUrlErr
 	}
 
-	kongServiceURL := apiGwURL + "/services"
+	kongServiceURL := apiGwURL + ServicesPath
 	serviceReq := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`,
 		targetURL, serviceName))
 	errMepService := util.SendPostRequest(kongServiceURL, serviceReq)
@@ -226,7 +228,7 @@ func addServiceRoute(serviceName string, targetURL string) error {
 		return errMepService
 	}
 
-	kongRouteURL := apiGwURL + "/services/" + serviceName + "/routes"
+	kongRouteURL := apiGwURL + ServicesPath + "/" + serviceName + "/routes"
 	preserveHost := ""
 	if serviceName == util.MepauthName {
 		preserveHost = ` ,"preserve_host": true`

@@ -37,6 +37,8 @@ import (
 )
 
 const Authorization string = "Authorization"
+const XRealIp string = "X-Real-Ip"
+const InternalError string = "Internal server error."
 
 type TokenController struct {
 	beego.Controller
@@ -45,7 +47,7 @@ type TokenController struct {
 // Process token request
 func (c *TokenController) Post() {
 	header := c.Ctx.Input.Header(Authorization)
-	clientIp := c.Ctx.Request.Header.Get("X-Real-Ip")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
 
 	// Below we first check the formats of the header is correct or not
 	ak, signHeader, sig := parseAuthHeader(header)
@@ -263,12 +265,12 @@ func validateDateTimeFormat(req *http.Request) bool {
 
 func (c *TokenController) validateSignature(ak string, sk []byte, signHeader string, sig string) bool {
 	signIsValid, err := akSignatureIsValid(c.Ctx.Request, ak, sk, signHeader, sig)
-	clientIp := c.Ctx.Request.Header.Get("X-Real-Ip")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
 
 	// clear sk
 	util.ClearByteArray(sk)
 	if err != nil {
-		c.writeResponse("Internal server error.", util.IntSerErr)
+		c.writeResponse(InternalError, util.IntSerErr)
 		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
 			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
 			" Result[Failure: Generating signature failed.]")
@@ -288,14 +290,14 @@ func (c *TokenController) validateSignature(ak string, sk []byte, signHeader str
 }
 
 func (c *TokenController) getTokenInfo(appInsId string, ak string) *models.TokenInfo {
-	clientIp := c.Ctx.Request.Header.Get("X-Real-Ip")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
 	if clientIp == "" {
 		clientIp = "UNKNOWN_IP"
 	}
 
 	token, err := generateJwtToken(appInsId, clientIp)
 	if err != nil {
-		c.writeResponse("Internal server error.", util.IntSerErr)
+		c.writeResponse(InternalError, util.IntSerErr)
 		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
 			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
 			" Result [Failure: Generation of jwt token failed.]")
@@ -314,12 +316,12 @@ func (c *TokenController) checkAkExistAndWriteErrorRes(akExist bool) {
 	if !akExist {
 		c.writeErrorResponse("Invalid access or signature.", util.Unauthorized)
 	} else {
-		c.writeErrorResponse("Internal server error.", util.IntSerErr)
+		c.writeErrorResponse(InternalError, util.IntSerErr)
 	}
 }
 
 func (c *TokenController) sendResponseMsg(ak string, tokenInfo *models.TokenInfo) {
-	clientIp := c.Ctx.Request.Header.Get("X-Real-Ip")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
 	c.Data["json"] = tokenInfo
 	c.ServeJSON()
 	bKey := *(*[]byte)(unsafe.Pointer(&tokenInfo.AccessToken))
