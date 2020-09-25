@@ -191,32 +191,13 @@ func getFieldFromPath(p reflect.Value, v reflect.Value, path string) JSONPathInf
 	case reflect.Invalid:
 		return JSONPathInfo{e: &JpErr{"Kind invalid", path}}
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Bool, reflect.String, reflect.Slice, reflect.Map, reflect.Ptr:
 		info.ParentNode = p
 		info.CurNode = v
 		return info
 
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		info.ParentNode = p
-		info.CurNode = v
-		return info
-
-	case reflect.Bool:
-		info.ParentNode = p
-		info.CurNode = v
-		return info
-	case reflect.String:
-		info.ParentNode = p
-		info.CurNode = v
-		return info
-	case reflect.Slice, reflect.Map:
-		info.ParentNode = p
-		info.CurNode = v
-		return info
-	case reflect.Ptr:
-		info.ParentNode = p
-		info.CurNode = v
-		return info
 	case reflect.Chan, reflect.Func:
 		return JSONPathInfo{e: &JpErr{"Kind Chan or Func", path}}
 	default:

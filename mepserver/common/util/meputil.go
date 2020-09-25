@@ -59,8 +59,8 @@ const ComponentFilePath string = "cprop/c_properties"
 const SaltFilePath string = "sprop/s_properties"
 const EncryptedWorkKeyFilePath string = "wprop/w_properties"
 const WorkKeyNonceFilePath string = "wnprop/wn_properties"
-const EncryptedCertPwdFilePath string = "ssl/cert_pwd"
-const CertPwdNonceFilePath string = "ssl/cert_pwd_nonce"
+const EncryptedCertSecFilePath string = "ssl/cert_pwd"
+const CertSecNonceFilePath string = "ssl/cert_pwd_nonce"
 
 var KeyComponentFromUserStr *[]byte
 
@@ -585,9 +585,9 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 		return errors.New(errMsg)
 	}
 
-	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedCertPwdFilePath,
+	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedCertSecFilePath,
 		encryptedCertPwd, KeyFileMode)
-	writeNonceErr := ioutil.WriteFile(CertPwdNonceFilePath, certPwdNonce, KeyFileMode)
+	writeNonceErr := ioutil.WriteFile(CertSecNonceFilePath, certPwdNonce, KeyFileMode)
 	ClearByteArray(encryptedCertPwd)
 	ClearByteArray(certPwdNonce)
 	if writeEncryptedPwdErr != nil || writeNonceErr != nil {
@@ -609,8 +609,8 @@ func GetCertPwd() ([]byte, error) {
 	}
 
 	// decrypt cert password by work key.
-	certPwd, decryptedCertPwdErr := decryptKey(workKey, EncryptedCertPwdFilePath,
-		CertPwdNonceFilePath)
+	certPwd, decryptedCertPwdErr := decryptKey(workKey, EncryptedCertSecFilePath,
+		CertSecNonceFilePath)
 	// clear work key
 	ClearByteArray(workKey)
 	if decryptedCertPwdErr != nil {

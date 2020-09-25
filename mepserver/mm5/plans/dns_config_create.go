@@ -118,30 +118,30 @@ func (t *DecodeDnsConfigRestReq) WithBody(body interface{}) *DecodeDnsConfigRest
 }
 
 func (t *DecodeDnsConfigRestReq) getParam(r *http.Request) error {
-	query, _ := meputil.GetHTTPTags(r)
+	queryReq, _ := meputil.GetHTTPTags(r)
 
-	var err error
+	var errRes error
 
-	t.AppInstanceId = query.Get(":appInstanceId")
-	if err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("validate X-AppinstanceId failed", err)
-		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
-		return err
+	t.AppInstanceId = queryReq.Get(":appInstanceId")
+	if errRes = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); errRes != nil {
+		log.Error("validate X-AppinstanceId failed", errRes)
+		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, errRes.Error())
+		return errRes
 	}
-	err = meputil.ValidateUUID(t.AppInstanceId)
-	if err != nil {
-		log.Error("app Instance ID validation failed", err)
+	errRes = meputil.ValidateUUID(t.AppInstanceId)
+	if errRes != nil {
+		log.Error("app Instance ID validation failed", errRes)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "app Instance ID validation failed, invalid uuid")
-		return err
+		return errRes
 	}
 
-	t.DNSRuleId = query.Get(":dnsRuleId")
+	t.DNSRuleId = queryReq.Get(":dnsRuleId")
 	if len(t.DNSRuleId) > meputil.MaxDNSRuleId {
 		log.Error("dns rule ID validation failed", nil)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "dns rule ID validation failed, invalid length")
-		return err
+		return errRes
 	}
-	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), query.Get(":project"))
+	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil
 }
 

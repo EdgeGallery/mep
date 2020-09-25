@@ -35,12 +35,12 @@ type DNSRulesGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
-func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
+func (t *DNSRulesGet) OnRequest(dataInp string) workspace.TaskCode {
 	log.Debugf("query request arrived to fetch all dns rules for appId %s.", t.AppInstanceId)
-	dnsRulesEntry, errCode := backend.GetRecords(util.EndDNSRuleKeyPath + t.AppInstanceId)
-	if errCode != 0 {
+	dnsRulesEntry, errRetCode := backend.GetRecords(util.EndDNSRuleKeyPath + t.AppInstanceId)
+	if errRetCode != 0 {
 		log.Errorf(nil, "retrieve dns rules from data-store failed")
-		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
+		t.SetFirstErrorCode(workspace.ErrCode(errRetCode), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
 

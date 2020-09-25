@@ -42,7 +42,7 @@ type DNSRuleUpdate struct {
 	HttpRsp       interface{}         `json:"httpRsp,out"`
 }
 
-func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
+func (t *DNSRuleUpdate) OnRequest(value string) workspace.TaskCode {
 
 	log.Debugf("update request arrived for dns rule %s and appId %s.", t.DNSRuleId, t.AppInstanceId)
 
@@ -52,11 +52,11 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	dnsRuleEntry, errCode := backend.GetRecord(meputil.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
-	if errCode != 0 {
+	dnsRuleEntry, errCodeVal := backend.GetRecord(meputil.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
+	if errCodeVal != 0 {
 		log.Errorf(errors.New("get operation failed"),
 			"dns rule retrieval from data-store failed on update request")
-		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
+		t.SetFirstErrorCode(workspace.ErrCode(errCodeVal), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
 
@@ -101,9 +101,9 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	errCode, errString := t.updateDnsRecordToRemoteServer(dnsRuleOnDataStore, dnsConfigInput)
-	if errCode != 0 {
-		t.SetFirstErrorCode(workspace.ErrCode(errCode), errString)
+	errCodeVal, errString := t.updateDnsRecordToRemoteServer(dnsRuleOnDataStore, dnsConfigInput)
+	if errCodeVal != 0 {
+		t.SetFirstErrorCode(workspace.ErrCode(errCodeVal), errString)
 		return workspace.TaskFinish
 	}
 
@@ -122,20 +122,20 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-func (t *DNSRuleUpdate) validateInputs(dnsConfigInput *models.DnsConfigRule,
-	dnsRuleOnDataStore *dns.RuleEntry) (errorString string, errorCode int) {
+func (t *DNSRuleUpdate) validateInputs(dnsConfInput *models.DnsConfigRule,
+	dnsRlOnDataStore *dns.RuleEntry) (errorString string, errorCode int) {
 
-	if len(dnsConfigInput.DnsRuleId) != 0 && t.DNSRuleId != dnsConfigInput.DnsRuleId {
+	if len(dnsConfInput.DnsRuleId) != 0 && t.DNSRuleId != dnsConfInput.DnsRuleId {
 		return "dns identifier miss-match", meputil.ParseInfoErr
 	}
 
-	if dnsConfigInput.DomainName != dnsRuleOnDataStore.DomainName ||
-		dnsConfigInput.IpAddress != dnsRuleOnDataStore.IpAddress ||
-		dnsConfigInput.IpAddressType != dnsRuleOnDataStore.IpAddressType {
+	if dnsConfInput.DomainName != dnsRlOnDataStore.DomainName ||
+		dnsConfInput.IpAddress != dnsRlOnDataStore.IpAddress ||
+		dnsConfInput.IpAddressType != dnsRlOnDataStore.IpAddressType {
 		return "update supported only for state", meputil.ParseInfoErr
 	}
 
-	if dnsConfigInput.State != meputil.ActiveState && dnsConfigInput.State != meputil.InactiveState {
+	if dnsConfInput.State != meputil.ActiveState && dnsConfInput.State != meputil.InactiveState {
 		return "invalid dns state input", meputil.ParseInfoErr
 	}
 
@@ -143,38 +143,38 @@ func (t *DNSRuleUpdate) validateInputs(dnsConfigInput *models.DnsConfigRule,
 }
 
 // Update the dns modification request to the remote dns server
-func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(dnsRuleOnDataStore *dns.RuleEntry, dnsConfigInput *models.DnsConfigRule) (int, string) {
-	var err error
+func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(dnsRlOnDataStore *dns.RuleEntry, dnsConfigInpt *models.DnsConfigRule) (int, string) {
+	var retErr error
 	// Backing up state data for reconfigure in case of failure
-	oldState := dnsRuleOnDataStore.State
-	dnsRuleOnDataStore.State = dnsConfigInput.State
+	oldState := dnsRlOnDataStore.State
+	dnsRlOnDataStore.State = dnsConfigInpt.State
 
-	errCode, errString := t.updateDnsRecordOnDataStore(dnsRuleOnDataStore)
+	errCode, errString := t.updateDnsRecordOnDataStore(dnsRlOnDataStore)
 	if errCode != 0 {
 		return errCode, errString
 	}
 
-	rrType := meputil.RRTypeA
-	if dnsRuleOnDataStore.IpAddressType == meputil.IPv6Type {
-		rrType = meputil.RRTypeAAAA
+	rrTypeVal := meputil.RRTypeA
+	if dnsRlOnDataStore.IpAddressType == meputil.IPv6Type {
+		rrTypeVal = meputil.RRTypeAAAA
 	}
 
 	// Update the DNS server as per the new configurations
-	dnsAgent := dns.NewRestClient()
-	var httpResp *http.Response
-	if dnsConfigInput.State == meputil.ActiveState {
-		httpResp, err = dnsAgent.SetResourceRecordTypeA(dnsRuleOnDataStore.DomainName, rrType, meputil.RRClassIN,
-			[]string{dnsRuleOnDataStore.IpAddress}, uint32(dnsRuleOnDataStore.TTL))
+	dnsAgentInst := dns.NewRestClient()
+	var httpResponse *http.Response
+	if dnsConfigInpt.State == meputil.ActiveState {
+		httpResponse, retErr = dnsAgentInst.SetResourceRecordTypeA(dnsRlOnDataStore.DomainName, rrTypeVal, meputil.RRClassIN,
+			[]string{dnsRlOnDataStore.IpAddress}, uint32(dnsRlOnDataStore.TTL))
 	} else {
-		httpResp, err = dnsAgent.DeleteResourceRecordTypeA(dnsRuleOnDataStore.DomainName, rrType)
+		httpResponse, retErr = dnsAgentInst.DeleteResourceRecordTypeA(dnsRlOnDataStore.DomainName, rrTypeVal)
 	}
-	if err != nil {
+	if retErr != nil {
 		log.Errorf(nil, "dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server!",
 			t.AppInstanceId, t.DNSRuleId)
 
 		// Revert the update in the data store in failure case
-		dnsRuleOnDataStore.State = oldState
-		errCode, _ := t.updateDnsRecordOnDataStore(dnsRuleOnDataStore)
+		dnsRlOnDataStore.State = oldState
+		errCode, _ := t.updateDnsRecordOnDataStore(dnsRlOnDataStore)
 		if errCode != 0 {
 			log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
 				"this might lead to inconsistency!", t.AppInstanceId, t.DNSRuleId)
@@ -182,13 +182,13 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(dnsRuleOnDataStore *dns.Ru
 
 		return meputil.RemoteServerErr, "failed to apply the dns modification"
 	}
-	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
+	if !meputil.IsHttpStatusOK(httpResponse.StatusCode) {
 		log.Errorf(nil, "dns rule(app-id: %s, dns-rule-id: %s) update failed on server(%d: %s).",
-			t.AppInstanceId, t.DNSRuleId, httpResp.StatusCode, httpResp.Status)
+			t.AppInstanceId, t.DNSRuleId, httpResponse.StatusCode, httpResponse.Status)
 
 		// Revert the update in the data store in failure case
-		dnsRuleOnDataStore.State = oldState
-		errCode, _ := t.updateDnsRecordOnDataStore(dnsRuleOnDataStore)
+		dnsRlOnDataStore.State = oldState
+		errCode, _ := t.updateDnsRecordOnDataStore(dnsRlOnDataStore)
 		if errCode != 0 {
 			log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
 				"this might lead to inconsistency!", t.AppInstanceId, t.DNSRuleId)
@@ -200,18 +200,18 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(dnsRuleOnDataStore *dns.Ru
 }
 
 // Update the dns record to the data-store
-func (t *DNSRuleUpdate) updateDnsRecordOnDataStore(dnsRecord *dns.RuleEntry) (int, string) {
-	updateJSON, err := json.Marshal(dnsRecord)
-	if err != nil {
+func (t *DNSRuleUpdate) updateDnsRecordOnDataStore(dnsRec *dns.RuleEntry) (int, string) {
+	updateJSON, errVal := json.Marshal(dnsRec)
+	if errVal != nil {
 		log.Errorf(nil, "marshal dns rule failed")
 		return meputil.ParseInfoErr, "output dns rule parse failed"
 	}
 
-	errCode := backend.PutRecord(meputil.EndDNSRuleKeyPath+t.AppInstanceId+"/"+t.DNSRuleId, updateJSON)
-	if errCode != 0 {
+	errRetCode := backend.PutRecord(meputil.EndDNSRuleKeyPath+t.AppInstanceId+"/"+t.DNSRuleId, updateJSON)
+	if errRetCode != 0 {
 		log.Errorf(nil, "dns rule(app-id: %s, dns-rule-id: %s) insertion on data-store failed!",
 			t.AppInstanceId, t.DNSRuleId)
-		return errCode, "dns rule insertion failed"
+		return errRetCode, "dns rule insertion failed"
 	}
 
 	return 0, ""
