@@ -36,7 +36,7 @@ type DNSRuleGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
-func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
+func (t *DNSRuleGet) OnRequest(inputData string) workspace.TaskCode {
 	log.Debugf("query request arrived to fetch dns rule %s for appId %s.", t.DNSRuleId, t.AppInstanceId)
 
 	if len(t.DNSRuleId) == 0 {
@@ -45,15 +45,15 @@ func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	dnsRuleEntry, errCode := backend.GetRecord(util.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
-	if errCode != 0 {
+	dnsRlEntry, err := backend.GetRecord(util.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
+	if err != 0 {
 		log.Errorf(nil, "get dns rules from data-store failed")
-		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
+		t.SetFirstErrorCode(workspace.ErrCode(err), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
 
-	dnsRuleInStore := &dns.RuleEntry{}
-	jsonErr := json.Unmarshal(dnsRuleEntry, dnsRuleInStore)
+	dnsRlInStore := &dns.RuleEntry{}
+	jsonErr := json.Unmarshal(dnsRlEntry, dnsRlInStore)
 	if jsonErr != nil {
 		log.Errorf(nil, "failed to parse the dns entry from data-store")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
@@ -61,10 +61,10 @@ func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 	}
 	t.HttpRsp = models.NewDnsConfigRule(
 		t.DNSRuleId,
-		dnsRuleInStore.DomainName,
-		dnsRuleInStore.IpAddressType,
-		dnsRuleInStore.IpAddress,
-		dnsRuleInStore.TTL,
-		dnsRuleInStore.State)
+		dnsRlInStore.DomainName,
+		dnsRlInStore.IpAddressType,
+		dnsRlInStore.IpAddress,
+		dnsRlInStore.TTL,
+		dnsRlInStore.State)
 	return workspace.TaskFinish
 }

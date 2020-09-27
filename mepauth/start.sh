@@ -69,7 +69,7 @@ if [ ! "$valid_cert_host_name" -eq "0" ] ; then
    exit 1
 fi
 
-MEPSERVER_HOST="${MEPSERVER_HOST:-localhost}"
+MEPSERVER_HOST="${MEPSERVER_HOST:-$(hostname -i)}"
 validate_host_name "$MEPSERVER_HOST"
 valid_mepserver_host_name="$?"
 if [ ! "$valid_mepserver_host_name" -eq "0" ] ; then

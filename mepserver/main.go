@@ -42,7 +42,7 @@ func main() {
 		log.Errorf(err, "initial encrypt component failed")
 		return
 	}
-	if !util.IsFileOrDirExist(util.EncryptedCertPwdFilePath) {
+	if !util.IsFileOrDirExist(util.EncryptedCertSecFilePath) {
 		err := encryptCertPwd()
 		if err != nil {
 			log.Errorf(err, "input cert pwd failed")
