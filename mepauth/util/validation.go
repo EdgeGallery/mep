@@ -83,27 +83,8 @@ func ValidateApiGwParams(apiGwHost string, apiGwPort string) (bool, error) {
 
 // Validate password
 func ValidatePassword(password *[]byte) (bool, error) {
-	if len(*password) >= minPasswordSize && len(*password) <= maxPasswordSize {
-		// password must satisfy any two conditions
-		var pwdValidCount = 0
-		pwdIsValid, err := regexp.Match(singleDigitRegex, *password)
-		if pwdIsValid && err == nil {
-			pwdValidCount++
-		}
-		pwdIsValid, err = regexp.Match(lowerCaseRegex, *password)
-		if pwdIsValid && err == nil {
-			pwdValidCount++
-		}
-		pwdIsValid, err = regexp.Match(upperCaseRegex, *password)
-		if pwdIsValid && err == nil  {
-			pwdValidCount++
-		}
-		// space validation for password complexity is not added
-		// as jwt decrypt fails if space is included in password
-		pwdIsValid, err = regexp.Match(specialCharRegex, *password)
-		if pwdIsValid && err == nil {
-			pwdValidCount++
-		}
+	if validateLength(password) {
+		pwdValidCount := validateRegex(password)
 		if pwdValidCount < maxPasswordCount {
 			return false, errors.New("password must contain at least two types of the either one lowercase" +
 				" character, one uppercase character, one digit or one special character")
@@ -112,6 +93,34 @@ func ValidatePassword(password *[]byte) (bool, error) {
 		return false, errors.New("password must have minimum length of 8 and maximum of 16")
 	}
 	return true, nil
+}
+
+func validateRegex(password *[]byte) int {
+	// password must satisfy any two conditions
+	var pwdValidCount = 0
+	pwdIsValid, err := regexp.Match(singleDigitRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	pwdIsValid, err = regexp.Match(lowerCaseRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	pwdIsValid, err = regexp.Match(upperCaseRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	// space validation for password complexity is not added
+	// as jwt decrypt fails if space is included in password
+	pwdIsValid, err = regexp.Match(specialCharRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	return pwdValidCount
+}
+
+func validateLength(password *[]byte) bool {
+	return len(*password) >= minPasswordSize && len(*password) <= maxPasswordSize
 }
 
 // Validate IP address adn CIDR
