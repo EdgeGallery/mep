@@ -20,19 +20,69 @@ package controllers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	log "github.com/sirupsen/logrus"
 
 	"mepauth/models"
 	"mepauth/util"
 )
 
+type ConfController struct {
+	beego.Controller
+}
+
+func (c *ConfController) Put() {
+	var appAuthInfo *models.AppAuthInfo
+	var err error
+	appInsId := c.Ctx.Input.Param(":applicationId")
+	logs.Info("appinstanceId=%s", appInsId)
+
+	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
+		c.Data["json"] = appAuthInfo
+		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
+		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
+		/*		aesInfo := &models.AesInfo{}
+				dberr := ReadData(aesInfo)
+				if dberr != nil {
+					c.Data["json"] = dberr.Error()
+				}
+				aesKey, _ := base64.StdEncoding.DecodeString(aesInfo.AesKey)
+				nonce, _ := base64.StdEncoding.DecodeString(aesInfo.Nonce)*/
+		skByte := []byte(sk)
+		cipherSkBytes, nonceBytes, err2 := getCipherAndNonce(&skByte)
+		if err2 != nil {
+			c.Data["json"] = err2.Error()
+			c.ServeJSON()
+			return
+		}
+		//cipherSk, _ := util.EncryptByAES256GCM([]byte(sk), cipherSkBytes, nonceBytes)
+		//fmt.Println(string(cipherSk))
+		authInfoRecord := &models.AuthInfoRecord{
+			AppInsId: appInsId,
+			Ak:       ak,
+			Sk:       string(cipherSkBytes),
+			Nonce:    string(nonceBytes),
+		}
+		err := InsertOrUpdateData(authInfoRecord, "app_ins_id")
+		if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+			c.Data["json"] = err.Error()
+		}
+	} else {
+		c.Data["json"] = err.Error()
+	}
+	c.ServeJSON()
+}
+
 // Save Ak and Sk configuration into file
 func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 
-	log.Info("ak/sk configuration is received, the corresponding app is "+ appInsID)
+	log.Info("ak/sk configuration is received, the corresponding app is " + appInsID)
 
 	if validateErr := util.ValidateUUID(appInsID); validateErr != nil {
-		log.Error("AppInstanceId: "+ appInsID + " is invalid.")
+		log.Error("AppInstanceId: " + appInsID + " is invalid.")
 		return validateErr
 	}
 
@@ -57,19 +107,39 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 }
 
 func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
+	cipherSkBytes, nonceBytes, err := getCipherAndNonce(sk)
+	if err != nil {
+		return err
+	}
+	authInfoRecord := &models.AuthInfoRecord{
+		AppInsId: appInsID,
+		Ak:       ak,
+		Sk:       string(cipherSkBytes),
+		Nonce:    string(nonceBytes),
+	}
+	err = InsertOrUpdateDataToFile(authInfoRecord)
+	util.ClearByteArray(nonceBytes)
+	if err != nil {
+		log.Error("Failed to save ak and sk to file.")
+		return err
+	}
+	return nil
+}
+
+func getCipherAndNonce(sk *[]byte) ([]byte, []byte, error) {
 	nonce := make([]byte, util.NonceSize, 20)
 	_, generateNonceErr := rand.Read(nonce)
 	if generateNonceErr != nil {
 		log.Error("Failed to generate nonce.")
 		util.ClearByteArray(*sk)
-		return generateNonceErr
+		return nil, nil, generateNonceErr
 	}
 	workKey, genKeyErr := util.GetWorkKey()
 	if genKeyErr != nil {
 		log.Error("Failed to generate work key.")
 		util.ClearByteArray(nonce)
 		util.ClearByteArray(*sk)
-		return genKeyErr
+		return nil, nil, genKeyErr
 	}
 	cipherSk, encryptErr := util.EncryptByAES256GCM(*sk, workKey, nonce)
 	util.ClearByteArray(*sk)
@@ -78,24 +148,12 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		log.Error("Failed to encrypt secret key.")
 		// clear nonce
 		util.ClearByteArray(nonce)
-		return encryptErr
+		return nil, nil, encryptErr
 	}
 	cipherSkBytes := make([]byte, hex.EncodedLen(len(cipherSk)), 200)
- 	hex.Encode(cipherSkBytes, cipherSk)
+	hex.Encode(cipherSkBytes, cipherSk)
 	nonceBytes := make([]byte, hex.EncodedLen(len(nonce)), 30)
 	hex.Encode(nonceBytes, nonce)
 	util.ClearByteArray(nonce)
-	authInfoRecord := &models.AuthInfoRecord{
-		AppInsId: appInsID,
-		Ak:       ak,
-		Sk:       string(cipherSkBytes),
-		Nonce:    string(nonceBytes),
-	}
-	err := InsertOrUpdateData(authInfoRecord)
-	util.ClearByteArray(nonceBytes)
-	if err != nil {
-		log.Error("Failed to save ak and sk to file.")
-		return err
-	}
-	return nil
+	return cipherSkBytes, nonceBytes, nil
 }

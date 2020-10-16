@@ -120,75 +120,74 @@ func getController() *TokenController {
 	return c
 }
 
-
 func TestParseAuthHeader(t *testing.T) {
 
-	Convey("parse auth header", t, func(){
+	Convey("parse auth header", t, func() {
 		ak, signHeader, sig := parseAuthHeader("SDK-HMAC-SHA256 Access=QVUJMSUMgS0VZLS0tLS0, " +
 			"SignedHeaders=content-type;host;x-sdk-date, " +
 			"Signature=62192e2ee0b871321e43a607654f93f661a91fcdedba86e45f02602c99eca052")
-		So(ak, ShouldEqual,"QVUJMSUMgS0VZLS0tLS0")
-		So(signHeader, ShouldEqual,"content-type;host;x-sdk-date")
-		So(sig, ShouldEqual,"62192e2ee0b871321e43a607654f93f661a91fcdedba86e45f02602c99eca052")
+		So(ak, ShouldEqual, "QVUJMSUMgS0VZLS0tLS0")
+		So(signHeader, ShouldEqual, "content-type;host;x-sdk-date")
+		So(sig, ShouldEqual, "62192e2ee0b871321e43a607654f93f661a91fcdedba86e45f02602c99eca052")
 		ak, signHeader, sig = parseAuthHeader("invalid_header")
-		So(ak, ShouldEqual,"")
-		So(signHeader, ShouldEqual,"")
-		So(sig, ShouldEqual,"")
+		So(ak, ShouldEqual, "")
+		So(signHeader, ShouldEqual, "")
+		So(sig, ShouldEqual, "")
 	})
 }
 
 func TestGetAppInsIdSk(t *testing.T) {
 	authInfo := &models.AuthInfoRecord{}
-	authInfo.Ak="QVUJMSUMgS0VZLS0tLS0"
-	authInfo.Sk="sk"
-	authInfo.AppInsId="5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
-	authInfo.Nonce="nonce"
+	authInfo.Ak = "QVUJMSUMgS0VZLS0tLS0"
+	authInfo.Sk = "sk"
+	authInfo.AppInsId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+	authInfo.Nonce = "nonce"
 
-	Convey("get app instance id and sk", t, func(){
-		Convey("for success", func(){
-			patches := ApplyFunc(ReadData, func(_ string) (models.AuthInfoRecord, error) {
+	Convey("get app instance id and sk", t, func() {
+		Convey("for success", func() {
+			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
 				return *authInfo, nil
 			})
-			patches.ApplyFunc(hex.Decode,func(_, _ []byte) (int,error) {
-				return 0,nil
+			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
+				return 0, nil
 			})
 			patches.ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return []byte("validKey"), nil
 			})
-			patches.ApplyFunc(util.DecryptByAES256GCM, func(_,_,_ []byte)([]byte, error) {
+			patches.ApplyFunc(util.DecryptByAES256GCM, func(_, _, _ []byte) ([]byte, error) {
 				return nil, nil
 			})
 			defer patches.Reset()
 			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
-			So(appInsId, ShouldEqual,"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f")
+			So(appInsId, ShouldEqual, "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f")
 			So(ok, ShouldBeTrue)
 		})
-		Convey("for read fail", func(){
-			patches := ApplyFunc(ReadData, func(_ string) (models.AuthInfoRecord, error) {
+		Convey("for read fail", func() {
+			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
 				return *authInfo, errors.New("read error")
 			})
 			defer patches.Reset()
 			_, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(ok, ShouldBeFalse)
 		})
-		Convey("for decode fail", func(){
-			patches := ApplyFunc(ReadData, func(_ string) (models.AuthInfoRecord, error) {
+		Convey("for decode fail", func() {
+			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
 				return *authInfo, nil
 			})
-			patches.ApplyFunc(hex.Decode,func(_, _ []byte) (int,error) {
-				return 0,errors.New("decode fail")
+			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
+				return 0, errors.New("decode fail")
 			})
 			defer patches.Reset()
 			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(appInsId, ShouldEqual, "")
 			So(ok, ShouldBeTrue)
 		})
-		Convey("for get work key fail", func(){
-			patches := ApplyFunc(ReadData, func(_ string) (models.AuthInfoRecord, error) {
+		Convey("for get work key fail", func() {
+			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
 				return *authInfo, nil
 			})
-			patches.ApplyFunc(hex.Decode,func(_, _ []byte) (int,error) {
-				return 0,nil
+			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
+				return 0, nil
 			})
 			patches.ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return []byte("validKey"), errors.New("get work key fail")
@@ -197,17 +196,17 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(appInsId, ShouldEqual, "")
 			So(ok, ShouldBeTrue)
 		})
-		Convey("for decrypt fail", func(){
-			patches := ApplyFunc(ReadData, func(_ string) (models.AuthInfoRecord, error) {
+		Convey("for decrypt fail", func() {
+			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
 				return *authInfo, nil
 			})
-			patches.ApplyFunc(hex.Decode,func(_, _ []byte) (int,error) {
-				return 0,nil
+			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
+				return 0, nil
 			})
 			patches.ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return []byte("validKey"), errors.New("get work key fail")
 			})
-			patches.ApplyFunc(util.DecryptByAES256GCM, func(_,_,_ []byte)([]byte, error) {
+			patches.ApplyFunc(util.DecryptByAES256GCM, func(_, _, _ []byte) ([]byte, error) {
 				return nil, errors.New("for decrypt fail")
 			})
 			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
@@ -231,36 +230,36 @@ func TestAkSignatureIsValid(t *testing.T) {
 	r.Header.Set(util.HOST_HEADER, "127.0.0.1")
 	r.Header.Set(util.DATE_HEADER, util.DATE_FORMAT)
 
-	Convey("ak signature is valid", t, func(){
-		Convey("for success", func(){
+	Convey("ak signature is valid", t, func() {
+		Convey("for success", func() {
 			var s *util.Sign
 			patches := ApplyMethod(reflect.TypeOf(s), "GetSignature", func(_ *util.Sign, _ *http.Request) (string, error) {
 				return "signature", nil
 			})
 			defer patches.Reset()
-			ok, err:=akSignatureIsValid(r,ak,sk,signHeader,sig)
+			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
 
 			So(ok, ShouldBeTrue)
 			So(err, ShouldBeNil)
 		})
-		Convey("for fail", func(){
+		Convey("for fail", func() {
 			var s *util.Sign
 			patches := ApplyMethod(reflect.TypeOf(s), "GetSignature", func(_ *util.Sign, _ *http.Request) (string, error) {
 				return "_signature", nil
 			})
 			defer patches.Reset()
-			ok, err:=akSignatureIsValid(r,ak,sk,signHeader,sig)
+			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
 
 			So(ok, ShouldBeFalse)
 			So(err, ShouldBeNil)
 		})
-		Convey("for error", func(){
+		Convey("for error", func() {
 			var s *util.Sign
 			patches := ApplyMethod(reflect.TypeOf(s), "GetSignature", func(_ *util.Sign, _ *http.Request) (string, error) {
 				return "signature", errors.New("get sig error")
 			})
 			defer patches.Reset()
-			ok, err:=akSignatureIsValid(r,ak,sk,signHeader,sig)
+			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
 
 			So(ok, ShouldBeFalse)
 			So(err, ShouldNotBeNil)
@@ -278,8 +277,8 @@ func fromBase10(base10 string) *big.Int {
 }
 
 func TestGenerateJwtToken(t *testing.T) {
-	appInsId:="5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
-	clientIp:="127.0.0.1"
+	appInsId := "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+	clientIp := "127.0.0.1"
 	token := &jwt.Token{}
 	priv := &rsa.PrivateKey{
 		PublicKey: rsa.PublicKey{
@@ -296,8 +295,8 @@ func TestGenerateJwtToken(t *testing.T) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	Convey("generate jwt token", t, func(){
-		Convey("for success", func(){
+	Convey("generate jwt token", t, func() {
+		Convey("for success", func() {
 			patches := ApplyFunc(util.GetPrivateKey, func() (*rsa.PrivateKey, error) {
 				return priv, nil
 			})
@@ -306,21 +305,20 @@ func TestGenerateJwtToken(t *testing.T) {
 			})
 
 			defer patches.Reset()
-			token, err := generateJwtToken(appInsId,clientIp)
+			token, err := generateJwtToken(appInsId, clientIp)
 
-			So(token, ShouldNotEqual,"")
+			So(token, ShouldNotEqual, "")
 			So(err, ShouldBeNil)
 		})
-		Convey("for fail", func(){
+		Convey("for fail", func() {
 			patches := ApplyFunc(util.GetPrivateKey, func() (*rsa.PrivateKey, error) {
 				return nil, errors.New("get private key fail")
 			})
 			defer patches.Reset()
-			token, err := generateJwtToken(appInsId,clientIp)
+			token, err := generateJwtToken(appInsId, clientIp)
 
 			So(token, ShouldBeNil)
 			So(err.Error(), ShouldEqual, "failed to get private key")
 		})
 	})
 }
-

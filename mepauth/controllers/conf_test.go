@@ -103,7 +103,7 @@ func TestSaveAkAndSk(t *testing.T) {
 			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
-			patches.ApplyFunc(InsertOrUpdateData, func(_ *models.AuthInfoRecord) error {
+			patches.ApplyFunc(InsertOrUpdateDataToFile, func(_ *models.AuthInfoRecord) error {
 				return errors.New("insert fail")
 			})
 			defer patches.Reset()

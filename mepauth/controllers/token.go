@@ -166,7 +166,7 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 
 // Get app instance Id and Sk
 func GetAppInsIdSk(ak string) (string, []byte, bool) {
-	authInfoRecord, readErr := ReadData(ak)
+	authInfoRecord, readErr := ReadDataFromFile(ak)
 	if readErr != nil {
 		log.Error("auth info record does not exist in file")
 		return "", nil, false
