@@ -39,12 +39,12 @@ import (
 func init() {
 	orm.RegisterDriver("postgres", orm.DRPostgres)
 	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
-		util.GetAppConfig("db::db_user"),
-		util.GetAppConfig("db::db_passwd"),
-		util.GetAppConfig("db::db_name"),
-		util.GetAppConfig("db::db_host"),
-		util.GetAppConfig("db::db_port"),
-		util.GetAppConfig("db::db_sslmode"))
+		util.GetAppConfig("db_user"),
+		util.GetAppConfig("db_passwd"),
+		util.GetAppConfig("db_name"),
+		util.GetAppConfig("db_host"),
+		util.GetAppConfig("db_port"),
+		util.GetAppConfig("db_sslmode"))
 	orm.RegisterDataBase("default", "postgres", dataSource)
 	orm.RunSyncdb("default", false, true)
 }
