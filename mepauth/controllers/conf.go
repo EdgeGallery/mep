@@ -44,13 +44,6 @@ func (c *ConfController) Put() {
 		c.Data["json"] = appAuthInfo
 		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
-		/*		aesInfo := &models.AesInfo{}
-				dberr := ReadData(aesInfo)
-				if dberr != nil {
-					c.Data["json"] = dberr.Error()
-				}
-				aesKey, _ := base64.StdEncoding.DecodeString(aesInfo.AesKey)
-				nonce, _ := base64.StdEncoding.DecodeString(aesInfo.Nonce)*/
 		skByte := []byte(sk)
 		cipherSkBytes, nonceBytes, err2 := getCipherAndNonce(&skByte)
 		if err2 != nil {
@@ -58,8 +51,6 @@ func (c *ConfController) Put() {
 			c.ServeJSON()
 			return
 		}
-		//cipherSk, _ := util.EncryptByAES256GCM([]byte(sk), cipherSkBytes, nonceBytes)
-		//fmt.Println(string(cipherSk))
 		authInfoRecord := &models.AuthInfoRecord{
 			AppInsId: appInsId,
 			Ak:       ak,
