@@ -90,10 +90,10 @@ sed -i "s/^HTTPSAddr.*=.*$/HTTPSAddr = $(hostname -i)/g" conf/app.conf
 sed -i "s/^mepserver_host.*=.*$/mepserver_host = ${MEPSERVER_HOST}/g" conf/app.conf
 
 # config db
-sed -i "s/^db_name.*=.*$/db_name = ${DB_NAME}/g" conf/app.conf
-sed -i "s/^db_user.*=.*$/db_user = ${DB_USER}/g" conf/app.conf
-sed -i "s/^db_passwd.*=.*$/db_passwd = ${DB_PASSWD}/g" conf/app.conf
-sed -i "s/^db_host.*=.*$/db_host = ${DB_HOST}/g" conf/app.conf
+sed -i "s/^db_name.*=.*$/db_name = ${MEPAUTH_DB_NAME}/g" conf/app.conf
+sed -i "s/^db_user.*=.*$/db_user = ${MEPAUTH_DB_USER}/g" conf/app.conf
+sed -i "s/^db_passwd.*=.*$/db_passwd = ${MEPAUTH_DB_PASSWD}/g" conf/app.conf
+sed -i "s/^db_host.*=.*$/db_host = ${MEPAUTH_DB_HOST}/g" conf/app.conf
 
 set -e
 
