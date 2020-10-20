@@ -14,5 +14,6 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v1.6.4
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	golang.org/x/net v0.0.0-20190603091049-60506f45cf65 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
