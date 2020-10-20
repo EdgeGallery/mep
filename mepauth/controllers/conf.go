@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
 	log "github.com/sirupsen/logrus"
 
 	"mepauth/models"
@@ -38,7 +37,7 @@ func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
 	appInsId := c.Ctx.Input.Param(":applicationId")
-	logs.Info("appinstanceId=%s", appInsId)
+	log.Info("conf ak/sk appinstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
