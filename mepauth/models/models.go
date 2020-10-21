@@ -19,11 +19,19 @@ package models
 
 import (
 	"time"
+
+	"github.com/astaxie/beego/orm"
 )
 
+func init() {
+	orm.RegisterModel(new(AuthInfoRecord))
+	orm.RegisterModel(new(RouteRecord))
+	orm.RegisterModel(new(AesInfo))
+
+}
 
 type AuthInfoRecord struct {
-	AppInsId string
+	AppInsId string `orm:"pk"`
 	Ak       string
 	Sk       string
 	Nonce    string
@@ -42,4 +50,41 @@ type TokenInfo struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   uint32 `json:"expires_in"`
+}
+
+type AuthInfo struct {
+	Credentials Credentials `json:"credentials"`
+}
+
+type Credentials struct {
+	AccessKeyId string `json:"accessKeyId"`
+	SecretKey   string `json:"secretKey"`
+}
+
+type AppAuthInfo struct {
+	AuthInfo AuthInfo `json:"authInfo"`
+}
+
+type RouteRecord struct {
+	Id      int64  `json:"id"`
+	RouteId string `json:"routeId"`
+	AppId   string `json:"appId"`
+	SerName string `json:"serName"`
+}
+
+type RouteInfo struct {
+	Id      int64   `json:"routeId"`
+	AppId   string  `json:"appId"`
+	SerInfo SerInfo `orm:"type(json)" json:"serInfo"`
+}
+
+type SerInfo struct {
+	SerName string   `json:"serName"`
+	Uris    []string `json:"uris"`
+}
+
+type AesInfo struct {
+	Id     int64  `json:"routeId"`
+	AesKey string `json:"aesKey"`
+	Nonce  string `json:"nonce"`
 }

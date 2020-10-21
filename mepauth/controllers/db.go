@@ -20,16 +20,19 @@ package controllers
 import (
 	"encoding/json"
 	"errors"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"mepauth/models"
 	"mepauth/util"
+
+	"github.com/astaxie/beego/orm"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const dataFile string = "/usr/mep/mepauthdata.json"
 
 // Insert or update data into mepauth data file
-func InsertOrUpdateData(data *models.AuthInfoRecord) error {
+func InsertOrUpdateDataToFile(data *models.AuthInfoRecord) error {
 
 	dataBytes, errMarshal := json.Marshal(data)
 	if errMarshal != nil {
@@ -44,7 +47,7 @@ func InsertOrUpdateData(data *models.AuthInfoRecord) error {
 }
 
 // Read data from mepauth data file
-func ReadData(ak string) (models.AuthInfoRecord, error) {
+func ReadDataFromFile(ak string) (models.AuthInfoRecord, error) {
 	data, errRead := ioutil.ReadFile(dataFile)
 	if errRead != nil {
 		log.Error("read data file error")
@@ -61,4 +64,32 @@ func ReadData(ak string) (models.AuthInfoRecord, error) {
 		return models.AuthInfoRecord{}, errors.New("the ak is not same as the one in the file")
 	}
 	return res, nil
+}
+
+func InsertData(data interface{}) error {
+	o := orm.NewOrm()
+	o.Using("default")
+	_, err := o.Insert(data)
+	return err
+}
+
+func InsertOrUpdateData(data interface{}, cols ...string) error {
+	o := orm.NewOrm()
+	o.Using("default")
+	_, err := o.InsertOrUpdate(data, cols...)
+	return err
+}
+
+func DeleteData(data interface{}, cols ...string) error {
+	o := orm.NewOrm()
+	o.Using("default")
+	_, err := o.Delete(data, cols...)
+	return err
+}
+
+func ReadData(data interface{}, cols ...string) error {
+	o := orm.NewOrm()
+	o.Using("default")
+	err := o.Read(data, cols...)
+	return err
 }

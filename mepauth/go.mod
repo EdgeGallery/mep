@@ -8,6 +8,7 @@ require (
 	github.com/astaxie/beego v1.12.0
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/go-playground/validator/v10 v10.2.0
+	github.com/lib/pq v1.7.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
 	github.com/sirupsen/logrus v1.4.2
