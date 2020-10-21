@@ -19,21 +19,35 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 
-	"mepauth/controllers"
-
-	"github.com/astaxie/beego"
-
 	_ "mepauth/config"
+	"mepauth/controllers"
 	_ "mepauth/models"
 	_ "mepauth/routers"
 	"mepauth/util"
 )
+
+func init() {
+	orm.RegisterDriver("postgres", orm.DRPostgres)
+	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
+		util.GetAppConfig("db_user"),
+		util.GetAppConfig("db_passwd"),
+		util.GetAppConfig("db_name"),
+		util.GetAppConfig("db_host"),
+		util.GetAppConfig("db_port"),
+		util.GetAppConfig("db_sslmode"))
+	orm.RegisterDataBase("default", "postgres", dataSource)
+	orm.RunSyncdb("default", false, true)
+}
 
 func scanConfig(r io.Reader) (util.AppConfigProperties, error) {
 	config := util.AppConfigProperties{}
@@ -62,7 +76,7 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 	}
 	defer file.Close()
 	config, err := scanConfig(file)
-	if  err != nil {
+	if err != nil {
 		log.Error("Failed to read the file.")
 		clearAppConfigOnExit(config)
 		return nil, err
@@ -127,7 +141,6 @@ func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
 		util.ClearByteArray(*element)
 	}
 }
-
 
 func doInitialization(trustedNetworks *[]byte) bool {
 	err := initAPIGateway(trustedNetworks)
