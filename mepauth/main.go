@@ -36,7 +36,7 @@ import (
 	"mepauth/util"
 )
 
-func init() {
+func initDb() {
 	orm.RegisterDriver("postgres", orm.DRPostgres)
 	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
 		util.GetAppConfig("db_user"),
@@ -85,6 +85,9 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
+	// Initialize database
+	initDb()
+
 	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
