@@ -50,6 +50,10 @@ func (m *Mm5Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleDelete},
+
+		// Platform Capability Query
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath, Func: getPlatformCapabilities},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath + meputil.CapabilityIdPath, Func: getPlatformCapability},
 	}
 }
 
@@ -99,6 +103,26 @@ func dnsRuleDelete(w http.ResponseWriter, r *http.Request) {
 		&plans.DecodeDnsConfigRestReq{},
 		&plans.DNSRuleDelete{})
 	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
+
+	workspace.WkRun(workPlan)
+}
+
+func getPlatformCapabilities(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeCapabilityQueryReq{},
+		&plans.CapabilitiesGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func getPlatformCapability(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeCapabilityQueryReq{},
+		&plans.CapabilityGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }

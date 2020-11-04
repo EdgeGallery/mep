@@ -302,6 +302,8 @@ func (t *SubscribeIst) getMp1SubscribeInfo() interface{} {
 }
 
 func (t *SubscribeIst) insertOrUpdateData(subscribeJSON []byte) error {
+	log.Infof("Insert: SubscribeType: %v, AppInstanceId: %v , SubscribeId: %v", t.SubscribeType, t.AppInstanceId,
+		t.SubscribeId)
 	opts := []registry.PluginOp{
 		registry.OpPut(registry.WithStrKey(util.GetSubscribeKeyPath(t.SubscribeType)+t.AppInstanceId+"/"+
 			t.SubscribeId),
