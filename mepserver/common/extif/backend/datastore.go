@@ -62,6 +62,23 @@ func GetRecords(path string) (records map[string][]byte, errorCode int) {
 	return resultList, 0
 }
 
+// Read multiple records on the given path
+func GetRecordsWithCompleteKeyPath(path string) (records map[string][]byte, errorCode int) {
+	opts := []registry.PluginOp{
+		registry.OpGet(registry.WithStrKey(path), registry.WithPrefix()),
+	}
+	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
+	if err != nil {
+		log.Errorf(nil, "get entries from data-store failed")
+		return nil, meputil.OperateDataWithEtcdErr
+	}
+	resultList := make(map[string][]byte)
+	for _, kvs := range resp.Kvs {
+		resultList[string(kvs.Key)] = kvs.Value
+	}
+	return resultList, 0
+}
+
 // Write new record to the given path
 func PutRecord(path string, value []byte) int {
 	opts := []registry.PluginOp{
