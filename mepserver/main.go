@@ -37,19 +37,19 @@ import (
 
 func main() {
 
-	err := initialEncryptComponent()
-	if err != nil {
-		log.Errorf(err, "initial encrypt component failed")
-		return
-	}
-	if !util.IsFileOrDirExist(util.EncryptedCertSecFilePath) {
-		err := encryptCertPwd()
+	/*	err := initialEncryptComponent()
 		if err != nil {
-			log.Errorf(err, "input cert pwd failed")
+			log.Errorf(err, "initial encrypt component failed")
 			return
 		}
+		if !util.IsFileOrDirExist(util.EncryptedCertSecFilePath) {
+			err := encryptCertPwd()
+			if err != nil {
+				log.Errorf(err, "input cert pwd failed")
+				return
+			}
 
-	}
+		}*/
 	server.Run()
 }
 
