@@ -12,11 +12,14 @@ replace (
 require (
 	github.com/agiledragon/gomonkey v2.0.1+incompatible
 	github.com/apache/servicecomb-service-center v0.0.0-20191027084911-c2dc0caef706
+	github.com/astaxie/beego v1.12.0
 	github.com/go-chassis/paas-lager v1.1.1 // indirect
 	github.com/go-mesh/openlogging v1.0.1 // indirect
 	github.com/go-playground/validator/v10 v10.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
+	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
+	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
