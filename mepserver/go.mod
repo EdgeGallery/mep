@@ -20,7 +20,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 )
