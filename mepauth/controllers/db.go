@@ -23,6 +23,8 @@ import (
 	"io/ioutil"
 	"mepauth/models"
 	"mepauth/util"
+	"os"
+	"strings"
 
 	"github.com/astaxie/beego/orm"
 
@@ -39,6 +41,16 @@ func InsertOrUpdateDataToFile(data *models.AuthInfoRecord) error {
 		log.Error("data marshal error")
 		return errors.New("data marshal error")
 	}
+	// check directory exist or not
+	dataDir := dataFile[0:strings.LastIndex(dataFile, "/")]
+	if _, err := os.Stat(dataDir); err != nil {
+		err := os.MkdirAll(dataDir, util.KeyFileMode)
+		if err != nil {
+			log.Error("Error creating directory")
+			return err
+		}
+	}
+
 	err := ioutil.WriteFile(dataFile, dataBytes, util.KeyFileMode)
 	if err != nil {
 		return err
