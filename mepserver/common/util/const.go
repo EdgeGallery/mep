@@ -43,20 +43,23 @@ const (
 )
 
 const (
-	RootPath            = "/mep"
-	Mm5RootPath         = "/mepcfg"
-	MecServicePath      = "/mec_service_mgmt/v1"
-	MecAppSupportPath   = "/mec_app_support/v1"
-	MecRuleConfigPath   = "/mec_app_config/v1"
-	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
-	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
-	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
-	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
-	DNSConfigRulesPath  = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
+	RootPath              = "/mep"
+	Mm5RootPath           = "/mepcfg"
+	MecServicePath        = "/mec_service_mgmt/v1"
+	MecAppSupportPath     = "/mec_app_support/v1"
+	MecRuleConfigPath     = "/mec_app_config/v1"
+	MecPlatformConfigPath = "/mec_platform_config/v1"
+	AppServicesPath       = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
+	AppSubscribePath      = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
+	EndAppSubscribePath   = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
+	DNSRulesPath          = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
+	DNSConfigRulesPath    = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
+	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	SubscriptionIdPath = "/:subscriptionId"
 	ServiceIdPath      = "/:serviceId"
+	CapabilityIdPath   = "/:capabilityId"
 )
 
 const (
