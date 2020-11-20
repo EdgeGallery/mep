@@ -37,7 +37,7 @@ func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
 	appInsId := c.Ctx.Input.Param(":applicationId")
-	// log.Info("conf ak/sk appinstanceId=%s", appInsId)
+	log.Infof("conf ak/sk appinstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
@@ -66,10 +66,46 @@ func (c *ConfController) Put() {
 	c.ServeJSON()
 }
 
+func (c *ConfController) Delete() {
+	appInsId := c.Ctx.Input.Param(":applicationId")
+
+	authInfoRecord := &models.AuthInfoRecord{
+		AppInsId: appInsId,
+	}
+
+	err := ReadData(authInfoRecord, "app_ins_id")
+	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+		c.Data["json"] = err.Error()
+	}
+
+	err = DeleteData(authInfoRecord, "app_ins_id")
+	if err != nil {
+		c.Data["json"] = err.Error()
+	}
+
+	c.Data["json"] = nil
+	c.ServeJSON()
+}
+
+func (c *ConfController) Get() {
+	appInsId := c.Ctx.Input.Param(":applicationId")
+
+	authInfoRecord := &models.AuthInfoRecord{
+		AppInsId: appInsId,
+	}
+
+	err := ReadData(authInfoRecord, "app_ins_id")
+	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+		c.Data["json"] = err.Error()
+	}
+	c.Data["json"] = authInfoRecord
+	c.ServeJSON()
+}
+
 // Save Ak and Sk configuration into file
 func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 
-	log.Info("ak/sk configuration is received, the corresponding app is " + appInsID)
+	log.Infof("ak/sk configuration is received, the corresponding app is " + appInsID)
 
 	if validateErr := util.ValidateUUID(appInsID); validateErr != nil {
 		log.Error("AppInstanceId: " + appInsID + " is invalid.")

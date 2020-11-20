@@ -26,6 +26,7 @@ import (
 const RootPath string = "/mepauth/v1"
 
 func init() {
+	beego.Router(RootPath+"/routes/:routeId", &controllers.OneRouteController{})
 	beego.Router(RootPath+"/token", &controllers.TokenController{})
 	beego.Router(RootPath+"/applications/:applicationId/confs", &controllers.ConfController{})
 }
