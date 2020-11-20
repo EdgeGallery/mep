@@ -18,6 +18,7 @@
 package util
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/aes"
@@ -27,6 +28,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -631,4 +633,41 @@ func GenerateStrongETag(body []byte) string {
 // Checks whether the status code is in the success range from 200 to 299
 func IsHttpStatusOK(statusCode int) bool {
 	return statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices
+}
+
+type AppConfigProperties map[string]string
+
+// read app.conf file to AppConfigProperties object
+func readPropertiesFile(filename string) (AppConfigProperties, error) {
+
+	if len(filename) == 0 {
+		return nil, nil
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Errorf(nil, "Failed to open the file.")
+		return nil, err
+	}
+	defer file.Close()
+	config, err := scanConfig(file)
+	if err != nil {
+		log.Errorf(nil, "Failed to read the file.")
+		return nil, err
+	}
+	return config, nil
+}
+
+func scanConfig(r io.Reader) (AppConfigProperties, error) {
+	config := AppConfigProperties{}
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if bytes.Contains(line, []byte("=")) {
+			keyVal := bytes.Split(line, []byte("="))
+			key := bytes.TrimSpace(keyVal[0])
+			val := string(bytes.TrimSpace(keyVal[1]))
+			config[string(key)] = val
+		}
+	}
+	return config, scanner.Err()
 }

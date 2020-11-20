@@ -20,6 +20,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -130,6 +131,22 @@ func (t *GetOneInstance) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "service instance id not found")
 		return workspace.TaskFinish
 	}
+	if mp1Rsp.TransportInfo.Endpoint.Addresses != nil {
+		appConfig, err := meputil.GetAppConfig()
+		if err != nil {
+			if err != nil {
+				log.Error("get app config error", nil)
+			}
+		}
+		mp1Rsp.TransportInfo.Endpoint.Addresses = nil
+		uri := fmt.Sprintf("https://%s:%s/%s",
+			appConfig["apigw_host"],
+			appConfig["apigw_port"],
+			mp1Rsp.SerName)
+		uris := []string{uri}
+		mp1Rsp.TransportInfo.Endpoint.Uris = uris
+	}
+
 	t.HttpRsp = mp1Rsp
 	_, err := json.Marshal(mp1Rsp)
 	if err != nil {
