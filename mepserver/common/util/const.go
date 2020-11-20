@@ -87,6 +87,7 @@ const specialCharRegex string = `^.*['~!@#$%^&*()-_=+\|[{}\];:'",<.>/?].*$`
 const singleDigitRegex string = `^.*\d.*$`
 const lowerCaseRegex string = `^.*[a-z].*$`
 const upperCaseRegex string = `^.*[A-Z].*$`
+const ServerNameRegex string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
 
 const pwdLengthMin int = 8
 const pwdLengthMax int = 16
@@ -110,6 +111,7 @@ const MaxDNSRuleId = 36
 
 const MaxPortNumber = 65535
 const MaxPortLength = 5
+const maxHostNameLen = 253
 
 const (
 	DefaultDnsHost           = "localhost"

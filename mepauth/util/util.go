@@ -28,10 +28,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/httplib"
@@ -52,6 +53,7 @@ const EncryptedWorkKeyFilePath string = "wprop/w_properties"
 const WorkKeyNonceFilePath string = "wnprop/wn_properties"
 const EncryptedJwtPrivateKeyPwdFilePath string = "encrypted_jwt_private_key_pwd"
 const JwtPrivateKeyPwdNonceFilePath string = "jwt_private_key_nonce_pwd"
+
 type AppConfigProperties map[string]*[]byte
 
 var KeyComponentFromUserStr *[]byte
@@ -222,7 +224,7 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 		log.Error("failed to decode cert file")
 		return nil, errors.New("failed to decode cert file")
 	}
-	
+
 	serverName := GetAppConfig("server_name")
 	serverNameIsValid, validateServerNameErr := ValidateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
@@ -278,11 +280,13 @@ func SendPostRequest(consumerURL string, jsonStr []byte) error {
 	}
 	req.SetTLSClientConfig(config)
 	req.Body(jsonStr)
-	_, err = req.String()
+	log.Infof("request: s%", jsonStr)
+	response, err := req.String()
 	if err != nil {
 		log.Error("send Post Request Failed")
 		return err
 	}
+	log.Infof("response: s%", response)
 	return nil
 }
 
@@ -354,7 +358,7 @@ func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
 		return getWorkKeyErr
 	}
 	encryptedJwtPrivateKeyPwd, encryptedJwtPrivateKeyPwdErr := EncryptByAES256GCM(*jwtPrivateKeyPwd,
-																					workKey, jwtPrivateKeyPwdNonce)
+		workKey, jwtPrivateKeyPwdNonce)
 	ClearByteArray(*jwtPrivateKeyPwd)
 	ClearByteArray(workKey)
 	if encryptedJwtPrivateKeyPwdErr != nil {
@@ -365,7 +369,7 @@ func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
 	}
 
 	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedJwtPrivateKeyPwdFilePath,
-												encryptedJwtPrivateKeyPwd, KeyFileMode)
+		encryptedJwtPrivateKeyPwd, KeyFileMode)
 	writeNonceErr := ioutil.WriteFile(JwtPrivateKeyPwdNonceFilePath, jwtPrivateKeyPwdNonce, KeyFileMode)
 	ClearByteArray(encryptedJwtPrivateKeyPwd)
 	ClearByteArray(jwtPrivateKeyPwdNonce)
