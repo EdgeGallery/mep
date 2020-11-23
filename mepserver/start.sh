@@ -56,26 +56,6 @@ if [ ! "$valid_host_name" -eq "0" ] ; then
    exit 1
 fi
 
-validate_host_name "$MEPSERVER_APIGW_HOST"
-valid_api_host_name="$?"
-if [ ! "$valid_api_host_name" -eq "0" ] ; then
-   echo "invalid apigw host name"
-   exit 1
-fi
-
-validate_port_num "$MEPSERVER_APIGW_PORT"
-valid_api_port="$?"
-if [ ! "$valid_api_port" -eq "0" ] ; then
-   echo "invalid apigw portnumber"
-   exit 1
-fi
-
-validate_host_name "$MEPSERVER_CERT_DOMAIN_NAME"
-valid_cert_host_name="$?"
-if [ ! "$valid_cert_host_name" -eq "0" ] ; then
-   echo "invalid cert host name"
-   exit 1
-fi
 
 sed -i "s/^httpaddr.*=.*$/httpaddr = $(hostname)/g" conf/app.conf
 sed -i "s/^apigw_host.*=.*$/apigw_host = ${MEPSERVER_APIGW_HOST}/g" conf/app.conf
