@@ -247,6 +247,21 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	if serviceInfo.LivenessInterval !=0 {
+		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/"+t.AppInstanceId+"/services/"+t.ServiceId+t.InstanceId+"/liveness"
+		serviceInfo.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId+t.InstanceId+"/liveness"
+	}
+	reqs := &proto.UpdateInstancePropsRequest{
+		ServiceId:  t.ServiceId,
+		InstanceId: t.InstanceId,
+		Properties: req.Instance.Properties,
+	}
+	_, err = core.InstanceAPI.UpdateInstanceProperties(t.Ctx, reqs)
+	if err != nil {
+		log.Error("service properties of heartbeat updation failed", nil)
+		t.SetFirstErrorCode(meputil.SerErrServiceInstanceFailed, "Status properties failed")
+		return workspace.TaskFinish
+	}
 	// build response serviceComb use serviceId + InstanceId to mark a service instance
 	mp1SerId := t.ServiceId + t.InstanceId
 	serviceInfo.SerInstanceId = mp1SerId

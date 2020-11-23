@@ -20,6 +20,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"mepserver/mp1/plans"
 	"os"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -50,6 +51,7 @@ func main() {
 		}
 
 	}
+	go plans.HeartbeatProcess()
 	server.Run()
 }
 

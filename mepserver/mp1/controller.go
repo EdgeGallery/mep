@@ -83,6 +83,11 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath, Func: getDnsRules},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
+		// HeartBeat
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
+			Func: getHeartbeat},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
+			Func: heartbeatService},
 	}
 }
 
@@ -263,6 +268,26 @@ func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
 		(&plans.DecodeDnsRestReq{}).WithBody(&models.DnsRule{}),
 		&plans.DNSRuleUpdate{})
 	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func getHeartbeat(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.GetOneDecodeHeartbeat{},
+		&plans.GetOneInstanceHeartbeat{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func heartbeatService(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		(&plans.DecodeHeartbeatRestReq{}).WithBodies(&models.ServiceLivenessUpdate{}),
+		&plans.UpdateHeartbeat{})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 
 	workspace.WkRun(workPlan)
 }

@@ -46,6 +46,14 @@ type ServiceInfo struct {
 	ScopeOfLocality   string        `json:"scopeOfLocality" validate:"omitempty,oneof=MEC_SYSTEM MEC_HOST NFVI_POP ZONE ZONE_GROUP NFVI_NODE"`
 	ConsumedLocalOnly bool          `json:"consumedLocalOnly,omitempty"`
 	IsLocal           bool          `json:"isLocal,omitempty"`
+	LivenessInterval  int           `json:"livenessInterval" validate:"omitempty,gte=0,max=2147483646"`
+	Links             Link          `json:"_links,omitempty"`
+}
+type Link struct {
+	Self Selves `json:"self"`
+}
+type Selves struct {
+	Href string `json:"liveness,omitempty"`
 }
 
 // transform ServiceInfo to CreateServiceRequest
@@ -89,6 +97,15 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 		meputil.InfoToProperties(properties, "ScopeOfLocality", s.ScopeOfLocality)
 		meputil.InfoToProperties(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
 		meputil.InfoToProperties(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
+		meputil.InfoToProperties(properties, "livenessInterval", strconv.Itoa(0))
+		if s.LivenessInterval != 0 {
+			meputil.InfoToProperties(properties, "livenessInterval", strconv.Itoa(meputil.DefaultHeartbeatInterval))
+			s.LivenessInterval = meputil.DefaultHeartbeatInterval
+		}
+		meputil.InfoToProperties(properties, "mecState", s.State)
+		secNanoSec := strconv.FormatInt(time.Now().UTC().UnixNano(), FormatIntBase)
+		meputil.InfoToProperties(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
+		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
 		req.Instance.Endpoints, epType = s.toEndpoints()
@@ -169,10 +186,7 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.SerInstanceId = inst.ServiceId + inst.InstanceId
 	s.serCategoryFromProperties(inst.Properties)
 	s.Version = inst.Version
-	s.State = meputil.ActiveState
-	if inst.Status == "DOWN" {
-		s.State = meputil.InactiveState
-	}
+	s.State = inst.Properties["mecState"]
 
 	s.SerName = inst.Properties["serName"]
 	s.TransportID = inst.Properties["transportId"]
@@ -180,6 +194,13 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	epType := inst.Properties["endPointType"]
 	s.ScopeOfLocality = inst.Properties["ScopeOfLocality"]
 	var err error
+	s.LivenessInterval, err = strconv.Atoi(inst.Properties["livenessInterval"])
+	if err != nil {
+		log.Warn("parse int liveness Interval fail")
+	}
+	if s.LivenessInterval != 0 {
+		s.Links.Self.Href = inst.Properties["liveness"]
+	}
 	s.ConsumedLocalOnly, err = strconv.ParseBool(inst.Properties["ConsumedLocalOnly"])
 	if err != nil {
 		log.Warn("parse bool ConsumedLocalOnly fail")
