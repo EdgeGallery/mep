@@ -32,6 +32,23 @@ validate_host_name()
  return 0
 }
 
+# Validating if port is > 1 and < 65535 , not validating reserved port.
+validate_port_num()
+{
+ portnum="$1"
+ len="${#portnum}"
+ if [ "${len}" -gt "5" ] ; then
+   return 1
+ fi
+ if ! echo "$portnum" | grep -qE '^-?[0-9]+$' ; then
+   return 1
+ fi
+ if [ "$portnum" -gt "65535" ] || [ "$portnum" -lt "1" ] ; then
+   return 1
+ fi
+ return 0
+}
+
 validate_host_name $(hostname)
 valid_host_name="$?"
 if [ ! "$valid_host_name" -eq "0" ] ; then
@@ -39,8 +56,33 @@ if [ ! "$valid_host_name" -eq "0" ] ; then
    exit 1
 fi
 
+validate_host_name "$MEPSERVER_APIGW_HOST"
+valid_api_host_name="$?"
+if [ ! "$valid_api_host_name" -eq "0" ] ; then
+   echo "invalid apigw host name"
+   exit 1
+fi
+
+validate_port_num "$MEPSERVER_APIGW_PORT"
+valid_api_port="$?"
+if [ ! "$valid_api_port" -eq "0" ] ; then
+   echo "invalid apigw portnumber"
+   exit 1
+fi
+
+validate_host_name "$MEPSERVER_CERT_DOMAIN_NAME"
+valid_cert_host_name="$?"
+if [ ! "$valid_cert_host_name" -eq "0" ] ; then
+   echo "invalid cert host name"
+   exit 1
+fi
 
 sed -i "s/^httpaddr.*=.*$/httpaddr = $(hostname)/g" conf/app.conf
+sed -i "s/^apigw_host.*=.*$/apigw_host = ${MEPSERVER_APIGW_HOST}/g" conf/app.conf
+sed -i "s/^apigw_port.*=.*$/apigw_port = ${MEPSERVER_APIGW_PORT}/g" conf/app.conf
+
+sed -i "s/^server_name.*=.*$/server_name = ${MEPSERVER_CERT_DOMAIN_NAME}/g" conf/app.conf
+
 set -e
 umask 0027
 

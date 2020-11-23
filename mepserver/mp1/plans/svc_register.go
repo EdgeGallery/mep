@@ -282,7 +282,7 @@ func registerToApigw(serviceInfo *models.ServiceInfo, appInstanceId string) {
 		address.Host,
 		address.Port)
 	uris := []string{uri}
-	log.Infof("SerName: s%, Address: s%", serName, address)
+	log.Infof("SerName: %s, Address: %s", serName, address)
 	serInfo := meputil.SerInfo{
 		SerName: serName,
 		Uris:    uris,
@@ -292,7 +292,7 @@ func registerToApigw(serviceInfo *models.ServiceInfo, appInstanceId string) {
 		AppId:   appInstanceId,
 		SerInfo: serInfo,
 	}
-	log.Infof("serInfo: s%, serInfo: s%", serName, routeInfo)
+	log.Infof("serInfo: %s, serInfo: %s", serName, routeInfo)
 	meputil.AddApigwService(routeInfo)
 	meputil.AddApigwRoute(routeInfo)
 
