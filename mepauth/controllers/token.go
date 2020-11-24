@@ -166,8 +166,12 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 
 // Get app instance Id and Sk
 func GetAppInsIdSk(ak string) (string, []byte, bool) {
-	authInfoRecord, readErr := ReadDataFromFile(ak)
-	if readErr != nil {
+	//authInfoRecord, readErr := ReadDataFromFile(ak)
+	authInfoRecord := &models.AuthInfoRecord{
+		Ak: ak,
+	}
+	readErr := ReadData(authInfoRecord)
+	if readErr != nil && readErr.Error() != "LastInsertId is not supported by this driver" {
 		log.Error("auth info record does not exist in file")
 		return "", nil, false
 	}
