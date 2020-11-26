@@ -143,9 +143,10 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Sk:       string(cipherSkBytes),
 		Nonce:    string(nonceBytes),
 	}
-	err = InsertOrUpdateDataToFile(authInfoRecord)
+	//err = InsertOrUpdateDataToFile(authInfoRecord)
+	err = InsertOrUpdateData(authInfoRecord, "app_ins_id")
 	util.ClearByteArray(nonceBytes)
-	if err != nil {
+	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
 		log.Error("Failed to save ak and sk to file.")
 		return err
 	}
