@@ -37,7 +37,7 @@ func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
 	appInsId := c.Ctx.Input.Param(":applicationId")
-	log.Infof("conf ak/sk appinstanceId=%s", appInsId)
+	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
@@ -68,6 +68,7 @@ func (c *ConfController) Put() {
 
 func (c *ConfController) Delete() {
 	appInsId := c.Ctx.Input.Param(":applicationId")
+	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
 
 	authInfoRecord := &models.AuthInfoRecord{
 		AppInsId: appInsId,
@@ -83,7 +84,7 @@ func (c *ConfController) Delete() {
 		c.Data["json"] = err.Error()
 	}
 
-	c.Data["json"] = nil
+	c.Data["json"] = "Delete success."
 	c.ServeJSON()
 }
 
