@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -670,4 +671,11 @@ func scanConfig(r io.Reader) (AppConfigProperties, error) {
 		}
 	}
 	return config, scanner.Err()
+}
+
+// Buffer for liveness Interval
+func BufferHeartbeatInterval(Interval int) int{
+	buffer := math.Ceil(float64(Interval) * 0.05)
+	buffer = math.Min(buffer, 5)
+	return Interval + int(buffer)
 }

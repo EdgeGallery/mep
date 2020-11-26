@@ -66,6 +66,10 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	}
 	mp1Ser.ToRegisterInstance(&req)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
+	if mp1Ser.LivenessInterval != 0 {
+		mp1Ser.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + instance.ServiceId + instance.InstanceId + "/liveness"
+		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + instance.ServiceId + instance.InstanceId + "/liveness"
+	}
 	domainProject := util.ParseDomainProject(t.Ctx)
 	centerErr := svcutil.UpdateInstance(t.Ctx, domainProject, &copyInstanceRef)
 	if centerErr != nil {

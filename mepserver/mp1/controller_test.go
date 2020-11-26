@@ -26,7 +26,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/agiledragon/gomonkey"
 	_ "github.com/apache/servicecomb-service-center/server"
@@ -79,6 +81,7 @@ const getSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
 const getOneSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
 const delOneSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
 const responseCheckFor201 = "Response status code must be 201"
+const responseCheckFor204 = "Response status code must be 204"
 const subtype1 = "SerAvailabilityNotificationSubscription"
 const subtype2 = "AppTerminationNotificationSubscription"
 const errorSubtypeMissMatch = "Subscription type mismatch"
@@ -93,6 +96,11 @@ const sampleServiceId = "f7e898d1c9ea9edd7496c761ddc92718"
 const sampleInstanceId = "f7e898d1c9ea9edd7496c761ddc92718"
 const serviceDiscoverUrlFormat = "/mep/mec_service_mgmt/v1/applications/%s/services"
 const serNameQueryFormat = ":appInstanceId=%s&;ser_name=%s&;"
+const getHeartbeatUrl = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+const heartBeatUrl = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+const formatIntBase = 10
+const secString = "timestamp/seconds"
+const nanosecString = "timestamp/nanoseconds"
 
 //=======================================END======================================================================
 // Generate test IP, instead of hard coding them
@@ -1973,4 +1981,199 @@ func TestDelOneServiceWithInValidId(t *testing.T) {
 	mockWriterGet.On("WriteHeader", 400)
 
 	service.URLPatterns()[8].Func(mockWriterGet, getRequest)
+}
+
+func TestGetHeartbeat(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+	service := Mp1Service{}
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(heartBeatUrl, defaultAppInstanceId, sampleServiceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	var resp  = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Instance: &pb.MicroServiceInstance {
+			InstanceId: sampleInstanceId,
+			ServiceId: sampleServiceId,
+			Properties: map[string] string{
+				"mecState" : "ACTIVE",
+				"livenessInterval" : "60",
+				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			},
+		},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+	service.URLPatterns()[16].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "200", responseGetHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+	mockWriterGet.AssertExpectations(t)
+}
+// Query a heartbeat data
+func TestGetHeartbeatForInvalidServiceId(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+	service := Mp1Service{}
+	serviceId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(heartBeatUrl, defaultAppInstanceId, serviceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, serviceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	var resp  = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Instance: &pb.MicroServiceInstance {
+			InstanceId: sampleInstanceId,
+			ServiceId: sampleServiceId,
+			Properties: map[string] string{
+				"mecState" : "ACTIVE",
+				"livenessInterval" : "60",
+				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			},
+		},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 400)
+	service.URLPatterns()[16].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "400", responseGetHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+	mockWriterGet.AssertExpectations(t)
+}
+// service heartbeat
+func TestHeartbeatService(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+	service := Mp1Service{}
+	heartbeatRequest := models.ServiceLivenessUpdate{State:"ACTIVE"}
+	heartbeatRequestBytes, _ := json.Marshal(heartbeatRequest)
+	//Patching
+	var updatePropertiesResp = &pb.UpdateInstancePropsResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n1 := &srv.InstanceService{}
+	var resp  = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Instance: &pb.MicroServiceInstance {
+			InstanceId: sampleInstanceId,
+			ServiceId: sampleServiceId,
+			Properties: map[string] string{
+				"mecState" : "ACTIVE",
+				"livenessInterval" : "60",
+				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			},
+		},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "UpdateInstanceProperties", func(*srv.InstanceService, context.Context, *pb.UpdateInstancePropsRequest) (*pb.UpdateInstancePropsResponse, error) {
+		return updatePropertiesResp, nil
+	})
+	defer patch2.Reset()
+	// Create http put request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(heartBeatUrl, defaultAppInstanceId, sampleServiceId),
+		bytes.NewReader(heartbeatRequestBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 204)
+	// 3 is the order of the DNS put handler in the URLPattern
+	service.URLPatterns()[17].Func(mockWriter, getRequest)
+	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+	mockWriter.AssertExpectations(t)
+}
+func TestHeartbeatServiceInvalidServiceId(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+	service := Mp1Service{}
+	heartbeatRequest := models.ServiceLivenessUpdate{State:"ACTIVE"}
+	heartbeatRequestBytes, _ := json.Marshal(heartbeatRequest)
+	//Patching
+	var updatePropertiesResp = &pb.UpdateInstancePropsResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n1 := &srv.InstanceService{}
+	var resp  = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Instance: &pb.MicroServiceInstance {
+			InstanceId: sampleInstanceId,
+			ServiceId: sampleServiceId,
+			Properties: map[string] string{
+				"mecState" : "ACTIVE",
+				"livenessInterval" : "60",
+				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			},
+		},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "UpdateInstanceProperties", func(*srv.InstanceService, context.Context, *pb.UpdateInstancePropsRequest) (*pb.UpdateInstancePropsResponse, error) {
+		return updatePropertiesResp, nil
+	})
+	defer patch2.Reset()
+	// Create http PUT request
+	serviceId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(heartBeatUrl, defaultAppInstanceId, serviceId),
+		bytes.NewReader(heartbeatRequestBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, serviceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+	// 3 is the order of the DNS put handler in the URLPattern
+	service.URLPatterns()[17].Func(mockWriter, getRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+	mockWriter.AssertExpectations(t)
 }

@@ -40,6 +40,8 @@ const (
 	RequestParamErr                               = 14
 	SubscriptionErr                               = 15
 	ResourceExists                                = 16
+	HeartbeatServiceNotFound    		      = 17
+	ServiceInactive             		      = 18
 )
 
 const (
@@ -60,11 +62,13 @@ const (
 	SubscriptionIdPath = "/:subscriptionId"
 	ServiceIdPath      = "/:serviceId"
 	CapabilityIdPath   = "/:capabilityId"
+	Liveness           = "/liveness"
 )
 
 const (
 	ActiveState   = "ACTIVE"
 	InactiveState = "INACTIVE"
+	SuspendedState = "SUSPENDED"
 )
 
 const (
@@ -73,6 +77,10 @@ const (
 )
 
 const Uris string = "uris"
+
+const DefaultHeartbeatInterval = 60
+const BitSize = 32
+const FormatIntBase = 10
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"

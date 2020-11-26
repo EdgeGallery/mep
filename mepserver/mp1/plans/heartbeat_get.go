@@ -1,0 +1,212 @@
+package plans
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/apache/servicecomb-service-center/server/core"
+	"github.com/apache/servicecomb-service-center/server/core/backend"
+	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
+	"mepserver/mp1/models"
+	"strconv"
+	"time"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
+	"mepserver/common/arch/workspace"
+	meputil "mepserver/common/util"
+	"net/http"
+)
+
+type GetOneDecodeHeartbeat struct {
+	workspace.TaskBase
+	R             *http.Request   `json:"r,in"`
+	Ctx           context.Context `json:"ctx,out"`
+	CoreRequest   interface{}     `json:"coreRequest,out"`
+	AppInstanceId string          `json:"appInstanceId,out"`
+}
+
+// OnRequest
+func (t *GetOneDecodeHeartbeat) OnRequest(data string) workspace.TaskCode {
+	var err error
+	log.Infof("Received message of get heartbeat from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
+	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
+	if err != nil {
+		log.Error("parameters validation failed", err)
+		return workspace.TaskFinish
+	}
+	return workspace.TaskFinish
+
+}
+
+func (t *GetOneDecodeHeartbeat) getFindParam(r *http.Request) (context.Context, *proto.GetOneInstanceRequest, error) {
+	query, ids := meputil.GetHTTPTags(r)
+
+	var err error
+	mp1SrvId := query.Get(":serviceId")
+	err = meputil.ValidateServiceID(mp1SrvId)
+	if err != nil {
+		log.Error("Invalid service ID", err)
+		t.SetFirstErrorCode(meputil.RequestParamErr, "Invalid service ID")
+		return nil, nil, err
+	}
+
+	t.AppInstanceId = query.Get(":appInstanceId")
+	err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r)
+	if err != nil {
+		log.Error("Validate X-AppInstanceId in heartbeat failed", err)
+		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
+		return nil, nil, err
+	}
+
+	serviceId := mp1SrvId[:len(mp1SrvId)/2]
+	instanceId := mp1SrvId[len(mp1SrvId)/2:]
+	req := &proto.GetOneInstanceRequest{
+		ConsumerServiceId:  r.Header.Get("X-ConsumerId"),
+		ProviderServiceId:  serviceId,
+		ProviderInstanceId: instanceId,
+		Tags:               ids,
+	}
+
+	ctx := util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), query.Get(":project"))
+	return ctx, req, nil
+}
+
+type GetOneInstanceHeartbeat struct {
+	workspace.TaskBase
+	HttpErrInf    *proto.Response `json:"httpErrInf,out"`
+	Ctx           context.Context `json:"ctx,in"`
+	CoreRequest   interface{}     `json:"coreRequest,in"`
+	HttpRsp       interface{}     `json:"httpRsp,out"`
+	AppInstanceId string          `json:"appInstanceId,in"`
+}
+
+// OnRequest
+func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
+	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
+	if !ok {
+		log.Error("get instance request in get heartbeat error", nil)
+		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get instance request heartbeat error")
+		return workspace.TaskFinish
+	}
+	resp, errGetOneInstance := core.InstanceAPI.GetOneInstance(t.Ctx, req)
+	if errGetOneInstance != nil {
+		log.Error("get one instance heartbeat error", nil)
+		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance heartbeat error")
+		return workspace.TaskFinish
+	}
+	t.HttpErrInf = resp.Response
+	resp.Response = nil
+	mp1Rsp := &models.ServiceLivenessInfo{}
+	t.filterAppInstanceId(resp.Instance)
+	if resp.Instance != nil {
+		mp1Rsp.FromServiceInstance(resp.Instance)
+	} else {
+		log.Error("service instance id in heartbeat not found", nil)
+		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "service instance id in heartbeat not found")
+		return workspace.TaskFinish
+	}
+	if mp1Rsp.Interval == 0{
+		log.Error("Service instance is not avail the service of heartbeat", nil)
+		t.SetFirstErrorCode(meputil.HeartbeatServiceNotFound, "Invalid get heartbeat request")
+		return workspace.TaskFinish
+	}
+	t.HttpRsp = mp1Rsp
+	_, err := json.Marshal(mp1Rsp)
+	if err != nil {
+		log.Error("heartbeat's marshal service info failed", nil)
+		t.SetFirstErrorCode(meputil.ParseInfoErr, "heartbeat's marshal service info failed")
+		return workspace.TaskFinish
+	}
+	log.Debugf("Response for service information in heartbeat with subscriptionId %s", req.ProviderServiceId)
+	return workspace.TaskFinish
+}
+
+func (t *GetOneInstanceHeartbeat) filterAppInstanceId(inst *proto.MicroServiceInstance) {
+	if inst == nil || inst.Properties == nil {
+		return
+	}
+	if t.AppInstanceId != inst.Properties["appInstanceId"] {
+		inst = nil
+	}
+}
+
+func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error){
+	opts := []registry.PluginOp{
+		registry.OpGet(registry.WithStrKey("/cse-sr/inst/files///"), registry.WithPrefix()),
+	}
+	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
+	if err != nil {
+		log.Errorf(nil, "query error from etcd")
+		return nil, fmt.Errorf("query from etcd error")
+	}
+	var findResp []*proto.MicroServiceInstance
+	for _, value := range resp.Kvs {
+		var instances map[string]interface{}
+		err = json.Unmarshal(value.Value, &instances)
+		if err != nil {
+			return nil, fmt.Errorf("string convert to instance get failed in heartbeat process")
+		}
+		dci := &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""}
+		instances["datacenterinfo"] = dci
+		message, err := json.Marshal(&instances)
+		if err != nil {
+			log.Errorf(nil, "instance convert to string failed in heartbeat process")
+			return nil, err
+		}
+		var ins *proto.MicroServiceInstance
+		err = json.Unmarshal(message, &ins)
+		if err != nil {
+			log.Errorf(nil, "String convert to MicroServiceInstance failed in heartbeat process!")
+			return nil, err
+		}
+		property := ins.Properties
+		liveInterval, err := strconv.Atoi(property["livenessInterval"])
+		if err!= nil{
+			log.Errorf(nil, "Failed to parse int")
+			return nil, err
+		}
+		mecState := property["mecState"]
+		if liveInterval > 0 && mecState == meputil.ActiveState{
+			findResp = append(findResp, ins)
+		}
+	}
+	if len(findResp) == 0 {
+		return nil, fmt.Errorf("null")
+	}
+	return findResp, nil
+}
+
+func HeartbeatProcess(){
+	ticker := time.NewTicker(1 * time.Second)
+	for range ticker.C {
+		services, _ := AvailableServiceForHeartbeat()
+		var seconds int64
+		var timeInterval int
+		var err1, err2 error
+		for _, svc := range services {
+			seconds, err1 = strconv.ParseInt(svc.Properties["timestamp/seconds"], meputil.FormatIntBase, meputil.BitSize)
+			timeInterval, err2 = strconv.Atoi(svc.Properties["livenessInterval"])
+			if err1 != nil && err2 != nil {
+				log.Warn("time Interval or timestamp is failing")
+			}
+			sec := time.Now().UTC().Unix() - seconds
+			if sec > int64(meputil.BufferHeartbeatInterval(timeInterval)) {
+				property := svc.Properties
+				property["mecState"] = meputil.SuspendedState
+				req := &proto.UpdateInstancePropsRequest{
+					ServiceId:  svc.ServiceId,
+					InstanceId: svc.InstanceId,
+					Properties: property,
+				}
+				_, err := core.InstanceAPI.UpdateInstanceProperties(context.Background(), req)
+				log.Infof("%s service send to suspended state", svc.ServiceId)
+				if err != nil {
+					log.Error("service properties of heartbeat updation failed", nil)
+				}
+			}
+		}
+	}
+}

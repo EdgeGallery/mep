@@ -121,6 +121,8 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 		body.Title = "Can not found resource"
 	case util.SerInstanceNotFound:
 		fallthrough
+	case util.HeartbeatServiceNotFound:
+		fallthrough
 	case util.SubscriptionNotFound:
 		statusCode = http.StatusNotFound
 		body.Title = "Can not found resource"
@@ -141,6 +143,9 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 		body.Title = "Request parameter error"
 	case util.SubscriptionErr:
 		body.Title = "App subscription error"
+	case util.ServiceInactive:
+		statusCode = http.StatusConflict
+		body.Title = "Service is in INACTIVE state"
 	case util.ResourceExists:
 		statusCode = http.StatusUnprocessableEntity
 		body.Title = "Resource already exists"
