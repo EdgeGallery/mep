@@ -77,11 +77,15 @@ func (c *ConfController) Delete() {
 	err := ReadData(authInfoRecord, "app_ins_id")
 	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
 		c.Data["json"] = err.Error()
+		c.Ctx.ResponseWriter.WriteHeader(util.BadRequest)
+		return
 	}
 
 	err = DeleteData(authInfoRecord, "app_ins_id")
 	if err != nil {
 		c.Data["json"] = err.Error()
+		c.Ctx.ResponseWriter.WriteHeader(util.BadRequest)
+		return
 	}
 
 	c.Data["json"] = "Delete success."
