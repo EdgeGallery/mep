@@ -170,7 +170,7 @@ func GetAppInsIdSk(ak string) (string, []byte, bool) {
 	authInfoRecord := &models.AuthInfoRecord{
 		Ak: ak,
 	}
-	readErr := ReadData(authInfoRecord)
+	readErr := ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != "LastInsertId is not supported by this driver" {
 		log.Error("auth info record does not exist in file")
 		return "", nil, false
