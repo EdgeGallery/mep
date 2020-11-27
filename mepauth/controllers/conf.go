@@ -74,17 +74,9 @@ func (c *ConfController) Delete() {
 		AppInsId: appInsId,
 	}
 
-	err := ReadData(authInfoRecord, "app_ins_id")
-	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
-		c.Data["json"] = err.Error()
-		c.Ctx.ResponseWriter.WriteHeader(util.BadRequest)
-		return
-	}
-
-	err = DeleteData(authInfoRecord, "app_ins_id")
+	err := DeleteData(authInfoRecord, "app_ins_id")
 	if err != nil {
-		c.Data["json"] = err.Error()
-		c.Ctx.ResponseWriter.WriteHeader(util.BadRequest)
+		c.writeErrorResponse("Delete fail.", util.BadRequest)
 		return
 	}
 
@@ -104,6 +96,17 @@ func (c *ConfController) Get() {
 		c.Data["json"] = err.Error()
 	}
 	c.Data["json"] = authInfoRecord
+	c.ServeJSON()
+}
+
+func (c *ConfController) writeErrorResponse(errMsg string, code int) {
+	log.Error(errMsg)
+	c.writeResponse(errMsg, code)
+}
+
+func (c *ConfController) writeResponse(msg string, code int) {
+	c.Data["json"] = msg
+	c.Ctx.ResponseWriter.WriteHeader(code)
 	c.ServeJSON()
 }
 

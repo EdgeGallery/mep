@@ -14,7 +14,6 @@ import (
 	. "github.com/agiledragon/gomonkey"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"mepauth/models"
 	"mepauth/util"
 )
 
@@ -100,7 +99,11 @@ func TestSaveAkAndSk(t *testing.T) {
 			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
+			patch2 := ApplyFunc(InsertOrUpdateData, func(_ interface{}, _ ...string) error {
+				return nil
+			})
 			defer patches.Reset()
+			defer patch2.Reset()
 			err := saveAkAndSk(validAppInsID, validAk, &validSk)
 			So(err, ShouldBeNil)
 		})
@@ -141,7 +144,7 @@ func TestSaveAkAndSk(t *testing.T) {
 			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
-			patches.ApplyFunc(InsertOrUpdateDataToFile, func(_ *models.AuthInfoRecord) error {
+			patches.ApplyFunc(InsertOrUpdateData, func(_ interface{}, _ ...string) error {
 				return errors.New("insert fail")
 			})
 			defer patches.Reset()
