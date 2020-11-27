@@ -36,7 +36,7 @@ type ConfController struct {
 func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
-	appInsId := c.Ctx.Input.Param(":applicationId")
+	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
@@ -57,7 +57,7 @@ func (c *ConfController) Put() {
 			Nonce:    string(nonceBytes),
 		}
 		err := InsertOrUpdateData(authInfoRecord, "app_ins_id")
-		if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+		if err != nil && err.Error() != util.PgOkMsg {
 			c.Data["json"] = err.Error()
 		}
 	} else {
@@ -67,7 +67,7 @@ func (c *ConfController) Put() {
 }
 
 func (c *ConfController) Delete() {
-	appInsId := c.Ctx.Input.Param(":applicationId")
+	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
 
 	authInfoRecord := &models.AuthInfoRecord{
@@ -85,14 +85,14 @@ func (c *ConfController) Delete() {
 }
 
 func (c *ConfController) Get() {
-	appInsId := c.Ctx.Input.Param(":applicationId")
+	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 
 	authInfoRecord := &models.AuthInfoRecord{
 		AppInsId: appInsId,
 	}
 
 	err := ReadData(authInfoRecord, "app_ins_id")
-	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+	if err != nil && err.Error() != util.PgOkMsg {
 		c.Data["json"] = err.Error()
 	}
 	c.Data["json"] = authInfoRecord
@@ -154,7 +154,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
 	err = InsertOrUpdateData(authInfoRecord, "app_ins_id")
 	util.ClearByteArray(nonceBytes)
-	if err != nil && err.Error() != "LastInsertId is not supported by this driver" {
+	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")
 		return err
 	}
