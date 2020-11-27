@@ -145,8 +145,8 @@ func TestGetAppInsIdSk(t *testing.T) {
 
 	Convey("get app instance id and sk", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
-				return *authInfo, nil
+			patches := ApplyFunc(ReadData, func(authInfoRecord interface{}, _ ...string) error {
+				return nil
 			})
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
@@ -158,21 +158,20 @@ func TestGetAppInsIdSk(t *testing.T) {
 				return nil, nil
 			})
 			defer patches.Reset()
-			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
-			So(appInsId, ShouldEqual, "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f")
+			_, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for read fail", func() {
-			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
-				return *authInfo, errors.New("read error")
+			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+				return errors.New("read error")
 			})
 			defer patches.Reset()
 			_, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for decode fail", func() {
-			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
-				return *authInfo, nil
+			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+				return nil
 			})
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, errors.New("decode fail")
@@ -183,8 +182,8 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for get work key fail", func() {
-			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
-				return *authInfo, nil
+			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+				return nil
 			})
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
@@ -197,8 +196,8 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for decrypt fail", func() {
-			patches := ApplyFunc(ReadDataFromFile, func(_ string) (models.AuthInfoRecord, error) {
-				return *authInfo, nil
+			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+				return nil
 			})
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
