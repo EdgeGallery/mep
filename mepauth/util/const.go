@@ -57,3 +57,8 @@ const minPasswordSize = 8
 const maxPasswordSize = 16
 const maxPasswordCount = 2
 const maxHostNameLen = 253
+const UrlApplicationId string = ":applicationId"
+const UrlRouteId string = ":routeId"
+const PgOkMsg string = "LastInsertId is not supported by this driver"
+const ContentType string = "Content-Type"
+const JsonUtf8 string = "application/json; charset=utf-8"

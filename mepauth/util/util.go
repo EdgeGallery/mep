@@ -272,7 +272,7 @@ func getCipherSuites(sslCiphers string) []uint16 {
 func SendPostRequest(consumerURL string, jsonStr []byte) error {
 
 	req := httplib.Post(consumerURL)
-	req.Header("Content-Type", "application/json; charset=utf-8")
+	req.Header(ContentType, JsonUtf8)
 	config, err := TLSConfig("apigw_cacert")
 	if err != nil {
 		log.Error("unable to read certificate")

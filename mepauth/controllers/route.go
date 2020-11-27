@@ -33,7 +33,7 @@ type OneRouteController struct {
 }
 
 func (c *OneRouteController) Get() {
-	routeId := c.Ctx.Input.Param(":routeId")
+	routeId := c.Ctx.Input.Param(util.UrlRouteId)
 	log.Info(routeId)
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
@@ -48,7 +48,7 @@ func (c *OneRouteController) Get() {
 }
 
 func (c *OneRouteController) Put() {
-	routeId := c.Ctx.Input.Param(":routeId")
+	routeId := c.Ctx.Input.Param(util.UrlRouteId)
 	log.Info(routeId)
 	var routeInfo *models.RouteInfo
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &routeInfo); err == nil {
@@ -79,14 +79,14 @@ func addApigwRoute(routeInfo *models.RouteInfo) {
 		serName)
 	req := httplib.Post(kongRouteUrl)
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	req.Header("Content-Type", "application/json; charset=utf-8")
+	req.Header(util.ContentType, util.JsonUtf8)
 	req.Body(jsonStr)
 
 	str, err := req.String()
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("request=%s", str)
+	log.Infof("addApigwRoute resp = %s", str)
 }
 
 func addApigwService(routeInfo *models.RouteInfo) {
@@ -97,14 +97,14 @@ func addApigwService(routeInfo *models.RouteInfo) {
 	req := httplib.Post(kongServiceUrl)
 	serUrl := routeInfo.SerInfo.Uris[0]
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	req.Header("Content-Type", "application/json; charset=utf-8")
+	req.Header(util.ContentType, util.JsonUtf8)
 	req.Body(jsonStr)
 
 	str, err := req.String()
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("request=%s", str)
+	log.Infof("addApigwService resp = %s", str)
 
 	addJwtPlugin(serName)
 }
@@ -116,19 +116,19 @@ func addJwtPlugin(serName string) {
 		serName)
 	req := httplib.Post(jwtPluginUrl)
 	jsonPluginStr := []byte(`{ "name": "jwt" }`)
-	req.Header("Content-Type", "application/json; charset=utf-8")
+	req.Header(util.ContentType, util.JsonUtf8)
 	req.Body(jsonPluginStr)
 
 	str, err := req.String()
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("request=%s", str)
+	log.Infof("addJwtPlugin = %s", str)
 
 }
 
 func (c *OneRouteController) Delete() {
-	routeId := c.Ctx.Input.Param(":routeId")
+	routeId := c.Ctx.Input.Param(util.UrlRouteId)
 	log.Info(routeId)
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
@@ -156,5 +156,5 @@ func apigwDelRoute(serName string) {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Infof("request=%s", str)
+	log.Infof("apigwDelRoute = %s", str)
 }
