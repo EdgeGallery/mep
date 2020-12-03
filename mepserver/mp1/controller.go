@@ -88,6 +88,11 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 			Func: getHeartbeat},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
 			Func: heartbeatService},
+		//Liveness and readiness
+		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func:  func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			w.Write([]byte("ok"))
+		}},
 	}
 }
 

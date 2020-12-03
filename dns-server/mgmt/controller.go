@@ -45,6 +45,7 @@ func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, 
 	// Routes
 	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord", e.handleSetResourceRecords)
 	e.echo.DELETE("/mep/dns_server_mgmt/v1/rrecord/:fqdn/:rrtype", e.handleDeleteResourceRecord)
+	e.echo.GET("/health", e.handleHealthResult)
 
 	e.dataStore = *store
 
@@ -167,4 +168,8 @@ func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "Error in retrieving the data.")
 	}
 	return c.String(http.StatusOK, "Success")
+}
+
+func (e *Controller) handleHealthResult(c echo.Context) error {
+	return c.String(http.StatusOK, "OK")
 }
