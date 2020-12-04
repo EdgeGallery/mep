@@ -72,9 +72,6 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceUpdate},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: getOneService},
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceDelete},
-		// services
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: serviceDiscover},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: getOneService},
 		// MEC Application Support API - appSubscriptions
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.EndAppSubscribePath, Func: appEndSubscribe},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath, Func: getAppEndSubscribes},
@@ -96,6 +93,9 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
 		}},
+		// services
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: serviceDiscover},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: getOneService},
 	}
 }
 
