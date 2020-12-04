@@ -40,8 +40,8 @@ const (
 	RequestParamErr                               = 14
 	SubscriptionErr                               = 15
 	ResourceExists                                = 16
-	HeartbeatServiceNotFound    		      = 17
-	ServiceInactive             		      = 18
+	HeartbeatServiceNotFound                      = 17
+	ServiceInactive                               = 18
 )
 
 const (
@@ -49,6 +49,7 @@ const (
 	Mm5RootPath           = "/mepcfg"
 	MecServicePath        = "/mec_service_mgmt/v1"
 	MecAppSupportPath     = "/mec_app_support/v1"
+	ServicesPath          = MecServicePath + "/services"
 	MecRuleConfigPath     = "/mec_app_config/v1"
 	MecPlatformConfigPath = "/mec_platform_config/v1"
 	AppServicesPath       = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
@@ -66,8 +67,8 @@ const (
 )
 
 const (
-	ActiveState   = "ACTIVE"
-	InactiveState = "INACTIVE"
+	ActiveState    = "ACTIVE"
+	InactiveState  = "INACTIVE"
 	SuspendedState = "SUSPENDED"
 )
 
