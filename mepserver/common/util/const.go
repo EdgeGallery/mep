@@ -40,8 +40,8 @@ const (
 	RequestParamErr                               = 14
 	SubscriptionErr                               = 15
 	ResourceExists                                = 16
-	HeartbeatServiceNotFound    		      = 17
-	ServiceInactive             		      = 18
+	HeartbeatServiceNotFound                      = 17
+	ServiceInactive                               = 18
 )
 
 const (
@@ -53,6 +53,7 @@ const (
 	MecPlatformConfigPath = "/mec_platform_config/v1"
 	AppServicesPath       = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
 	AppSubscribePath      = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
+	ServicesPath          = RootPath + MecServicePath + "/services"
 	EndAppSubscribePath   = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath          = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	DNSConfigRulesPath    = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
@@ -66,8 +67,8 @@ const (
 )
 
 const (
-	ActiveState   = "ACTIVE"
-	InactiveState = "INACTIVE"
+	ActiveState    = "ACTIVE"
+	InactiveState  = "INACTIVE"
 	SuspendedState = "SUSPENDED"
 )
 
