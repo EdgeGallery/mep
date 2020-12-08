@@ -89,10 +89,13 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
 			Func: heartbeatService},
 		//Liveness and readiness
-		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func:  func(w http.ResponseWriter, r *http.Request) {
+		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
 		}},
+		// services
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: serviceDiscover},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: getOneService},
 	}
 }
 
