@@ -52,20 +52,20 @@ func (c *TokenController) Post() {
 	// Below we first check the formats of the header is correct or not
 	ak, signHeader, sig := parseAuthHeader(header)
 	if ak == "" || signHeader == "" || sig == "" {
-		log.Info("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
+		log.Error("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
 			" Resource [" + c.Ctx.Input.URL() + "]")
 		c.writeErrorResponse("Bad request.", util.BadRequest)
-		log.Info("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
+		log.Error("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
 			" Resource [" + c.Ctx.Input.URL() + "] Result [Failure: Bad auth header format.]")
 		return
 	}
 
 	isTimeValid := validateDateTimeFormat(c.Ctx.Request)
 	if !isTimeValid {
-		log.Info("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
+		log.Error("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
 			" Resource [" + c.Ctx.Input.URL() + "]")
 		c.writeErrorResponse("Bad request.", util.BadRequest)
-		log.Info("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
+		log.Error("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
 			" Resource [" + c.Ctx.Input.URL() + "] Result [Failure: Bad x-sdk-time format.]")
 		return
 	}
@@ -76,7 +76,7 @@ func (c *TokenController) Post() {
 	isAkBlockListed := IsAkInBlockList(ak)
 	if isAkBlockListed {
 		c.writeErrorResponse("Access is locked.", util.Forbidden)
-		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
+		log.Error("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
 			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
 			" Result [Failure: Ak is blockListed.]")
 		return
@@ -85,7 +85,7 @@ func (c *TokenController) Post() {
 	appInsId, sk, akExist := GetAppInsIdSk(ak)
 	if appInsId == "" || sk == nil || len(sk) == 0 {
 		c.checkAkExistAndWriteErrorRes(akExist)
-		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
+		log.Error("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
 			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
 			" Result [Failure: Matching App instance id not found.]")
 		return
