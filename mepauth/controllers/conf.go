@@ -42,6 +42,7 @@ func (c *ConfController) Put() {
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
 		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
+		log.Infof("conf ak/sk ak=%s", ak)
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
 		cipherSkBytes, nonceBytes, err2 := getCipherAndNonce(&skByte)
