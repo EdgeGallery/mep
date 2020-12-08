@@ -22,7 +22,7 @@ const PortRegex string = `^([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{
 const ServerNameRegex string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
 const AkRegex string = `^\w{20}$`
 const SkRegex string = `^\w{64}$`
-const AuthHeaderRegex string = `^SDK-HMAC-SHA256 Access=(\w{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
+const AuthHeaderRegex string = `^SDK-HMAC-SHA256 Access=([\w=]{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
 const MepserverName = "mepserver"
 const MepserverRootPath = "mep"
 const MepauthName = "mepauth"
