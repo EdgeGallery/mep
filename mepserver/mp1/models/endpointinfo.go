@@ -18,12 +18,12 @@
 package models
 
 type EndPointInfo struct {
-	Uris        []string `json:"uris" validate:"omitempty,dive,uri"`
+	Uris        []string              `json:"uris" validate:"omitempty,dive,uri"`
 	Addresses   []EndPointInfoAddress `json:"addresses" validate:"omitempty,dive"`
-	Alternative interface{} `json:"alternative"`
+	Alternative interface{}           `json:"alternative"`
 }
 
 type EndPointInfoAddress struct {
-	Host string `json:"host" validate:"required,ip4_addr"`
+	Host string `json:"host" validate:"required"`
 	Port uint32 `json:"port" validate:"required,gt=0,lte=65535"`
 }
