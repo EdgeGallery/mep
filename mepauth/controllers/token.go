@@ -172,7 +172,7 @@ func GetAppInsIdSk(ak string) (string, []byte, bool) {
 	}
 	readErr := ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != util.PgOkMsg {
-		log.Error("auth info record does not exist in file")
+		log.Error("auth info record does not exist")
 		return "", nil, false
 	}
 	encodedSk := []byte(authInfoRecord.Sk)
