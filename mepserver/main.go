@@ -19,7 +19,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"mepserver/mp1/plans"
 	"os"
 
@@ -27,8 +26,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	_ "github.com/apache/servicecomb-service-center/server/init"
-	"golang.org/x/crypto/ssh/terminal"
-
 	_ "mepserver/common/tls"
 	"mepserver/common/util"
 	_ "mepserver/mm5"
@@ -97,13 +94,4 @@ func initialEncryptComponent() error {
 		return err
 	}
 	return nil
-}
-
-func readPassword(prompt string) ([]byte, error) {
-	fmt.Print("\n" + prompt)
-	pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		return nil, err
-	}
-	return pass, nil
 }
