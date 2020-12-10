@@ -18,8 +18,7 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
+	"errors"
 	"mepserver/mp1/plans"
 	"os"
 
@@ -27,8 +26,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	_ "github.com/apache/servicecomb-service-center/server/init"
-	"golang.org/x/crypto/ssh/terminal"
-
 	_ "mepserver/common/tls"
 	"mepserver/common/util"
 	_ "mepserver/mm5"
@@ -56,16 +53,13 @@ func main() {
 }
 
 func encryptCertPwd() error {
-	pwd, err := readPassword("Please input tls certificates password: ")
-	if err != nil {
+	pwd := []byte(os.Getenv("TLS_KEY"))
+	if len(os.Getenv("TLS_KEY")) == 0 {
+		err := errors.New("tls password is not set in environment variable")
 		log.Errorf(err, "read password failed")
 		return err
 	}
-	confirm, err := readPassword("Confirm the password: ")
-	if err != nil || !bytes.Equal(pwd, confirm) {
-		log.Errorf(err, "confirm password failed")
-		return err
-	}
+	os.Unsetenv("TLS_KEY")
 	_, verifyErr := util.ValidatePassword(&pwd)
 	if verifyErr != nil {
 		log.Errorf(verifyErr, "Certificate password complexity validation failed")
@@ -80,11 +74,13 @@ func encryptCertPwd() error {
 }
 
 func initialEncryptComponent() error {
-	keyComponentFromUser, err := readPassword("Please input root key component: ")
-	if err != nil {
+	keyComponentFromUser := []byte(os.Getenv(("ROOT_KEY")))
+	if len(os.Getenv("ROOT_KEY")) == 0 {
+		err := errors.New("root key is not present inside environment variable")
 		log.Errorf(err, "read root key component failed")
 		return err
 	}
+	os.Unsetenv("ROOT_KEY")
 	verifyErr := util.ValidateKeyComponentUserInput(&keyComponentFromUser)
 	if verifyErr != nil {
 		log.Errorf(verifyErr, "root key component from user validation failed")
@@ -92,19 +88,10 @@ func initialEncryptComponent() error {
 	}
 	util.KeyComponentFromUserStr = &keyComponentFromUser
 
-	err = util.InitRootKeyAndWorkKey()
+	err := util.InitRootKeyAndWorkKey()
 	if err != nil {
 		log.Errorf(err, "failed to init root key and work key")
 		return err
 	}
 	return nil
-}
-
-func readPassword(prompt string) ([]byte, error) {
-	fmt.Print("\n" + prompt)
-	pass, err := terminal.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		return nil, err
-	}
-	return pass, nil
 }
