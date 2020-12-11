@@ -48,7 +48,7 @@ type TokenController struct {
 func (c *TokenController) Post() {
 	header := c.Ctx.Input.Header(Authorization)
 	clientIp := c.Ctx.Request.Header.Get(XRealIp)
-	log.Info("Get token clientIp: %s", clientIp)
+	log.Infof("Get token clientIp: %s", clientIp)
 	// Below we first check the formats of the header is correct or not
 	ak, signHeader, sig := parseAuthHeader(header)
 	if ak == "" || signHeader == "" || sig == "" {
@@ -59,7 +59,6 @@ func (c *TokenController) Post() {
 			" Resource [" + c.Ctx.Input.URL() + "] Result [Failure: Bad auth header format.]")
 		return
 	}
-	log.Infof("ak: %s, signHeader: %s, sig: %s", ak, signHeader, sig)
 
 	isTimeValid := validateDateTimeFormat(c.Ctx.Request)
 	if !isTimeValid {
