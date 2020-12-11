@@ -84,10 +84,7 @@ func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "capability id miss-match")
 		return workspace.TaskFinish
 	}
-	capabilityState := meputil.ActiveState
-	if resp.Instance.Status == "DOWN" {
-		capabilityState = meputil.InactiveState
-	}
+	capabilityState := resp.Instance.Properties["mecState"]
 
 	// Build a complete list of service to its consumers applications
 	errCode := t.buildConsumerList()

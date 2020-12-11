@@ -104,10 +104,7 @@ func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
 	for _, instance := range resp.Instances {
 
 		capabilityId := instance.GetServiceId() + instance.GetInstanceId()
-		capabilityState := meputil.ActiveState
-		if instance.Status == "DOWN" {
-			capabilityState = meputil.InactiveState
-		}
+		capabilityState := instance.Properties["mecState"]
 
 		// Build the capability structure
 		capability := models.PlatformCapability{CapabilityId: capabilityId,
