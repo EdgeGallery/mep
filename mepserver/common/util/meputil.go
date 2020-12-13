@@ -280,7 +280,19 @@ func ValidateAppInstanceIdWithHeader(id string, r *http.Request) error {
 	if id == r.Header.Get("X-AppinstanceID") {
 		return nil
 	}
+	if validateUrl(r) {
+		return nil
+	}
 	return errors.New("UnAuthorization to access the resource")
+}
+
+func validateUrl(r *http.Request) bool {
+	url := r.URL.Path
+	if strings.Contains(url, ServicesPath) {
+		return true
+	}
+	return false
+
 }
 
 // get resource info
@@ -674,7 +686,7 @@ func scanConfig(r io.Reader) (AppConfigProperties, error) {
 }
 
 // Buffer for liveness Interval
-func BufferHeartbeatInterval(Interval int) int{
+func BufferHeartbeatInterval(Interval int) int {
 	buffer := math.Ceil(float64(Interval) * 0.05)
 	buffer = math.Min(buffer, 5)
 	return Interval + int(buffer)
