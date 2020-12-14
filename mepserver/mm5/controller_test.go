@@ -1010,6 +1010,7 @@ func TestGetCapabilitiesSuccessCase(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		})
 		return &response, nil
@@ -1058,6 +1059,7 @@ func TestGetCapabilitiesWithConsumers(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		})
 		return &response, nil
@@ -1119,6 +1121,7 @@ func TestGetCapabilitiesWithMultiConsumers(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		})
 		return &response, nil
@@ -1181,6 +1184,7 @@ func TestGetCapabilitiesWithMultiCapabilityMultiConsumers(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		})
 		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
@@ -1190,6 +1194,7 @@ func TestGetCapabilitiesWithMultiCapabilityMultiConsumers(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService5",
+				"mecState": "ACTIVE",
 			},
 		})
 		return &response, nil
@@ -1259,6 +1264,7 @@ func TestGetCapabilitiesWithMultiConsumersAndServiceNameFilter(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		})
 		return &response, nil
@@ -1320,6 +1326,7 @@ func TestGetCapabilitiesWithMultiConsumersAndCategoryFilter(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName":             "FaceRegService6",
+				"mecState":            "ACTIVE",
 				"serCategory/href":    "/example/catalogue1",
 				"serCategory/id":      "id12345",
 				"serCategory/name":    "RNI",
@@ -1392,6 +1399,7 @@ func TestGetCapabilitySuccessCase(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		}
 		return &response, nil
@@ -1441,6 +1449,7 @@ func TestGetCapabilitySuccessCaseWithConsumers(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		}
 		return &response, nil
@@ -1504,6 +1513,7 @@ func TestGetCapabilitySuccessCaseWithConsumersAndSerNameFilter(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName": "FaceRegService6",
+				"mecState": "ACTIVE",
 			},
 		}
 		return &response, nil
@@ -1587,6 +1597,7 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 			Version:    "3.2.1",
 			Properties: map[string]string{
 				"serName":             "FaceRegService6",
+				"mecState":            "ACTIVE",
 				"serCategory/href":    "/example/catalogue1",
 				"serCategory/id":      "id12345",
 				"serCategory/name":    "RNI",
