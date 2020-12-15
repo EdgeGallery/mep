@@ -69,7 +69,7 @@ func GetRecordsWithCompleteKeyPath(path string) (records map[string][]byte, erro
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get entries from data-store failed")
+		log.Errorf(nil, "get entries with path from data-store failed")
 		return nil, meputil.OperateDataWithEtcdErr
 	}
 	resultList := make(map[string][]byte)
@@ -86,7 +86,7 @@ func PutRecord(path string, value []byte) int {
 	}
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get entries from data-store failed")
+		log.Errorf(nil, "write to data-store failed")
 		return meputil.OperateDataWithEtcdErr
 	}
 	return 0
