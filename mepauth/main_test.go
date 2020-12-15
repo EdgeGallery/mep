@@ -1,8 +1,14 @@
 package main
 
 import (
+	"errors"
+	"io"
+	"mepauth/util"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/agiledragon/gomonkey"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -31,6 +37,75 @@ func TestReadPropertiesFile(t *testing.T) {
 			config, err = readPropertiesFile("main.go")
 			So(config, ShouldNotBeNil)
 			So(err, ShouldBeNil)
+		})
+		Convey("for open file fail", func() {
+			patch1 := gomonkey.ApplyFunc(os.Open, func(string) (*os.File, error) {
+				return nil, errors.New("open file fail")
+			})
+			defer patch1.Reset()
+			_, err := readPropertiesFile("abc.go")
+			So(err, ShouldNotBeNil)
+		})
+		Convey("scan config fail", func() {
+			patch1 := gomonkey.ApplyFunc(scanConfig, func(io.Reader) (util.AppConfigProperties, error) {
+				return util.AppConfigProperties{}, errors.New("scan config fail")
+			})
+			defer patch1.Reset()
+			_, err := readPropertiesFile("main.go")
+			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
+func TestClearAppConfigOnExit(t *testing.T) {
+	Convey("Clear AppConfig", t, func() {
+		Convey("for success", func() {
+			trustedNetworks := util.AppConfigProperties{}
+			network := []byte("example.com")
+			trustedNetworks["network1"] = &network
+			clearAppConfigOnExit(trustedNetworks)
+		})
+	})
+}
+
+func TestDoInitialization(t *testing.T) {
+	Convey("Do Initialization", t, func() {
+		Convey("for success", func() {
+			network := []byte("example.com")
+			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
+				return nil
+			})
+			defer patch1.Reset()
+			patch2 := gomonkey.ApplyFunc(util.InitRootKeyAndWorkKey, func() error {
+				return nil
+			})
+			defer patch2.Reset()
+			res := doInitialization(&network)
+			So(res, ShouldBeTrue)
+		})
+
+		Convey("for initAPIGateway fail", func() {
+			network := []byte("example.com")
+			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
+				return errors.New("initAPIGateway fail")
+			})
+			defer patch1.Reset()
+			res := doInitialization(&network)
+			So(res, ShouldBeFalse)
+		})
+
+		Convey("for InitRootKeyAndWorkKey fail", func() {
+			network := []byte("example.com")
+			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
+				return nil
+			})
+			defer patch1.Reset()
+			patch2 := gomonkey.ApplyFunc(util.InitRootKeyAndWorkKey, func() error {
+				return errors.New("InitRootKeyAndWorkKey fail")
+			})
+			defer patch2.Reset()
+			res := doInitialization(&network)
+			So(res, ShouldBeFalse)
 		})
 
 	})
