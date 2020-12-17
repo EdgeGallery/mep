@@ -26,8 +26,6 @@ import (
 func init() {
 	orm.RegisterModel(new(AuthInfoRecord))
 	orm.RegisterModel(new(RouteRecord))
-	orm.RegisterModel(new(AesInfo))
-
 }
 
 type AuthInfoRecord struct {
@@ -81,10 +79,4 @@ type RouteInfo struct {
 type SerInfo struct {
 	SerName string   `json:"serName"`
 	Uris    []string `json:"uris"`
-}
-
-type AesInfo struct {
-	Id     int64  `json:"routeId"`
-	AesKey string `json:"aesKey"`
-	Nonce  string `json:"nonce"`
 }
