@@ -26,7 +26,7 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 
 	"github.com/astaxie/beego/httplib"
 )
@@ -58,7 +58,7 @@ func AddApigwService(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
 	err = SendPostRequest(kongServiceUrl, jsonStr)
 	if err != nil {
-		log.Error(err)
+		log.Error("AddApigwService failed", err)
 	}
 }
 
@@ -73,7 +73,7 @@ func AddApigwRoute(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
 	err = SendPostRequest(kongRouteUrl, jsonStr)
 	if err != nil {
-		log.Error(err)
+		log.Error("AddApigwRoute failed", err)
 	}
 }
 
@@ -87,7 +87,7 @@ func ApigwDelRoute(serName string) {
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
-		log.Error(err)
+		log.Error("ApigwDelRoute failed", err)
 	}
 	log.Infof("request=%s", str)
 }
@@ -106,14 +106,14 @@ func SendPostRequest(consumerURL string, jsonStr []byte) error {
 	req.Header("Content-Type", "application/json; charset=utf-8")
 	config, err := TLSConfig("apigw_cacert")
 	if err != nil {
-		log.Error("unable to read certificate")
+		log.Error("unable to read certificate", err)
 		return err
 	}
 	req.SetTLSClientConfig(config)
 	req.Body(jsonStr)
 	res, err := req.String()
 	if err != nil {
-		log.Error("send Post Request Failed")
+		log.Error("send Post Request Failed", err)
 		return err
 	}
 	log.Infof("request=%s", res)
@@ -124,32 +124,32 @@ func SendPostRequest(consumerURL string, jsonStr []byte) error {
 func TLSConfig(crtName string) (*tls.Config, error) {
 	appConfig, err := GetAppConfig()
 	if err != nil {
-		log.Error("get app config error")
+		log.Error("get app config error", err)
 		return nil, err
 	}
 	certNameConfig := string(appConfig[crtName])
 	if len(certNameConfig) == 0 {
-		log.Error(crtName + " configuration is not set")
+		log.Error(crtName+" configuration is not set", nil)
 		return nil, errors.New("cert name configuration is not set")
 	}
 
 	crt, err := ioutil.ReadFile(certNameConfig)
 	if err != nil {
-		log.Error("unable to read certificate")
+		log.Error("unable to read certificate", err)
 		return nil, err
 	}
 
 	rootCAs := x509.NewCertPool()
 	ok := rootCAs.AppendCertsFromPEM(crt)
 	if !ok {
-		log.Error("failed to decode cert file")
+		log.Error("failed to decode cert file", nil)
 		return nil, errors.New("failed to decode cert file")
 	}
 
 	serverName := string(appConfig["server_name"])
 	serverNameIsValid, validateServerNameErr := ValidateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error")
+		log.Error("validate server name error", err)
 		return nil, validateServerNameErr
 	}
 	sslCiphers := string(appConfig["ssl_ciphers"])
@@ -186,7 +186,7 @@ func getCipherSuites(sslCiphers string) []uint16 {
 		}
 		mapValue, ok := cipherSuiteMap[cipherName]
 		if !ok {
-			log.Error("not recommended cipher suite")
+			log.Error("not recommended cipher suite", nil)
 			return nil
 		}
 		cipherSuiteArr = append(cipherSuiteArr, mapValue)
