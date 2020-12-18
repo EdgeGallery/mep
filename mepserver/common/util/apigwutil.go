@@ -77,7 +77,7 @@ func AddApigwRoute(routeInfo RouteInfo) {
 	}
 }
 
-// enable mep server jwt plugin
+// enable kong jwt plugin
 func EnableJwtPlugin(routeInfo RouteInfo) {
 	appConfig, err := GetAppConfig()
 	serName := routeInfo.SerInfo.SerName
@@ -88,7 +88,7 @@ func EnableJwtPlugin(routeInfo RouteInfo) {
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
 	err = SendPostRequest(kongPluginUrl, []byte(jwtConfig))
 	if err != nil {
-		log.Error("Enable mep server jwt plugin failed", err)
+		log.Error("Enable kong jwt plugin failed", err)
 	}
 }
 
