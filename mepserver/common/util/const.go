@@ -58,6 +58,7 @@ const (
 	DNSRulesPath          = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	DNSConfigRulesPath    = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
 	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
+	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	SubscriptionIdPath = "/:subscriptionId"
@@ -91,6 +92,7 @@ const RequestBodyLength = 4096
 const ServicesMaxCount = 50
 const AppSubscriptionCount = 50
 const ServerHeader = "Server"
+const JwtPlugin = "jwt"
 
 const specialCharRegex string = `^.*['~!@#$%^&*()-_=+\|[{}\];:'",<.>/?].*$`
 const singleDigitRegex string = `^.*\d.*$`

@@ -247,9 +247,9 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	if serviceInfo.LivenessInterval !=0 {
-		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/"+t.AppInstanceId+"/services/"+t.ServiceId+t.InstanceId+"/liveness"
-		serviceInfo.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId+t.InstanceId+"/liveness"
+	if serviceInfo.LivenessInterval != 0 {
+		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
+		serviceInfo.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
 	}
 	reqs := &proto.UpdateInstancePropsRequest{
 		ServiceId:  t.ServiceId,
@@ -310,6 +310,7 @@ func registerToApigw(serviceInfo *models.ServiceInfo, appInstanceId string) {
 	log.Infof("serInfo: %s, serInfo: %s", serName, routeInfo)
 	meputil.AddApigwService(routeInfo)
 	meputil.AddApigwRoute(routeInfo)
+	meputil.EnableJwtPlugin(routeInfo)
 
 }
 
