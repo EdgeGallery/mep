@@ -77,6 +77,21 @@ func AddApigwRoute(routeInfo RouteInfo) {
 	}
 }
 
+// enable kong jwt plugin
+func EnableJwtPlugin(routeInfo RouteInfo) {
+	appConfig, err := GetAppConfig()
+	serName := routeInfo.SerInfo.SerName
+	kongPluginUrl := fmt.Sprintf("https://%s:%s/services/%s/plugins",
+		appConfig["apigw_host"],
+		appConfig["apigw_port"],
+		serName)
+	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
+	err = SendPostRequest(kongPluginUrl, []byte(jwtConfig))
+	if err != nil {
+		log.Error("Enable kong jwt plugin failed", err)
+	}
+}
+
 func ApigwDelRoute(serName string) {
 	appConfig, err := GetAppConfig()
 
