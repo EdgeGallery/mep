@@ -54,7 +54,7 @@ Above is the directory tree of MEP project, their usage is as belows:
 
 Most of the MEP project codes are developed by golang, the kong plugin is by lua. MEP project is released via docker image.
 
-### build mep-auth
+### Build mep-auth
 
 ```
 cd mepauth
@@ -62,14 +62,14 @@ sudo ./docker-build.sh
 
 ```
 
-### build mep-server
+### Build mep-server
 
 ```
 cd mepserver
 sudo ./docker-build.sh
 ```
 
-### run mepauth
+### Run mepauth
 
 ```
 docker run -itd --name mepauth \
@@ -92,8 +92,10 @@ docker run -itd --name mepauth \
 MEP_CERTS_DIR is where you put mepauth server certificates and keys.
 MEPAUTH_CONF_PATH is a config file for mepauth.
 
-### run mepserver
+### Run mepserver
 MEP_CERTS_DIR is where you put mep server certificates and keys.
+MEP_ROOT_KEY_COMPONENT is the root key's random component of length 256. 
+CERT_PASSPHRASE is the passphrase used to create the certificate.
 ```
 docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_DIR}" \
                                  --cap-drop All \
@@ -101,6 +103,8 @@ docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_
                                  -v ${MEP_CERTS_DIR}/mepserver_encryptedtls.key:${MEPSERVER_SSL_DIR}/server_key.pem:ro \
                                  -v ${MEP_CERTS_DIR}/ca.crt:${MEPSERVER_SSL_DIR}/trust.cer:ro \
                                  -v ${MEP_CERTS_DIR}/mepserver_cert_pwd:${MEPSERVER_SSL_DIR}/cert_pwd:ro \
+                                 -e "ROOT_KEY=${MEP_ROOT_KEY_COMPONENT}" \
+                                 -e "TLS_KEY=${CERT_PASSPHRASE}" \
                                  edgegallery/mep:latest
 ```
 
