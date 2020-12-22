@@ -43,15 +43,14 @@ MEP Mp1服务注册和发现基于servicecomb服务中心实现[3]。Servicecomb
 
 大多数MEP项目代码是由golang开发的，kong插件是由lua开发的。MEP项目通过docker image发布。
 
-### 建立mep-auth
+### 构建mep-auth镜像
 
 ```
 cd mepauth
 sudo ./docker-build.sh
-
 ```
 
-### 建立mep服务器
+### 构建mepserver镜像
 
 ```
 cd mepserver
@@ -82,6 +81,8 @@ MEP_CERTS_DIR是放置mepauth服务器证书和密钥的位置。MEPAUTH_CONF_PA
 
 ### 运行mepserver
 MEP_CERTS_DIR是放置mep服务器证书和密钥的目录。
+MEP_ROOT_KEY_COMPONENT是根密钥的随机组件，长度为256。
+CERT_PASSPHRASE 是用于创建证书的密码。
 ```
 docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_DIR}" \
                                  --cap-drop All \
@@ -89,6 +90,8 @@ docker run -itd --name mepserver --network mep-net -e "SSL_ROOT=${MEPSERVER_SSL_
                                  -v ${MEP_CERTS_DIR}/mepserver_encryptedtls.key:${MEPSERVER_SSL_DIR}/server_key.pem:ro \
                                  -v ${MEP_CERTS_DIR}/ca.crt:${MEPSERVER_SSL_DIR}/trust.cer:ro \
                                  -v ${MEP_CERTS_DIR}/mepserver_cert_pwd:${MEPSERVER_SSL_DIR}/cert_pwd:ro \
+                                 -e "ROOT_KEY=${MEP_ROOT_KEY_COMPONENT}" \
+                                 -e "TLS_KEY=${CERT_PASSPHRASE}" \
                                  edgegallery/mep:latest
 ```
 
