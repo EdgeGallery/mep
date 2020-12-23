@@ -109,23 +109,23 @@ func GetAppConfig() (AppConfigProperties, error) {
 
 // Send post request
 func SendPostRequest(url string, jsonStr []byte) error {
-	return SendRequest(url, POST_METHOD, jsonStr)
+	return SendRequest(url, PostMethod, jsonStr)
 }
 
 // Send delete request
 func SendDelRequest(url string) error {
-	return SendRequest(url, DELETE_METHOD, nil)
+	return SendRequest(url, DeleteMethod, nil)
 }
 
 func SendRequest(url string, method string, jsonStr []byte) error {
 	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
 	var req *httplib.BeegoHTTPRequest
 	switch method {
-	case POST_METHOD:
+	case PostMethod:
 		req = httplib.Post(url)
 		req.Header("Content-Type", "application/json; charset=utf-8")
 		req.Body(jsonStr)
-	case DELETE_METHOD:
+	case DeleteMethod:
 		req = httplib.Delete(url)
 	default:
 		req = httplib.Get(url)

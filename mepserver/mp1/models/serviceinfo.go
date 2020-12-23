@@ -75,7 +75,7 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
+func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, serviceId string) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -108,7 +108,7 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints()
+		req.Instance.Endpoints, epType = s.toEndpoints(serviceId)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -125,18 +125,15 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 	}
 }
 
-func (s *ServiceInfo) toEndpoints() ([]string, string) {
+func (s *ServiceInfo) toEndpoints(serviceId string) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		return s.TransportInfo.Endpoint.Uris, meputil.Uris
 	}
 	endPoints := make([]string, 0, 1)
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
-
-		for _, v := range s.TransportInfo.Endpoint.Addresses {
-			addrDes := fmt.Sprintf("%s:%d", v.Host, v.Port)
-			endPoints = append(endPoints, addrDes)
-		}
-		return endPoints, "addresses"
+		registerToApigw(s, serviceId)
+		uri := fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName+serviceId)
+		return []string{uri}, meputil.Uris
 	}
 
 	if s.TransportInfo.Endpoint.Alternative != nil {
@@ -211,6 +208,30 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	}
 	s.fromEndpoints(inst.Endpoints, epType)
 	s.transportInfoFromProperties(inst.Properties)
+}
+
+func registerToApigw(serviceInfo *ServiceInfo, serviceId string) {
+	serName := serviceInfo.SerName + serviceId
+	address := serviceInfo.TransportInfo.Endpoint.Addresses[0]
+	uri := fmt.Sprintf("http://%s:%d/",
+		address.Host,
+		address.Port)
+	uris := []string{uri}
+	log.Infof("SerName: %s, Address: %s", serName, address)
+	serInfo := meputil.SerInfo{
+		SerName: serName,
+		Uris:    uris,
+	}
+	routeInfo := meputil.RouteInfo{
+		Id:      1,
+		AppId:   serviceId,
+		SerInfo: serInfo,
+	}
+	log.Infof("serInfo: %s, routeInfo: %s", serName, routeInfo)
+	meputil.AddApigwService(routeInfo)
+	meputil.AddApigwRoute(routeInfo)
+	meputil.EnableJwtPlugin(routeInfo)
+
 }
 
 func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {

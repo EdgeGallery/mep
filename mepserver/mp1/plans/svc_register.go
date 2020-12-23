@@ -231,7 +231,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}
-	serviceInfo.ToRegisterInstance(req)
+	serviceInfo.ToRegisterInstance(req, t.ServiceId)
 	req.Instance.ServiceId = t.ServiceId
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	resp, err := core.InstanceAPI.Register(t.Ctx, req)
@@ -307,7 +307,7 @@ func registerToApigw(serviceInfo *models.ServiceInfo, appInstanceId string) {
 		AppId:   appInstanceId,
 		SerInfo: serInfo,
 	}
-	log.Infof("serInfo: %s, serInfo: %s", serName, routeInfo)
+	log.Infof("serInfo: %s, routeInfo: %s", serName, routeInfo)
 	meputil.AddApigwService(routeInfo)
 	meputil.AddApigwRoute(routeInfo)
 	meputil.EnableJwtPlugin(routeInfo)
