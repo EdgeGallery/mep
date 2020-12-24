@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apache/servicecomb-service-center/pkg/util"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
@@ -75,7 +77,7 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, serviceId string) {
+func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -108,7 +110,7 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, ser
 		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints(serviceId)
+		req.Instance.Endpoints, epType = s.toEndpoints()
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -125,14 +127,15 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, ser
 	}
 }
 
-func (s *ServiceInfo) toEndpoints(serviceId string) ([]string, string) {
+func (s *ServiceInfo) toEndpoints() ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		return s.TransportInfo.Endpoint.Uris, meputil.Uris
 	}
 	endPoints := make([]string, 0, 1)
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
-		registerToApigw(s, serviceId)
-		uri := fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName+serviceId)
+		uuid := util.GenerateUuid()[0:20]
+		registerToApigw(s, uuid)
+		uri := fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName+uuid)
 		return []string{uri}, meputil.Uris
 	}
 
