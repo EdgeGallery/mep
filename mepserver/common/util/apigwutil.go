@@ -47,31 +47,33 @@ type SerInfo struct {
 	Uris    []string `json:"uris"`
 }
 
-func AddApigwService(routeInfo RouteInfo) {
+func GetApigwUrl() string {
 	appConfig, err := GetAppConfig()
+	if err != nil {
+		log.Error("Get App Config failed.", err)
+		return ""
+	}
+	kongUrl := fmt.Sprintf("https://%s:%s", appConfig["apigw_host"], appConfig["apigw_port"])
+	return kongUrl
 
+}
+
+func AddApigwService(routeInfo RouteInfo) {
+	kongServiceUrl := GetApigwUrl() + "/services"
 	serName := routeInfo.SerInfo.SerName
-	kongServiceUrl := fmt.Sprintf("https://%s:%s/services",
-		appConfig["apigw_host"],
-		appConfig["apigw_port"])
 	serUrl := routeInfo.SerInfo.Uris[0]
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	err = SendPostRequest(kongServiceUrl, jsonStr)
+	err := SendPostRequest(kongServiceUrl, jsonStr)
 	if err != nil {
 		log.Error("AddApigwService failed", err)
 	}
 }
 
 func AddApigwRoute(routeInfo RouteInfo) {
-	appConfig, err := GetAppConfig()
-
 	serName := routeInfo.SerInfo.SerName
-	kongRouteUrl := fmt.Sprintf("https://%s:%s/services/%s/routes",
-		appConfig["apigw_host"],
-		appConfig["apigw_port"],
-		serName)
+	kongRouteUrl := GetApigwUrl() + "/services/" + serName + "/routes"
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	err = SendPostRequest(kongRouteUrl, jsonStr)
+	err := SendPostRequest(kongRouteUrl, jsonStr)
 	if err != nil {
 		log.Error("AddApigwRoute failed", err)
 	}
@@ -79,32 +81,23 @@ func AddApigwRoute(routeInfo RouteInfo) {
 
 // enable kong jwt plugin
 func EnableJwtPlugin(routeInfo RouteInfo) {
-	appConfig, err := GetAppConfig()
 	serName := routeInfo.SerInfo.SerName
-	kongPluginUrl := fmt.Sprintf("https://%s:%s/services/%s/plugins",
-		appConfig["apigw_host"],
-		appConfig["apigw_port"],
-		serName)
+	kongPluginUrl := GetApigwUrl() + "/services/" + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	err = SendPostRequest(kongPluginUrl, []byte(jwtConfig))
+	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig))
 	if err != nil {
 		log.Error("Enable kong jwt plugin failed", err)
 	}
 }
 
 func ApigwDelRoute(serName string) {
-	appConfig, err := GetAppConfig()
-
-	kongRouteUrl := fmt.Sprintf("https://%s:%s/services/%s/routes/%s",
-		appConfig["apigw_host"],
-		appConfig["apigw_port"],
-		serName, serName)
+	kongRouteUrl := GetApigwUrl() + "/services/" + serName + "/routes/" + serName
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
 		log.Error("ApigwDelRoute failed", err)
 	}
-	log.Infof("request=%s", str)
+	log.Infof("res=%s", str)
 }
 
 func GetAppConfig() (AppConfigProperties, error) {
@@ -115,23 +108,42 @@ func GetAppConfig() (AppConfigProperties, error) {
 }
 
 // Send post request
-func SendPostRequest(consumerURL string, jsonStr []byte) error {
+func SendPostRequest(url string, jsonStr []byte) error {
+	return SendRequest(url, PostMethod, jsonStr)
+}
 
-	req := httplib.Post(consumerURL)
-	req.Header("Content-Type", "application/json; charset=utf-8")
+// Send delete request
+func SendDelRequest(url string) error {
+	return SendRequest(url, DeleteMethod, nil)
+}
+
+func SendRequest(url string, method string, jsonStr []byte) error {
+	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
+	var req *httplib.BeegoHTTPRequest
+	switch method {
+	case PostMethod:
+		req = httplib.Post(url)
+		req.Header("Content-Type", "application/json; charset=utf-8")
+		req.Body(jsonStr)
+	case DeleteMethod:
+		req = httplib.Delete(url)
+	default:
+		req = httplib.Get(url)
+	}
+
 	config, err := TLSConfig("apigw_cacert")
 	if err != nil {
 		log.Error("unable to read certificate", err)
 		return err
 	}
 	req.SetTLSClientConfig(config)
-	req.Body(jsonStr)
+
 	res, err := req.String()
 	if err != nil {
-		log.Error("send Post Request Failed", err)
+		log.Error("send Request Failed", err)
 		return err
 	}
-	log.Infof("request=%s", res)
+	log.Infof("res=%s", res)
 	return nil
 }
 

@@ -284,34 +284,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	log.Debugf("response sent for service registration with appId %s", t.AppInstanceId)
-	if serviceInfo.TransportInfo.Endpoint.Addresses != nil {
-		registerToApigw(serviceInfo, t.AppInstanceId)
-	}
 	return workspace.TaskFinish
-}
-
-func registerToApigw(serviceInfo *models.ServiceInfo, appInstanceId string) {
-	serName := serviceInfo.SerName
-	address := serviceInfo.TransportInfo.Endpoint.Addresses[0]
-	uri := fmt.Sprintf("http://%s:%d/",
-		address.Host,
-		address.Port)
-	uris := []string{uri}
-	log.Infof("SerName: %s, Address: %s", serName, address)
-	serInfo := meputil.SerInfo{
-		SerName: serName,
-		Uris:    uris,
-	}
-	routeInfo := meputil.RouteInfo{
-		Id:      1,
-		AppId:   appInstanceId,
-		SerInfo: serInfo,
-	}
-	log.Infof("serInfo: %s, serInfo: %s", serName, routeInfo)
-	meputil.AddApigwService(routeInfo)
-	meputil.AddApigwRoute(routeInfo)
-	meputil.EnableJwtPlugin(routeInfo)
-
 }
 
 type RegisterLimit struct {

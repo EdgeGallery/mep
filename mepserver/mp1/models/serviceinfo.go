@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apache/servicecomb-service-center/pkg/util"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
@@ -131,12 +133,10 @@ func (s *ServiceInfo) toEndpoints() ([]string, string) {
 	}
 	endPoints := make([]string, 0, 1)
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
-
-		for _, v := range s.TransportInfo.Endpoint.Addresses {
-			addrDes := fmt.Sprintf("%s:%d", v.Host, v.Port)
-			endPoints = append(endPoints, addrDes)
-		}
-		return endPoints, "addresses"
+		uuid := util.GenerateUuid()[0:20]
+		registerToApigw(s, uuid)
+		uri := fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName+uuid)
+		return []string{uri}, meputil.Uris
 	}
 
 	if s.TransportInfo.Endpoint.Alternative != nil {
@@ -211,6 +211,30 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	}
 	s.fromEndpoints(inst.Endpoints, epType)
 	s.transportInfoFromProperties(inst.Properties)
+}
+
+func registerToApigw(serviceInfo *ServiceInfo, serviceId string) {
+	serName := serviceInfo.SerName + serviceId
+	address := serviceInfo.TransportInfo.Endpoint.Addresses[0]
+	uri := fmt.Sprintf("http://%s:%d/",
+		address.Host,
+		address.Port)
+	uris := []string{uri}
+	log.Infof("SerName: %s, Address: %s", serName, address)
+	serInfo := meputil.SerInfo{
+		SerName: serName,
+		Uris:    uris,
+	}
+	routeInfo := meputil.RouteInfo{
+		Id:      1,
+		AppId:   serviceId,
+		SerInfo: serInfo,
+	}
+	log.Infof("serInfo: %s, routeInfo: %s", serName, routeInfo)
+	meputil.AddApigwService(routeInfo)
+	meputil.AddApigwRoute(routeInfo)
+	meputil.EnableJwtPlugin(routeInfo)
+
 }
 
 func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {

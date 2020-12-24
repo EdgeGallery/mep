@@ -78,6 +78,11 @@ const (
 	IPv6Type = "IP_V6"
 )
 
+const (
+	PostMethod   = "POST"
+	DeleteMethod = "DELETE"
+)
+
 const Uris string = "uris"
 
 const DefaultHeartbeatInterval = 60
