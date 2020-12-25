@@ -38,7 +38,6 @@ func (c *ConfController) Put() {
 	var err error
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
-	log.Infof("conf ak/sk RequestBody=%s", c.Ctx.Input.RequestBody)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo

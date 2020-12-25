@@ -280,13 +280,11 @@ func SendPostRequest(consumerURL string, jsonStr []byte) error {
 	}
 	req.SetTLSClientConfig(config)
 	req.Body(jsonStr)
-	log.Infof("request: %s", jsonStr)
-	response, err := req.String()
+	_, err = req.String()
 	if err != nil {
 		log.Error("send Post Request Failed")
 		return err
 	}
-	log.Infof("response: %s", response)
 	return nil
 }
 
