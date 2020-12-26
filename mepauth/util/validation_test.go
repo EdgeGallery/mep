@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package util
 
 import (
@@ -56,14 +72,14 @@ func TestValidateApiGwParams(t *testing.T) {
 		ok, err := ValidateApiGwParams("apigw.edgegallery.org", "30443")
 		So(ok, ShouldBeTrue)
 		So(err, ShouldBeNil)
-		ok, err= ValidateApiGwParams("apigw.edgegallery.org", "304433")
+		ok, err = ValidateApiGwParams("apigw.edgegallery.org", "304433")
 		So(ok, ShouldBeFalse)
 		So(err, ShouldBeNil)
 		tooLongHost := "edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org."
-		ok, err= ValidateApiGwParams(tooLongHost, "304433")
+		ok, err = ValidateApiGwParams(tooLongHost, "304433")
 		So(ok, ShouldBeFalse)
 		So(err, ShouldNotBeNil)
 	})

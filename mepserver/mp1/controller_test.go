@@ -1,17 +1,17 @@
 /*
- *  Copyright 2020 Huawei Technologies Co., Ltd.
+ * Copyright 2020 Huawei Technologies Co., Ltd.
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package mp1
@@ -30,24 +30,25 @@ import (
 	"testing"
 	"time"
 
+	"mepserver/mp1/models"
+	"reflect"
+
 	"github.com/agiledragon/gomonkey"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	_ "github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 	srv "github.com/apache/servicecomb-service-center/server/service"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"mepserver/mp1/models"
-	"reflect"
 
-
-	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
 	"mepserver/common/util"
+
+	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 )
 
 type mockHttpWriter struct {
@@ -75,6 +76,7 @@ const maxIPVal = 255
 const ipAddFormatter = "%d.%d.%d.%d"
 const writeObjectFormat = "{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\"," +
 	"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"%s\"}\n"
+
 //===========================Services==============================================
 const postSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
 const getSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
@@ -129,10 +131,12 @@ func (m *mockHttpWriter) WriteHeader(statusCode int) {
 	// Get the argument inputs and marking the function is called with correct input
 	m.Called(statusCode)
 }
+
 type mockHttpWriterWithoutWrite struct {
 	mock.Mock
 	response []byte
 }
+
 func (m *mockHttpWriterWithoutWrite) Header() http.Header {
 	// Get the argument inputs
 	args := m.Called()
@@ -920,7 +924,7 @@ func TestAppSubscribePost(t *testing.T) {
 
 	service := Mp1Service{}
 	createSubscription := models.SerAvailabilityNotificationSubscription{
-		SubscriptionType: "SerAvailabilityNotificationSubscription",
+		SubscriptionType:  "SerAvailabilityNotificationSubscription",
 		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
 		FilteringCriteria: models.FilteringCriteria{
 			SerInstanceIds: []string{
@@ -930,12 +934,12 @@ func TestAppSubscribePost(t *testing.T) {
 				"FaceRegService5",
 			},
 			SerCategories: []models.CategoryRef{
-			{
-				Href: "https://192.0.2.1:8080/example/catalogue1",
-				ID: "id12345",
-				Name: "RNI",
-				Version: "1.2.2",
-			},
+				{
+					Href:    "https://192.0.2.1:8080/example/catalogue1",
+					ID:      "id12345",
+					Name:    "RNI",
+					Version: "1.2.2",
+				},
 			},
 			States: []string{
 				"ACTIVE",
@@ -944,7 +948,7 @@ func TestAppSubscribePost(t *testing.T) {
 		},
 	}
 	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 	}
 	n := &srv.InstanceService{}
@@ -986,8 +990,7 @@ func TestAppSubscribePostWrongJsonBody(t *testing.T) {
 
 	service := Mp1Service{}
 
-	var resp  = &pb.GetOneInstanceResponse{
-	}
+	var resp = &pb.GetOneInstanceResponse{}
 	n := &srv.InstanceService{}
 	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
 		return resp, nil
@@ -1027,7 +1030,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 
 	service := Mp1Service{}
 	createSubscription := models.SerAvailabilityNotificationSubscription{
-		SubscriptionType: "SerAvailabilityNotificationSubscription",
+		SubscriptionType:  "SerAvailabilityNotificationSubscription",
 		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
 		FilteringCriteria: models.FilteringCriteria{
 			SerInstanceIds: []string{
@@ -1038,9 +1041,9 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 			},
 			SerCategories: []models.CategoryRef{
 				{
-					Href: "https://192.0.2.1:8080/example/catalogue1",
-					ID: "id12345",
-					Name: "RNI",
+					Href:    "https://192.0.2.1:8080/example/catalogue1",
+					ID:      "id12345",
+					Name:    "RNI",
 					Version: "1.2.2",
 				},
 			},
@@ -1051,7 +1054,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 		},
 	}
 	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 	}
 	n := &srv.InstanceService{}
@@ -1059,7 +1062,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 		return resp, nil
 	})
 	defer patch1.Reset()
-    var counter = 0
+	var counter = 0
 	patch2 := gomonkey.ApplyFunc(json.Marshal, func(i interface{}) (b []byte, e error) {
 		counter++
 		if counter == 3 {
@@ -1108,7 +1111,6 @@ func TestAppSubscribeGetAll(t *testing.T) {
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
 
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
@@ -1162,7 +1164,6 @@ func TestDelOneAppSubscribe(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1185,12 +1186,12 @@ func TestAppTerminationSubscribePost(t *testing.T) {
 
 	service := Mp1Service{}
 	createSubscription := models.AppTerminationNotificationSubscription{
-		SubscriptionType: "AppTerminationNotificationSubscription",
+		SubscriptionType:  "AppTerminationNotificationSubscription",
 		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
-		AppInstanceId: "6abe4782-2c70-4e47-9a4e-0ee3a1a0fd1e",
+		AppInstanceId:     "6abe4782-2c70-4e47-9a4e-0ee3a1a0fd1e",
 	}
 	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 	}
 	n := &srv.InstanceService{}
@@ -1263,7 +1264,6 @@ func TestGetOneAppTerminationSubscribe(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1290,7 +1290,6 @@ func TestDelOneAppTerminationSubscribe(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1304,16 +1303,16 @@ func TestDelOneAppTerminationSubscribe(t *testing.T) {
 //========================================PRODUCER SERVICE=================================================
 type serviceInfo struct {
 	//	SerInstanceId     string        `json:"serInstanceId,omitempty"`
-	SerName           string        `json:"serName" validate:"required,max=128,validateName"`
+	SerName           string               `json:"serName" validate:"required,max=128,validateName"`
 	SerCategory       models.CategoryRef   `json:"serCategory" validate:"omitempty"`
-	Version           string        `json:"version" validate:"required,max=32,validateVersion"`
-	State             string        `json:"state" validate:"required,oneof=ACTIVE INACTIVE"`
-	TransportID       string        `json:"transportId" validate:"omitempty,max=64,validateId"`
+	Version           string               `json:"version" validate:"required,max=32,validateVersion"`
+	State             string               `json:"state" validate:"required,oneof=ACTIVE INACTIVE"`
+	TransportID       string               `json:"transportId" validate:"omitempty,max=64,validateId"`
 	TransportInfo     models.TransportInfo `json:"transportInfo" validate:"omitempty"`
-	Serializer        string        `json:"serializer" validate:"required,oneof=JSON XML PROTOBUF3"`
-	ScopeOfLocality   string        `json:"scopeOfLocality" validate:"omitempty,oneof=MEC_SYSTEM MEC_HOST NFVI_POP ZONE ZONE_GROUP NFVI_NODE"`
-	ConsumedLocalOnly bool          `json:"consumedLocalOnly,omitempty"`
-	IsLocal           bool          `json:"isLocal,omitempty"`
+	Serializer        string               `json:"serializer" validate:"required,oneof=JSON XML PROTOBUF3"`
+	ScopeOfLocality   string               `json:"scopeOfLocality" validate:"omitempty,oneof=MEC_SYSTEM MEC_HOST NFVI_POP ZONE ZONE_GROUP NFVI_NODE"`
+	ConsumedLocalOnly bool                 `json:"consumedLocalOnly,omitempty"`
+	IsLocal           bool                 `json:"isLocal,omitempty"`
 }
 
 // Register a service
@@ -1326,7 +1325,6 @@ func TestPostServiceRegister(t *testing.T) {
 
 	service := Mp1Service{}
 
-
 	svcCat := models.CategoryRef{
 		Href:    "/example/catalogue1",
 		ID:      "id12345",
@@ -1337,28 +1335,27 @@ func TestPostServiceRegister(t *testing.T) {
 	var theArray = make([]string, 1)
 	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
 
-
 	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes: theArray,
+		GrantTypes:    theArray,
 		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
 	}
 
 	sec1 := models.SecurityInfo{
 		OAuth2Info: authInfo,
 	}
-	transInfo := models.TransportInfo {
-		ID:          "TransId12345",
-		Name:        "REST",
-		Description: "REST API",
-		TransType:   "REST_HTTP",
-		Protocol:    "HTTP",
-		Version:     "2.0",
-		Endpoint:    models.EndPointInfo{},
-		Security:    sec1,
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      "REST API",
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
 		ImplSpecificInfo: nil,
 	}
 	serviceInf := serviceInfo{
-		SerName:       "FaceRegService5",
+		SerName:           "FaceRegService5",
 		SerCategory:       svcCat,
 		Version:           "4.5.8",
 		State:             "ACTIVE",
@@ -1371,8 +1368,8 @@ func TestPostServiceRegister(t *testing.T) {
 	}
 	serviceInfBytes, _ := json.Marshal(serviceInf)
 	//Patching
-	var srvresp  = &pb.CreateServiceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	var srvresp = &pb.CreateServiceResponse{
+		Response:  &pb.Response{Code: pb.Response_SUCCESS},
 		ServiceId: sampleServiceId,
 	}
 	n1 := &srv.MicroServiceService{}
@@ -1382,7 +1379,7 @@ func TestPostServiceRegister(t *testing.T) {
 	defer patch1.Reset()
 
 	var instResp = &pb.RegisterInstanceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Response:   &pb.Response{Code: pb.Response_SUCCESS},
 		InstanceId: sampleServiceId,
 	}
 	n2 := &srv.InstanceService{}
@@ -1391,12 +1388,12 @@ func TestPostServiceRegister(t *testing.T) {
 	})
 	defer patch2.Reset()
 
-	var findInstResp  = &pb.FindInstancesResponse{
+	var findInstResp = &pb.FindInstancesResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instances: []*pb.MicroServiceInstance {
+		Instances: []*pb.MicroServiceInstance{
 			{
 				InstanceId: sampleInstanceId,
-				ServiceId: sampleServiceId,
+				ServiceId:  sampleServiceId,
 			},
 		},
 	}
@@ -1433,7 +1430,6 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 
 	service := Mp1Service{}
 
-
 	svcCat := models.CategoryRef{
 		Href:    "/example/catalogue1",
 		ID:      "id12345",
@@ -1445,26 +1441,26 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
 
 	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes: theArray,
+		GrantTypes:    theArray,
 		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
 	}
 
 	sec1 := models.SecurityInfo{
 		OAuth2Info: authInfo,
 	}
-	transInfo := models.TransportInfo {
-		ID:          "TransId12345",
-		Name:        "REST",
-		Description: "REST API",
-		TransType:   "REST_HTTP",
-		Protocol:    "HTTP",
-		Version:     "2.0",
-		Endpoint:    models.EndPointInfo{},
-		Security:    sec1,
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      "REST API",
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
 		ImplSpecificInfo: nil,
 	}
 	serviceInf := serviceInfo{
-		SerName:       "FaceRegService5",
+		SerName:           "FaceRegService5",
 		SerCategory:       svcCat,
 		Version:           "4.5.8",
 		State:             "ACTIVE",
@@ -1478,7 +1474,7 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	serviceInfBytes, _ := json.Marshal(serviceInf)
 	//Patching
 	var srvResp = &pb.CreateServiceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Response:  &pb.Response{Code: pb.Response_SUCCESS},
 		ServiceId: sampleServiceId,
 	}
 	n1 := &srv.MicroServiceService{}
@@ -1487,8 +1483,8 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	})
 	defer patch1.Reset()
 
-	var instresp  = &pb.RegisterInstanceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	var instresp = &pb.RegisterInstanceResponse{
+		Response:   &pb.Response{Code: pb.Response_SUCCESS},
 		InstanceId: sampleServiceId,
 	}
 	n2 := &srv.InstanceService{}
@@ -1497,7 +1493,7 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	})
 	defer patch2.Reset()
 
-	var counter  = 0
+	var counter = 0
 	patch3 := gomonkey.ApplyFunc(json.Marshal, func(i interface{}) (b []byte, e error) {
 		counter++
 		if counter == 3 {
@@ -1538,7 +1534,6 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 
 	service := Mp1Service{}
 
-
 	svcCat := models.CategoryRef{
 		Href:    "/example/catalogue1",
 		ID:      "id12345",
@@ -1550,26 +1545,26 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
 
 	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes: theArray,
+		GrantTypes:    theArray,
 		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
 	}
 
 	sec1 := models.SecurityInfo{
 		OAuth2Info: authInfo,
 	}
-	transInfo := models.TransportInfo {
-		ID:          "TransId12345",
-		Name:        "REST",
-		Description: "REST API",
-		TransType:   "REST_HTTP",
-		Protocol:    "HTTP",
-		Version:     "2.0",
-		Endpoint:    models.EndPointInfo{},
-		Security:    sec1,
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      "REST API",
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
 		ImplSpecificInfo: nil,
 	}
 	serviceInf := serviceInfo{
-		SerName:       "FaceRegService5",
+		SerName:           "FaceRegService5",
 		SerCategory:       svcCat,
 		Version:           "4.5.8",
 		State:             "ACTIVE",
@@ -1583,7 +1578,7 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 	serviceInfBytes, _ := json.Marshal(serviceInf)
 	//Patching
 	var srvResp = &pb.CreateServiceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Response:  &pb.Response{Code: pb.Response_SUCCESS},
 		ServiceId: sampleServiceId,
 	}
 	n1 := &srv.MicroServiceService{}
@@ -1593,7 +1588,7 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 	defer patch1.Reset()
 
 	var instResp = &pb.RegisterInstanceResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Response:   &pb.Response{Code: pb.Response_SUCCESS},
 		InstanceId: sampleServiceId,
 	}
 	n2 := &srv.InstanceService{}
@@ -1601,7 +1596,6 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 		return instResp, nil
 	})
 	defer patch2.Reset()
-
 
 	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(url.Values) (*pb.FindInstancesResponse, error) {
 		return nil, errors.New("instance not found")
@@ -1671,12 +1665,12 @@ func TestServiceDiscoverServiceFound(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	var findInstResp  = &pb.FindInstancesResponse{
+	var findInstResp = &pb.FindInstancesResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instances: []*pb.MicroServiceInstance {
+		Instances: []*pb.MicroServiceInstance{
 			{
 				InstanceId: defaultAppInstanceId,
-				ServiceId: sampleServiceId,
+				ServiceId:  sampleServiceId,
 			},
 		},
 	}
@@ -1706,7 +1700,6 @@ func TestPutServiceUpdate(t *testing.T) {
 
 	service := Mp1Service{}
 
-
 	svcCat := models.CategoryRef{
 		Href:    "/example/catalogue1",
 		ID:      "id12345",
@@ -1718,26 +1711,26 @@ func TestPutServiceUpdate(t *testing.T) {
 	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
 
 	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes: theArray,
+		GrantTypes:    theArray,
 		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
 	}
 
 	sec1 := models.SecurityInfo{
 		OAuth2Info: authInfo,
 	}
-	transInfo := models.TransportInfo {
-		ID:          "TransId12345",
-		Name:        "REST",
-		Description: "REST API",
-		TransType:   "REST_HTTP",
-		Protocol:    "HTTP",
-		Version:     "2.0",
-		Endpoint:    models.EndPointInfo{},
-		Security:    sec1,
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      "REST API",
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
 		ImplSpecificInfo: nil,
 	}
 	serviceInf := serviceInfo{
-		SerName:       "FaceRegService5",
+		SerName:           "FaceRegService5",
 		SerCategory:       svcCat,
 		Version:           "4.5.8",
 		State:             "ACTIVE",
@@ -1757,9 +1750,9 @@ func TestPutServiceUpdate(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	var findInstResp  = &pb.MicroServiceInstance{
+	var findInstResp = &pb.MicroServiceInstance{
 		InstanceId: sampleInstanceId,
-		ServiceId: sampleServiceId,
+		ServiceId:  sampleServiceId,
 	}
 	patch1 := gomonkey.ApplyFunc(util.GetServiceInstance, func(ctx context.Context, serviceId string) (*pb.MicroServiceInstance, error) {
 		return findInstResp, nil
@@ -1792,7 +1785,6 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 
 	service := Mp1Service{}
 
-
 	svcCat := models.CategoryRef{
 		Href:    "/example/catalogue1",
 		ID:      "id12345",
@@ -1804,26 +1796,26 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
 
 	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes: theArray,
+		GrantTypes:    theArray,
 		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
 	}
 
 	sec1 := models.SecurityInfo{
 		OAuth2Info: authInfo,
 	}
-	transInfo := models.TransportInfo {
-		ID:          "TransId12345",
-		Name:        "REST",
-		Description: "REST API",
-		TransType:   "REST_HTTP",
-		Protocol:    "HTTP",
-		Version:     "2.0",
-		Endpoint:    models.EndPointInfo{},
-		Security:    sec1,
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      "REST API",
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
 		ImplSpecificInfo: nil,
 	}
 	serviceInf := serviceInfo{
-		SerName:       "FaceRegService5",
+		SerName:           "FaceRegService5",
 		SerCategory:       svcCat,
 		Version:           "4.5.8",
 		State:             "ACTIVE",
@@ -1870,7 +1862,6 @@ func TestGetOneServiceWithInvalidId(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1896,17 +1887,17 @@ func TestGetOneServiceWithValidId(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instance: &pb.MicroServiceInstance {
+		Instance: &pb.MicroServiceInstance{
 			InstanceId: sampleInstanceId,
-			ServiceId: sampleServiceId,
-			Properties: map[string] string{
-				"serCategory/href" : "b",
-				"serCategory/id" : "",
-				"serCategory/name" : "",
-				"serName": "NewService",
-				"endPointType": "addresses",
+			ServiceId:  sampleServiceId,
+			Properties: map[string]string{
+				"serCategory/href": "b",
+				"serCategory/id":   "",
+				"serCategory/name": "",
+				"serName":          "NewService",
+				"endPointType":     "addresses",
 			},
 			Endpoints: []string{
 				"100.1.1.1:8080",
@@ -1945,7 +1936,6 @@ func TestDelOneServiceWithValidId(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1972,7 +1962,6 @@ func TestDelOneServiceWithInValidId(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
 	responseGetHeader := http.Header{} // Create http response header
@@ -1995,16 +1984,16 @@ func TestGetHeartbeat(t *testing.T) {
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instance: &pb.MicroServiceInstance {
+		Instance: &pb.MicroServiceInstance{
 			InstanceId: sampleInstanceId,
-			ServiceId: sampleServiceId,
-			Properties: map[string] string{
-				"mecState" : "ACTIVE",
-				"livenessInterval" : "60",
-				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
-				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			ServiceId:  sampleServiceId,
+			Properties: map[string]string{
+				"mecState":         "ACTIVE",
+				"livenessInterval": "60",
+				secString:          strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString:      strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
 			},
 		},
 	}
@@ -2024,6 +2013,7 @@ func TestGetHeartbeat(t *testing.T) {
 		responseCheckFor200)
 	mockWriterGet.AssertExpectations(t)
 }
+
 // Query a heartbeat data
 func TestGetHeartbeatForInvalidServiceId(t *testing.T) {
 	defer func() {
@@ -2038,16 +2028,16 @@ func TestGetHeartbeatForInvalidServiceId(t *testing.T) {
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, serviceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instance: &pb.MicroServiceInstance {
+		Instance: &pb.MicroServiceInstance{
 			InstanceId: sampleInstanceId,
-			ServiceId: sampleServiceId,
-			Properties: map[string] string{
-				"mecState" : "ACTIVE",
-				"livenessInterval" : "60",
-				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
-				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			ServiceId:  sampleServiceId,
+			Properties: map[string]string{
+				"mecState":         "ACTIVE",
+				"livenessInterval": "60",
+				secString:          strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString:      strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
 			},
 		},
 	}
@@ -2067,6 +2057,7 @@ func TestGetHeartbeatForInvalidServiceId(t *testing.T) {
 		responseCheckFor400)
 	mockWriterGet.AssertExpectations(t)
 }
+
 // service heartbeat
 func TestHeartbeatService(t *testing.T) {
 	defer func() {
@@ -2075,23 +2066,23 @@ func TestHeartbeatService(t *testing.T) {
 		}
 	}()
 	service := Mp1Service{}
-	heartbeatRequest := models.ServiceLivenessUpdate{State:"ACTIVE"}
+	heartbeatRequest := models.ServiceLivenessUpdate{State: "ACTIVE"}
 	heartbeatRequestBytes, _ := json.Marshal(heartbeatRequest)
 	//Patching
 	var updatePropertiesResp = &pb.UpdateInstancePropsResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 	}
 	n1 := &srv.InstanceService{}
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instance: &pb.MicroServiceInstance {
+		Instance: &pb.MicroServiceInstance{
 			InstanceId: sampleInstanceId,
-			ServiceId: sampleServiceId,
-			Properties: map[string] string{
-				"mecState" : "ACTIVE",
-				"livenessInterval" : "60",
-				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
-				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			ServiceId:  sampleServiceId,
+			Properties: map[string]string{
+				"mecState":         "ACTIVE",
+				"livenessInterval": "60",
+				secString:          strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString:      strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
 			},
 		},
 	}
@@ -2129,23 +2120,23 @@ func TestHeartbeatServiceInvalidServiceId(t *testing.T) {
 		}
 	}()
 	service := Mp1Service{}
-	heartbeatRequest := models.ServiceLivenessUpdate{State:"ACTIVE"}
+	heartbeatRequest := models.ServiceLivenessUpdate{State: "ACTIVE"}
 	heartbeatRequestBytes, _ := json.Marshal(heartbeatRequest)
 	//Patching
 	var updatePropertiesResp = &pb.UpdateInstancePropsResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 	}
 	n1 := &srv.InstanceService{}
-	var resp  = &pb.GetOneInstanceResponse{
+	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instance: &pb.MicroServiceInstance {
+		Instance: &pb.MicroServiceInstance{
 			InstanceId: sampleInstanceId,
-			ServiceId: sampleServiceId,
-			Properties: map[string] string{
-				"mecState" : "ACTIVE",
-				"livenessInterval" : "60",
-				secString : strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
-				nanosecString :strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+			ServiceId:  sampleServiceId,
+			Properties: map[string]string{
+				"mecState":         "ACTIVE",
+				"livenessInterval": "60",
+				secString:          strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
+				nanosecString:      strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
 			},
 		},
 	}

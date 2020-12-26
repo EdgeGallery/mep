@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package util
 
 import (
@@ -22,7 +38,7 @@ func TestClearByteArray(t *testing.T) {
 
 func TestGenRandRootKeyComponent(t *testing.T) {
 	Convey("genrate random root key component", t, func() {
-		err := genRandRootKeyComponent("tmpComponentFile","tmpSaltFile")
+		err := genRandRootKeyComponent("tmpComponentFile", "tmpSaltFile")
 		data := []byte{'a', 'b', 'c'}
 		ClearByteArray(data)
 		So(isFileOrDirExist("tmpComponentFile"), ShouldBeTrue)
@@ -31,19 +47,19 @@ func TestGenRandRootKeyComponent(t *testing.T) {
 
 		keyComponentFromUserStrByte := []byte("")
 		KeyComponentFromUserStr = &keyComponentFromUserStrByte
-		_, err2 := genRootKey("tmpComponentFile","tmpSaltFile")
+		_, err2 := genRootKey("tmpComponentFile", "tmpSaltFile")
 		So(err2, ShouldNotBeNil)
 
 		keyComponentFromUserStrByte = []byte(ComponentContent)
-		rootKey, err3 := genRootKey("tmpComponentFile","tmpSaltFile")
+		rootKey, err3 := genRootKey("tmpComponentFile", "tmpSaltFile")
 		So(err3, ShouldBeNil)
 		So(rootKey, ShouldNotBeNil)
 		So(len(rootKey), ShouldBeGreaterThan, 0)
 
-		if err := os.Remove("tmpComponentFile"); err!=nil{
+		if err := os.Remove("tmpComponentFile"); err != nil {
 			log.Error("remove tmpComponentFile failed")
 		}
-		if err := os.Remove("tmpSaltFile"); err!=nil{
+		if err := os.Remove("tmpSaltFile"); err != nil {
 			log.Error("remove tmpSaltFile failed")
 		}
 	})
@@ -73,14 +89,14 @@ func TestGetPrivateKey(t *testing.T) {
 
 func TestEncryptByAES256GCM(t *testing.T) {
 	Convey("encrypt by aes 256 gcm", t, func() {
-		_, err :=  EncryptByAES256GCM([]byte("plaintext"),nil,nil)
+		_, err := EncryptByAES256GCM([]byte("plaintext"), nil, nil)
 		So(err, ShouldNotBeNil)
 	})
 }
 
 func TestDecryptByAES256GCM(t *testing.T) {
 	Convey("decrypt by aes 256 gcm", t, func() {
-		_, err :=  DecryptByAES256GCM([]byte("ciphertext"),nil,nil)
+		_, err := DecryptByAES256GCM([]byte("ciphertext"), nil, nil)
 		So(err, ShouldNotBeNil)
 	})
 }
@@ -95,5 +111,3 @@ func TestGetCipherSuites(t *testing.T) {
 		So(suite, ShouldNotBeNil)
 	})
 }
-
-
