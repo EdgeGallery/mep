@@ -31,6 +31,8 @@ import (
 	"github.com/astaxie/beego/httplib"
 )
 
+const serviceUrl string = "/services/"
+
 var cipherSuiteMap = map[string]uint16{
 	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -71,7 +73,7 @@ func AddApigwService(routeInfo RouteInfo) {
 
 func AddApigwRoute(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
-	kongRouteUrl := GetApigwUrl() + "/services/" + serName + "/routes"
+	kongRouteUrl := GetApigwUrl() + serviceUrl + serName + "/routes"
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
 	err := SendPostRequest(kongRouteUrl, jsonStr)
 	if err != nil {
@@ -82,7 +84,7 @@ func AddApigwRoute(routeInfo RouteInfo) {
 // enable kong jwt plugin
 func EnableJwtPlugin(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
-	kongPluginUrl := GetApigwUrl() + "/services/" + serName + "/plugins"
+	kongPluginUrl := GetApigwUrl() + serviceUrl + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
 	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig))
 	if err != nil {
@@ -91,7 +93,7 @@ func EnableJwtPlugin(routeInfo RouteInfo) {
 }
 
 func ApigwDelRoute(serName string) {
-	kongRouteUrl := GetApigwUrl() + "/services/" + serName + "/routes/" + serName
+	kongRouteUrl := GetApigwUrl() + serviceUrl + serName + "/routes/" + serName
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
