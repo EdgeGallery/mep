@@ -1,20 +1,37 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package plans
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/util"
-	"github.com/apache/servicecomb-service-center/server/core"
-	"github.com/apache/servicecomb-service-center/server/core/proto"
-	"github.com/go-playground/validator/v10"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
+	"github.com/apache/servicecomb-service-center/server/core"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
+	"github.com/go-playground/validator/v10"
 )
 
 type DecodeHeartbeatRestReq struct {
@@ -128,12 +145,12 @@ func (t *DecodeHeartbeatRestReq) WithBodies(body interface{}) *DecodeHeartbeatRe
 type UpdateHeartbeat struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
-	Ctx       context.Context `json:"ctx,in"`
-	AppInstanceId string      `json:"appInstanceId,in"`
-	CoreRequest   interface{} `json:"coreRequest,in"`
-	ServiceId string          `json:"serviceId,in"`
-	HttpRsp   interface{}     `json:"httpRsp,out"`
-	RestBody  interface{}     `json:"restBody,in"`
+	Ctx           context.Context `json:"ctx,in"`
+	AppInstanceId string          `json:"appInstanceId,in"`
+	CoreRequest   interface{}     `json:"coreRequest,in"`
+	ServiceId     string          `json:"serviceId,in"`
+	HttpRsp       interface{}     `json:"httpRsp,out"`
+	RestBody      interface{}     `json:"restBody,in"`
 }
 
 func (t *UpdateHeartbeat) OnRequest(data string) workspace.TaskCode {
@@ -169,7 +186,7 @@ func (t *UpdateHeartbeat) OnRequest(data string) workspace.TaskCode {
 	if err != nil {
 		log.Warn("time Interval is failing")
 	}
-	if interval == 0{
+	if interval == 0 {
 		log.Error("Service instance is not avail the service of heartbeat. Invalid patch request", nil)
 		t.SetFirstErrorCode(meputil.HeartbeatServiceNotFound, "Invalid heartbeat update request")
 		return workspace.TaskFinish

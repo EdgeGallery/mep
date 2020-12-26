@@ -1,10 +1,27 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package models
 
 import (
-	"github.com/apache/servicecomb-service-center/server/core/proto"
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	meputil "mepserver/common/util"
 	"strconv"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
 )
 
 type ServiceLivenessInfo struct {
@@ -34,7 +51,7 @@ func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstan
 	if err != nil {
 		log.Warn("liveness Interval is fail")
 	}
-	if interval == 0{
+	if interval == 0 {
 		log.Warn("It is not subscribed for heartbeat")
 	}
 	s.State = inst.Properties["mecState"]
@@ -52,6 +69,6 @@ func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstan
 }
 
 //Check the patched details
-func (t *ServiceLivenessUpdate) UpdateHeartbeat() string{
+func (t *ServiceLivenessUpdate) UpdateHeartbeat() string {
 	return t.State
 }

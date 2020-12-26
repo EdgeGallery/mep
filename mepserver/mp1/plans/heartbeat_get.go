@@ -1,22 +1,40 @@
+/*
+ * Copyright 2020 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package plans
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/servicecomb-service-center/server/core"
-	"github.com/apache/servicecomb-service-center/server/core/backend"
-	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 	"mepserver/mp1/models"
 	"strconv"
 	"time"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/util"
-	"github.com/apache/servicecomb-service-center/server/core/proto"
+	"github.com/apache/servicecomb-service-center/server/core"
+	"github.com/apache/servicecomb-service-center/server/core/backend"
+	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
+
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
 	"net/http"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
 )
 
 type GetOneDecodeHeartbeat struct {
@@ -108,7 +126,7 @@ func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "service instance id in heartbeat not found")
 		return workspace.TaskFinish
 	}
-	if mp1Rsp.Interval == 0{
+	if mp1Rsp.Interval == 0 {
 		log.Error("Service instance is not avail the service of heartbeat", nil)
 		t.SetFirstErrorCode(meputil.HeartbeatServiceNotFound, "Invalid get heartbeat request")
 		return workspace.TaskFinish
@@ -133,7 +151,7 @@ func (t *GetOneInstanceHeartbeat) filterAppInstanceId(inst *proto.MicroServiceIn
 	}
 }
 
-func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error){
+func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error) {
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey("/cse-sr/inst/files///"), registry.WithPrefix()),
 	}
@@ -164,12 +182,12 @@ func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error){
 		}
 		property := ins.Properties
 		liveInterval, err := strconv.Atoi(property["livenessInterval"])
-		if err!= nil{
+		if err != nil {
 			log.Errorf(nil, "Failed to parse int")
 			return nil, err
 		}
 		mecState := property["mecState"]
-		if liveInterval > 0 && mecState == meputil.ActiveState{
+		if liveInterval > 0 && mecState == meputil.ActiveState {
 			findResp = append(findResp, ins)
 		}
 	}
@@ -179,7 +197,7 @@ func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error){
 	return findResp, nil
 }
 
-func HeartbeatProcess(){
+func HeartbeatProcess() {
 	ticker := time.NewTicker(1 * time.Second)
 	for range ticker.C {
 		services, _ := AvailableServiceForHeartbeat()
