@@ -14,7 +14,6 @@
 
 FROM golang:1.14.2 as builder
 
-
 ENV GOPROXY https://goproxy.io
 ENV GO111MODULE on
 ENV HOME=/usr/mep
@@ -35,6 +34,11 @@ COPY . $HOME
 WORKDIR $HOME
 
 RUN GOOS=linux go build -buildmode=pie -ldflags '-linkmode "external" -extldflags "-static"' -o app
+
+RUN chmod -R 550 $HOME/app &&\
+    chmod -R 750 $HOME/conf &&\
+    chmod 640 $HOME/conf/app.conf &&\
+    chmod 550 $HOME/start.sh
 
 FROM alpine:latest
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
@@ -59,14 +63,7 @@ RUN apk update &&\
 ## SETTING UP THE APP ##
 WORKDIR $HOME
 
-# Copy in the application exe.
-COPY --from=builder $HOME/app $HOME/bin
-COPY --from=builder $HOME/conf/ $HOME/conf/
-COPY --from=builder $HOME/start.sh $HOME/bin
-
 RUN chmod 750 $HOME &&\
-    chmod 750 $HOME/conf &&\
-    chmod 640 $HOME/conf/app.conf &&\
     chmod 550 -R $HOME/bin &&\
     mkdir -p -m 700 $HOME/ssl &&\
     mkdir -p -m 750 $HOME/log &&\
@@ -75,7 +72,13 @@ RUN chmod 750 $HOME &&\
     mkdir -p -m 700 $HOME/sprop  &&\
     mkdir -p -m 700 $HOME/wprop  &&\
     mkdir -p -m 700 $HOME/wnprop &&\
+    mkdir -p -m 750 $HOME/conf &&\
     chown -hR $USER_NAME:$GROUP_NAME $HOME
+
+# Copy in the application exe.
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/app $HOME/bin
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/conf/ $HOME/conf/
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/start.sh $HOME/bin
 
 USER $USER_NAME
 
