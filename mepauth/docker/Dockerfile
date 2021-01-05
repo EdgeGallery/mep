@@ -35,6 +35,12 @@ WORKDIR $HOME
 
 RUN GOOS=linux go build -buildmode=pie -ldflags '-linkmode "external" -extldflags "-static"' -o app
 
+RUN chmod 550 $HOME/app $HOME/start.sh &&\
+    chmod -R 750 $HOME/conf &&\
+    chmod 640 $HOME/conf/app.conf &&\
+    chmod -R 500 $HOME/views &&\
+    chmod 440 -R $HOME/views/error/404.tpl
+
 FROM alpine:latest
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
 # Create the home directory for the new mep user.
@@ -58,17 +64,7 @@ RUN apk update &&\
 ## SETTING UP THE APP ##
 WORKDIR $HOME
 
-# Copy in the application exe.
-COPY --from=builder $HOME/app $HOME/bin
-COPY --from=builder $HOME/conf/ $HOME/conf/
-COPY --from=builder $HOME/start.sh $HOME/bin
-COPY --from=builder $HOME/views/ $HOME/views/
-
 RUN chmod 750 $HOME &&\
-    chmod 750 $HOME/conf &&\
-    chmod 500 -R $HOME/views &&\
-    chmod 640 $HOME/conf/app.conf &&\
-    chmod 440 -R $HOME/views/error/404.tpl &&\
     chmod 550 -R $HOME/bin/ &&\
     mkdir -p -m 750 $HOME/log &&\
     mkdir -p -m 700 $HOME/ssl &&\
@@ -77,7 +73,15 @@ RUN chmod 750 $HOME &&\
     mkdir -p -m 700 $HOME/sprop  &&\
     mkdir -p -m 700 $HOME/wprop  &&\
     mkdir -p -m 700 $HOME/wnprop &&\
+    mkdir -p -m 750 $HOME/conf &&\
+    mkdir -p -m 500 $HOME/views &&\
     chown -hR $USER_NAME:$GROUP_NAME $HOME
+
+# Copy in the application exe.
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/app $HOME/bin
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/conf/ $HOME/conf/
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/start.sh $HOME/bin
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/views/ $HOME/views/
 
 USER $USER_NAME
 

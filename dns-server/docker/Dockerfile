@@ -27,6 +27,8 @@ RUN apk update && \
     go mod download && \
     GOOS=linux go build -buildmode=pie -ldflags '-linkmode "external" -extldflags "-static"' -o dnsserver
 
+RUN chmod 550 $HOME/dnsserver
+
 FROM alpine:latest
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
 # Create the home directory for the new mep user.
@@ -50,13 +52,13 @@ RUN apk update &&\
 ## SETTING UP THE APP ##
 WORKDIR $HOME
 
-# Copy in the application exe.
-COPY --from=builder $HOME/dnsserver $HOME/bin
-
 RUN chmod 750 $HOME &&\
     chmod 550 -R $HOME/bin/ &&\
     mkdir -p -m 750 $HOME/log &&\
     chown -hR $USER_NAME:$GROUP_NAME $HOME
+
+# Copy in the application exe.
+COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/dnsserver $HOME/bin
 
 USER $USER_NAME
 
