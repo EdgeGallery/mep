@@ -19,13 +19,13 @@ package plans
 
 import (
 	"encoding/json"
+	"mepserver/common/extif/dataplane"
 	"mepserver/common/models"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
-	"mepserver/common/extif/dns"
 	"mepserver/common/util"
 )
 
@@ -45,26 +45,35 @@ func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	dnsRuleEntry, errCode := backend.GetRecord(util.EndDNSRuleKeyPath + t.AppInstanceId + "/" + t.DNSRuleId)
+	appDConfigEntry, errCode := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
 		log.Errorf(nil, "get dns rule from data-store failed")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
 
-	dnsRuleInStore := &dns.RuleEntry{}
-	jsonErr := json.Unmarshal(dnsRuleEntry, dnsRuleInStore)
-	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the dns entry from data-store")
-		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
+	appDInStore := models.AppDConfig{}
+	var dnsOnStore *dataplane.DNSRule
+	if appDConfigEntry != nil {
+		jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
+		if jsonErr != nil {
+			log.Errorf(jsonErr, "failed to parse the dns entry from data-store on update request")
+			t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules failed")
+			return workspace.TaskFinish
+		}
+		for _, rule := range appDInStore.AppDNSRule {
+			if rule.DNSRuleID == t.DNSRuleId {
+				dnsOnStore = &rule
+				break
+			}
+		}
+	}
+	if dnsOnStore == nil {
+		log.Error("Requested dns rule id doesn't exists.", nil)
+		t.SetFirstErrorCode(util.SubscriptionNotFound, "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
-	t.HttpRsp = models.NewDnsRule(
-		t.DNSRuleId,
-		dnsRuleInStore.DomainName,
-		dnsRuleInStore.IpAddressType,
-		dnsRuleInStore.IpAddress,
-		dnsRuleInStore.TTL,
-		dnsRuleInStore.State)
+
+	t.HttpRsp = dnsOnStore
 	return workspace.TaskFinish
 }

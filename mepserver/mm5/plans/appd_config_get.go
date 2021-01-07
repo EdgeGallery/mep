@@ -14,45 +14,40 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
 package plans
 
 import (
 	"encoding/json"
-	"mepserver/common/extif/dataplane"
-	"mepserver/common/models"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
-
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
+	"mepserver/common/models"
 	"mepserver/common/util"
 )
 
-type DNSRulesGet struct {
+type AppDConfigGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
-func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
+func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
+	log.Debugf("query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
 
-	log.Debugf("query request arrived to fetch all dns rules for appId %s.", t.AppInstanceId)
-
-	appDConfigEntry, errCode := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
-	if errCode != 0 {
-		t.HttpRsp = []dataplane.DNSRule{}
+	appDConfigEntry, err := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
+	if err != 0 {
+		log.Errorf(nil, "get appD config from data-store failed")
+		t.SetFirstErrorCode(workspace.ErrCode(err), "appD config retrieval failed")
 		return workspace.TaskFinish
 	}
 
-	appDInStore := models.AppDConfig{}
-	jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
+	appDInStore := &models.AppDConfig{}
+	jsonErr := json.Unmarshal(appDConfigEntry, appDInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the dns entries from data-store")
-		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
+		log.Errorf(nil, "failed to parse the appd config from data-store")
+		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse appd config  from data-store failed")
 		return workspace.TaskFinish
 	}
-
-	t.HttpRsp = appDInStore.AppDNSRule
+	t.HttpRsp = appDInStore
 	return workspace.TaskFinish
 }
