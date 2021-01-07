@@ -18,15 +18,20 @@
 package mp1
 
 import (
-	"net/http"
-
+	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
+	"mepserver/common/config"
+	"mepserver/common/extif/dataplane"
+	dpCommon "mepserver/common/extif/dataplane/common"
+	"mepserver/common/extif/dns"
+	"mepserver/common/models"
+	"net/http"
 
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mp1/models"
 	"mepserver/mp1/plans"
 )
 
@@ -48,58 +53,93 @@ func init() {
 }
 
 func initRouter() {
-	rest.
-		RegisterServant(&Mp1Service{})
+	mp1 := &Mp1Service{}
+	if err := mp1.Init(); err != nil {
+		log.Errorf(err, "Mm5 interface initialization failed.")
+		//os.Exit(1) # Init function cannot be mocked by test. Hence removed this.
+	}
+	rest.RegisterServant(mp1)
 }
 
 type Mp1Service struct {
 	v4.MicroServiceService
+	config    *config.MepServerConfig
+	dnsAgent  dns.DNSAgent
+	dataPlane dataplane.DataPlane
+}
+
+func (m *Mp1Service) Init() error {
+	mepConfig, err := config.LoadMepServerConfig()
+	if err != nil {
+		return fmt.Errorf("error: reading configuration failed")
+	}
+	m.config = mepConfig
+
+	// Checking if local or both is configured
+	var dnsAgent dns.DNSAgent
+	if m.config.DNSAgent.Type != meputil.DnsAgentTypeDataPlane {
+		dnsAgent = dns.NewRestDNSAgent(mepConfig)
+	}
+	m.dnsAgent = dnsAgent
+	// select data plane as per configuration
+	dataPlane := dpCommon.CreateDataPlane(mepConfig)
+	if dataPlane == nil {
+		return fmt.Errorf("error: unsupported data-plane")
+	}
+
+	if err := dataPlane.InitDataPlane(mepConfig); err != nil {
+		return err
+	}
+	m.dataPlane = dataPlane
+	log.Infof("Data plane initialized to %s", m.config.DataPlane.Type)
+
+	return nil
 }
 
 // url patterns
 func (m *Mp1Service) URLPatterns() []rest.Route {
 	return []rest.Route{
 		// appSubscriptions
-		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppSubscribePath, Func: doAppSubscribe},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath, Func: getAppSubscribes},
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppSubscribePath, Func: m.doAppSubscribe},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath, Func: m.getAppSubscribes},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppSubscribePath + meputil.SubscriptionIdPath,
-			Func: getOneAppSubscribe},
+			Func: m.getOneAppSubscribe},
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppSubscribePath + meputil.SubscriptionIdPath,
-			Func: delOneAppSubscribe},
+			Func: m.delOneAppSubscribe},
 		// appServices
-		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppServicesPath, Func: serviceRegister},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath, Func: serviceDiscover},
-		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceUpdate},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: getOneService},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: serviceDelete},
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.AppServicesPath, Func: m.serviceRegister},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath, Func: m.serviceDiscover},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: m.serviceUpdate},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: m.getOneService},
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppServicesPath + meputil.ServiceIdPath, Func: m.serviceDelete},
 		// MEC Application Support API - appSubscriptions
-		{Method: rest.HTTP_METHOD_POST, Path: meputil.EndAppSubscribePath, Func: appEndSubscribe},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath, Func: getAppEndSubscribes},
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.EndAppSubscribePath, Func: m.appEndSubscribe},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath, Func: m.getAppEndSubscribes},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.EndAppSubscribePath + meputil.SubscriptionIdPath,
-			Func: getEndAppOneSubscribe},
+			Func: m.getEndAppOneSubscribe},
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.EndAppSubscribePath + meputil.SubscriptionIdPath,
-			Func: delEndAppOneSubscribe},
+			Func: m.delEndAppOneSubscribe},
 		// DNS
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath, Func: getDnsRules},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
-		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath, Func: m.getDnsRules},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: m.getDnsRule},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSRulesPath + meputil.DNSRuleIdPath, Func: m.dnsRuleUpdate},
 		// HeartBeat
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
-			Func: getHeartbeat},
+			Func: m.getHeartbeat},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
-			Func: heartbeatService},
+			Func: m.heartbeatService},
 		//Liveness and readiness
 		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
 		}},
 		// services
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: serviceDiscover},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: getOneService},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: m.serviceDiscover},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: m.getOneService},
 	}
 }
 
-func appEndSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) appEndSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try((&plans.DecodeRestReq{}).WithBody(&models.AppTerminationNotificationSubscription{}),
@@ -110,7 +150,7 @@ func appEndSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getAppEndSubscribes(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getAppEndSubscribes(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -121,7 +161,7 @@ func getAppEndSubscribes(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -132,7 +172,7 @@ func getEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func delEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) delEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -143,7 +183,7 @@ func delEndAppOneSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func doAppSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) doAppSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -155,7 +195,7 @@ func doAppSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getAppSubscribes(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getAppSubscribes(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -166,7 +206,7 @@ func getAppSubscribes(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -177,7 +217,7 @@ func getOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func delOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) delOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -188,7 +228,7 @@ func delOneAppSubscribe(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func serviceRegister(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) serviceRegister(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -201,7 +241,7 @@ func serviceRegister(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func serviceDiscover(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) serviceDiscover(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -214,7 +254,7 @@ func serviceDiscover(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func serviceUpdate(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) serviceUpdate(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -225,7 +265,7 @@ func serviceUpdate(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getOneService(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getOneService(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -237,7 +277,7 @@ func getOneService(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func serviceDelete(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) serviceDelete(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -248,7 +288,7 @@ func serviceDelete(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getDnsRules(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getDnsRules(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -259,7 +299,7 @@ func getDnsRules(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func getDnsRule(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getDnsRule(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
@@ -270,17 +310,17 @@ func getDnsRule(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
-		(&plans.DecodeDnsRestReq{}).WithBody(&models.DnsRule{}),
-		&plans.DNSRuleUpdate{})
+		(&plans.DecodeDnsRestReq{}).WithBody(&dataplane.DNSRule{}),
+		(&plans.DNSRuleUpdate{}).WithDNSAgent(m.dnsAgent).WithDataPlane(m.dataPlane))
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }
 
-func getHeartbeat(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getHeartbeat(w http.ResponseWriter, r *http.Request) {
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
 		&plans.GetOneDecodeHeartbeat{},
@@ -290,7 +330,7 @@ func getHeartbeat(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func heartbeatService(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) heartbeatService(w http.ResponseWriter, r *http.Request) {
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
 		(&plans.DecodeHeartbeatRestReq{}).WithBodies(&models.ServiceLivenessUpdate{}),

@@ -38,6 +38,7 @@ RUN GOOS=linux go build -buildmode=pie -ldflags '-linkmode "external" -extldflag
 RUN chmod -R 550 $HOME/app &&\
     chmod -R 750 $HOME/conf &&\
     chmod 640 $HOME/conf/app.conf &&\
+    chmod 640 $HOME/conf/mep/config.yaml &&\
     chmod 550 $HOME/start.sh
 
 FROM alpine:latest

@@ -21,10 +21,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"mepserver/common/config"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
@@ -69,24 +69,30 @@ type ZoneEntry struct {
 	RR   *[]ResourceRecord `json:"rr"`
 }
 
-type RestClient struct {
+type RestDNSAgent struct {
 	DNSAgent
 	ServerEndPoint *url.URL `json:"serverEndPoint"`
+	client         http.Client
 }
 
-func NewRestClient() *RestClient {
+func NewRestDNSAgent(config *config.MepServerConfig) *RestDNSAgent {
 	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", remoteServerHost, remoteServerPort))
 	if err != nil {
 		log.Errorf(nil, "could not parse the DNS server endpoint.")
-		return &RestClient{}
+		return &RestDNSAgent{}
 	}
-	return &RestClient{ServerEndPoint: u}
+	agent := RestDNSAgent{ServerEndPoint: u}
+	return &agent
 }
 
-func (d *RestClient) SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) (resp *http.Response, err error) {
+func (d *RestDNSAgent) GetEndpoint(paths ...string) string {
+	return meputil.JoinURL(d.ServerEndPoint.String(), paths...)
+}
+
+func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
 		log.Errorf(nil, "invalid dns remote end point")
-		return nil, fmt.Errorf("invalid dns server endpoint")
+		return fmt.Errorf("invalid dns server endpoint")
 	}
 
 	hostName := host
@@ -99,67 +105,56 @@ func (d *RestClient) SetResourceRecordTypeA(host, rrtype, class string, pointTo 
 	zoneJSON, err := json.Marshal(zones)
 	if err != nil {
 		log.Errorf(nil, "marshal dns info failed")
-		return nil, err
+		return err
 	}
 
-	httpClient := &http.Client{}
-	httpReq, err := http.NewRequest(http.MethodPut,
-		d.joinURL(d.ServerEndPoint.String(), "rrecord"),
+	httpReq, err := http.NewRequest(http.MethodPut, d.GetEndpoint("rrecord"),
 		bytes.NewBuffer(zoneJSON))
 	if err != nil {
 		log.Errorf(nil, "http request creation for dns update failed.")
-		return nil, err
+		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
 		log.Errorf(nil, "request to dns server failed in update")
-		return nil, err
+		return err
 	}
 	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
 		log.Errorf(nil, "dns rule update failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
-		return nil, fmt.Errorf("update request to dns server failed")
+		return fmt.Errorf("update request to dns server failed")
 	}
-	return httpResp, nil
+	return nil
 
 }
 
-func (d *RestClient) DeleteResourceRecordTypeA(host, rrtype string) (resp *http.Response, err error) {
+func (d *RestDNSAgent) DeleteResourceRecordTypeA(host, rrtype string) error {
 	if d.ServerEndPoint == nil {
 		log.Errorf(nil, "invalid dns remote end point")
-		return nil, fmt.Errorf("invalid dns server endpoint")
+		return fmt.Errorf("invalid dns server endpoint")
 	}
 	hostName := host
 	if !strings.HasSuffix(host, ".") {
 		hostName = host + "."
 	}
 
-	httpClient := &http.Client{}
-
-	httpReq, err := http.NewRequest(
-		http.MethodDelete,
-		d.joinURL(d.ServerEndPoint.String(), "rrecord", hostName, rrtype),
+	httpReq, err := http.NewRequest(http.MethodDelete, d.GetEndpoint("rrecord", hostName, rrtype),
 		bytes.NewBuffer([]byte("{}")))
 	if err != nil {
 		log.Errorf(nil, "http request creation for dns delete failed")
-		return nil, err
+		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
 		log.Errorf(nil, "request to dns server failed in delete")
-		return nil, err
+		return err
 	}
 	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
 		log.Errorf(nil, "dns rule delete failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
-		return nil, fmt.Errorf("delete request to dns server failed")
+		return fmt.Errorf("delete request to dns server failed")
 	}
-	return httpResp, nil
-}
-
-func (d *RestClient) joinURL(base string, paths ...string) string {
-	return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"),
-		strings.TrimLeft(path.Join(paths...), "/"))
+	return nil
 }

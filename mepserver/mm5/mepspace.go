@@ -37,6 +37,7 @@ type MepSpace struct {
 	AppInstanceId string          `json:"appInstanceId"`
 	DNSRuleId     string          `json:"dnsRuleId"`
 	CapabilityId  string          `json:"capabilityId"`
+	TaskId        string          `json:"taskId"`
 	QueryParam    url.Values      `json:"queryParam"`
 	CoreRequest   interface{}     `json:"coreRequest"`
 	CoreRsp       interface{}     `json:"coreRsp"`

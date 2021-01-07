@@ -20,6 +20,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"mepserver/common/models"
 	"net/http"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -30,7 +31,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type GetOneDecode struct {

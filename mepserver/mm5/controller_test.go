@@ -21,15 +21,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"github.com/ghodss/yaml"
+	uuid "github.com/satori/go.uuid"
 	"math/rand"
+	"mepserver/common/config"
+	"mepserver/common/extif/dns"
+	"mepserver/common/models"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/agiledragon/gomonkey"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	_ "github.com/apache/servicecomb-service-center/server"
 	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
@@ -38,38 +47,26 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"mepserver/common/extif/backend"
-	"mepserver/common/extif/dns"
 	"mepserver/common/util"
-	"mepserver/mm5/models"
-	mp1models "mepserver/mp1/models"
+	"mepserver/mm5/plans"
 )
 
 const defaultAppInstanceId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
-const dnsRuleId = "7d71e54e-81f3-47bb-a2fc-b565a326d794"
 
 const panicFormatString = "Panic: %v"
-const getDnsRulesUrlFormat = "/mepcfg/mec_app_config/v1/rules/%s/dns_rules"
-const getDnsRuleUrlFormat = "/mepcfg/mec_app_config/v1/rules/%s/dns_rules/%s"
+const getTaskStatusFormat = "/mepcfg/app_lcm/v1/tasks/%s/appd_configuration"
+const appConfigUrlFormat = "/mepcfg/app_lcm/v1/applications/%s/appd_configuration"
+
+const defaultTaskId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+const taskQueryFormat = ":taskId=%s&;"
+
 const appInstanceQueryFormat = ":appInstanceId=%s&;"
-const appIdAndDnsRuleIdQueryFormat = ":appInstanceId=%s&;:dnsRuleId=%s&;"
 const appInstanceIdHeader = "X-AppinstanceID"
 const responseStatusHeader = "X-Response-Status"
 const responseCheckFor200 = "Response status code must be 200"
 const responseCheckFor400 = "Response status code must be 404"
-const errorDomainMissMatch = "Domain name miss-match in the response"
-const errorIPTypeMissMatch = "IP type miss-match in the response"
-const errorIPAddrMissMatch = "IP address miss-match in the response"
-const errorTTLMissMatch = "TTL miss-match in the response"
-const errorStateMissMatch = "State miss-match in the response"
-const errorWriteRespErr = "Write Response Error"
-const errorRspMissMatch = "Miss-match in the response"
-const exampleDomainName = "www.example.com"
-const defaultTTL = 30
-const TTL35 = 35
 const maxIPVal = 255
 const ipAddFormatter = "%d.%d.%d.%d"
-const writeObjectFormat = "{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\"," +
-	"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"%s\"}\n"
 
 const getCapabilitiesUrl = "/mepcfg/mec_platform_config/v1/capabilities"
 
@@ -80,6 +77,19 @@ const subscriberId2 = "09022fec-a63c-49fc-857a-dcd7ecaa40a2"
 const appInstanceId2 = "3abe4278-9c70-2e47-3a4e-7ee3a1a0fd1e"
 
 const capabilityQueryFormat = ":capabilityId=%s&;"
+
+const recordDB = "csr/etcd/%s/%s"
+const svcCatHref = "serCategory/href"
+const svcCatResponse = "/example/catalogue1"
+const svcCatName = "serCategory/name"
+const svcCatId = "serCategory/id"
+const svcCatVersion = "serCategory/version"
+
+const respMsg = "[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n"
+const respMsg1 = "{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}\n"
+
+const writeObjectStatusFormat = "{\"taskId\":\"%s\",\"appInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"," +
+	"\"configResult\":\"PROCESSING\",\"configPhase\":\"%d\",\"Detailed\":\"%s\"}\n"
 
 // Generate test IP, instead of hard coding them
 var exampleIPAddress = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
@@ -125,6 +135,7 @@ func (m *mockHttpWriterWithoutWrite) Header() http.Header {
 	// retrieve the configured value we provided at the input and return it back
 	return args.Get(0).(http.Header)
 }
+
 func (m *mockHttpWriterWithoutWrite) Write(response []byte) (int, error) {
 	// fmt.Printf("Write: %v", response)
 	// Get the argument inputs and marking the function is called with correct input
@@ -143,484 +154,459 @@ func (m *mockHttpWriterWithoutWrite) WriteHeader(statusCode int) {
 	return
 }
 
-type dnsCreateRule struct {
-	DomainName    string `json:"domainName"`
-	IpAddressType string `json:"ipAddressType"`
-	IpAddress     string `json:"ipAddress"`
-	TTL           int    `json:"ttl"`
-	State         string `json:"state"`
+// DB implementation with concurrency protector
+type safeDB struct {
+	mu sync.Mutex
+	db map[string][]byte
 }
 
-// Query an empty dns rules request in mm5 interface
-func TestGetEmptyDnsRules(t *testing.T) {
+func (c *safeDB) Put(key string, value []byte) {
+	c.mu.Lock()
+	if c.db == nil {
+		c.db = make(map[string][]byte)
+	}
+	c.db[key] = value
+	c.mu.Unlock()
+}
+
+func (c *safeDB) String() {
+	c.mu.Lock()
+	for k, v := range c.db {
+		log.Infof("DB: Key-> %v; Value-> %v", k, string(v))
+	}
+	c.mu.Unlock()
+}
+
+func (c *safeDB) Get(key string) []byte {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.db[key]
+}
+
+func (c *safeDB) GetMultiple(path string) map[string][]byte {
+	c.mu.Lock()
+	resultList := make(map[string][]byte)
+	for k, v := range c.db {
+		if strings.HasPrefix(k, path) {
+			resultList[filepath.Base(k)] = v
+		}
+	}
+	defer c.mu.Unlock()
+	return resultList
+}
+
+func (c *safeDB) Delete(key string) {
+	c.mu.Lock()
+	delete(c.db, key)
+	c.mu.Unlock()
+}
+
+// Query Task Status with valid values
+func TestGetTaskStatus(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
 		}
 	}()
 
+	//taskId
+	//taskId := uuid.NewV4()
+
 	service := Mm5Service{}
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
+		fmt.Sprintf(getTaskStatusFormat, defaultTaskId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(taskQueryFormat, defaultTaskId)
+	//getRequest.Header.Set(appInstanceIdHeader, "wrong-app-instance-id")
 
-	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("null\n")).Return(0, nil)
+	mockWriter.On("Write", []byte(fmt.Sprintf(writeObjectStatusFormat, defaultTaskId, 50, "Status"))).
+		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	// 1 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[1].Func(mockWriter, getRequest)
+	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
+		// To handle two db call for Task Status or taskID-->AppID database.
+		if strings.Contains(path, "taskstatus") {
+
+			TrfSts := models.RuleStatus{Id: "r123", State: 0, Method: 0}
+			DnsSts := models.RuleStatus{Id: "r144", State: 0, Method: 0}
+
+			status := models.TaskStatus{}
+			status.Progress = 1
+			status.Details = "Status"
+			status.DNSRuleStatusLst = append(status.DNSRuleStatusLst, DnsSts)
+			status.TrafficRuleStatusLst = append(status.TrafficRuleStatusLst, TrfSts)
+
+			outBytes, _ := json.Marshal(&status)
+			return outBytes, 0
+		} else {
+			return []byte(defaultAppInstanceId), 0
+		}
+	})
+
+	defer patch1.Reset()
+
+	// 1
+	service.URLPatterns()[4].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader), responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
-
 }
 
-// Query empty dns rules with unmatched application instance id
-func TestGetEmptyDnsRulesAppInstanceIdUnMatched(t *testing.T) {
+// Query Task Status with non existing Task ID
+func TestGetTaskStatusInvalidTaskID(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
 		}
 	}()
 
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, "wrong-app-instance-id")
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(
-		"{\"title\":\"UnAuthorization\",\"status\":11,\"detail\":\"UnAuthorization to access the resource\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 401)
-
-	// 1 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[1].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
-		"Response status code must be 401 Unauthorized")
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query empty dns rules with invalid application instance id
-func TestGetEmptyDnsRulesAppInstanceIdInvalid(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	invalidAppInstanceId := "invalid-app-instance-id"
+	//taskId
 
 	service := Mm5Service{}
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getDnsRulesUrlFormat, invalidAppInstanceId),
+		fmt.Sprintf(getTaskStatusFormat, defaultTaskId),
 		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, invalidAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, invalidAppInstanceId)
+	getRequest.URL.RawQuery = fmt.Sprintf(taskQueryFormat, defaultTaskId)
+	//getRequest.Header.Set(appInstanceIdHeader, "wrong-app-instance-id")
 
-	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(
-		"{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"app Instance ID validation failed, invalid uuid\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	// 1 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[1].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		"Response status code must be 400 Unauthorized")
-
-	mockWriter.AssertExpectations(t)
-
-}
-
-// Query single rule
-func TestGetSingleDnsRuleNotFound(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"Can not found resource\",\"status\":5,\"detail\":\"dns rule retrieval failed\"}\n")).
+	mockWriter.On("Write", []byte("{\"title\":\"Can not found resource\",\"status\":5,\"detail\":\"task rule retrieval failed\"}\n")).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 404)
 
-	// 2 is the order of the DNS get one handler in the URLPattern
-	service.URLPatterns()[2].Func(mockWriter, getRequest)
+	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 
-	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
+		return nil, util.SubscriptionNotFound
+	})
+
+	defer patch1.Reset()
+
+	// 1
+	service.URLPatterns()[4].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader), responseCheckFor400)
 
 	mockWriter.AssertExpectations(t)
 }
 
-// Query single rule with empty rule id
-func TestGetSingleDnsRuleNoId(t *testing.T) {
+// Delete ConfigRules - Success case
+func TestDeleteConfigRules(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
 		}
 	}()
 
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, ""),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, "")
-	getRequest.Header.Set(appInstanceIdHeader, "")
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"UnAuthorization\",\"status\":11,\"detail\":\"UnAuthorization to access the resource\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 401)
-
-	// 2 is the order of the DNS get one handler in the URLPattern
-	service.URLPatterns()[2].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Update a dns rule from INACTIVE to ACTIVE
-func TestPutSingleDnsRuleActive(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
+	recordInDb := []byte(`
+	{
+	  "appTrafficRule": [
+		{
+		  "trafficRuleId": "TrafficRule1",
+		  "filterType": "FLOW",
+		  "priority": 1,
+		  "trafficFilter": [
+			{
+			  "srcAddress": [
+				"192.168.1.1"
+			  ],
+			  "dstAddress": [
+				"192.168.1.1"
+			  ],
+			  "srcPort": [
+				"8080"
+			  ],
+			  "dstPort": [
+				"8080"
+			  ],
+			  "protocol": [
+				"TCP"
+			  ],
+			  "qCI": 1,
+			  "dSCP": 0,
+			  "tC": 1
+			}
+		  ],
+		  "action": "DROP",
+		  "state": "ACTIVE"
 		}
-	}()
+	  ],
+	  "appDNSRule": [
+		{
+		  "dnsRuleId": "dnsRule1",
+		  "domainName": "www.example.com",
+		  "ipAddressType": "IP_V6",
+		  "ipAddress": "192.0.2.0",
+		  "ttl": 30,
+		  "state": "ACTIVE"
+		}
+	  ],
+	  "appSupportMp1": true,
+	  "appName": "abc"
+	}`)
+
+	//taskId
+	taskId := uuid.NewV4()
 
 	service := Mm5Service{}
 
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           defaultTTL,
-		State:         util.InactiveState,
-	}
-	createRuleBytes, _ := json.Marshal(createRule)
-
 	// Create http get request
-	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		nil)
+
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	// Mock the response writer
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte(fmt.Sprintf(writeObjectFormat, exampleIPAddress, util.InactiveState))).
+	mockWriter.On("Write", []byte(fmt.Sprintf(writeObjectStatusFormat, taskId.String(), 0, "Operation In progress"))).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
-			TTL: 30, State: util.ActiveState}
-		outBytes, _ := json.Marshal(&entry)
-		return outBytes, 0
+
+		// To handle two db call for Task Status or taskID-->AppID database.
+		if strings.Contains(path, "jobs") {
+			//Ongoing operation exist or not. Not exist is return error from DB.
+			return nil, 1111
+		} else {
+			//Is instance id exist or not. To delete it must exist so return DB query True with some value.
+			//return []byte("Hello"), 0
+			return recordInDb, 0
+		}
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
+
+	patch2 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+
+		// Return Success.
+		return 0
+	})
+
+	patch3 := gomonkey.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
+
+		// Return Success.
+		return 0
+	})
+
+	patch4 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) bool {
+
+		// Return Success.
+		return true
+	})
+
+	patch5 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
+
+		// Return Success.
+		return taskId.String()
 	})
 
 	defer patch1.Reset()
 	defer patch2.Reset()
+	defer patch3.Reset()
+	defer patch4.Reset()
+	defer patch5.Reset()
 
-	// 15 is the order of the DNS put handler in the URLPattern
+	// 1
 	service.URLPatterns()[3].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader), responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
 
-// Update a dns rule from ACTIVE to ACTIVE
-func TestPutSingleDnsRuleReActive(t *testing.T) {
+// Delete ConfigRules - Application Instance not exist
+func TestDeleteConfigRulesAppNotExist(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
 		}
 	}()
 
+	//taskId
+	//taskId := uuid.NewV4()
+
 	service := Mm5Service{}
 
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           defaultTTL,
-		State:         util.ActiveState,
-	}
-	createRuleBytes, _ := json.Marshal(createRule)
-
 	// Create http get request
-	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		nil)
+
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
 	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
+	mockWriter := &mockHttpWriterWithoutWrite{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte(fmt.Sprintf(writeObjectFormat, exampleIPAddress, util.ActiveState))).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 200)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 404)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
-			TTL: 30, State: util.ActiveState}
-		outBytes, _ := json.Marshal(&entry)
-		return outBytes, 0
+
+		return nil, -1
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
+
+	defer patch1.Reset()
+
+	// 1
+	service.URLPatterns()[3].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader), responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Delete ConfigRules - Some other Operation in progress
+func TestDeleteConfigRulesOperationInProgress(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	//taskId
+	//taskId := uuid.NewV4()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		nil)
+
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 403)
+
+	patch1 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) bool {
+
+		// Return Success.
+		return true
+	})
+
+	patch2 := gomonkey.ApplyFunc(plans.IsAnyOngoingOperationExist, func(appInstanceId string) bool {
+
+		// Return Success.
+		return true
 	})
 
 	defer patch1.Reset()
 	defer patch2.Reset()
-
-	// 15 is the order of the DNS put handler in the URLPattern
+	// 1
 	service.URLPatterns()[3].Func(mockWriter, getRequest)
 
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
+	assert.Equal(t, "403", responseHeader.Get(responseStatusHeader), responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
 
-// Put a dns rule which doesn't exists
-func TestPutSingleDnsRuleNotFound(t *testing.T) {
+// Query ConfigRules - Success case
+func TestGetConfigRules(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
 		}
 	}()
 
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("{}")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"Can not found resource\",\"status\":5,\"detail\":\"dns rule retrieval failed\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 404)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[3].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Put a dns rule with invalid body
-func TestPutSingleDnsRuleBodyParseError(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
+	recordInDb := []byte(`
+	{
+	  "appTrafficRule": [
+		{
+		  "trafficRuleId": "TrafficRule1",
+		  "filterType": "FLOW",
+		  "priority": 1,
+		  "trafficFilter": [
+			{
+			  "srcAddress": [
+				"192.168.1.1"
+			  ],
+			  "dstAddress": [
+				"192.168.1.1"
+			  ],
+			  "srcPort": [
+				"8080"
+			  ],
+			  "dstPort": [
+				"8080"
+			  ],
+			  "protocol": [
+				"TCP"
+			  ],
+			  "qCI": 1,
+			  "dSCP": 0,
+			  "tC": 1
+			}
+		  ],
+		  "action": "DROP",
+		  "state": "ACTIVE"
 		}
-	}()
-
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"check Param failed\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[3].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Put a dns rule with large body
-func TestPutSingleDnsRuleOverLengthBody(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
+	  ],
+	  "appDNSRule": [
+		{
+		  "dnsRuleId": "dnsRule1",
+		  "domainName": "www.example.com",
+		  "ipAddressType": "IP_V6",
+		  "ipAddress": "192.0.2.0",
+		  "ttl": 30,
+		  "state": "ACTIVE"
 		}
-	}()
-
-	messageBody := ""
-	for i := 0; i <= 64; i++ {
-		messageBody += "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz123456789011"
-	}
+	  ],
+	  "appSupportMp1": true,
+	  "appName": "abc"
+	}`)
 
 	service := Mm5Service{}
 
 	// Create http get request
-	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte(messageBody)))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		nil)
 
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[3].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		"Response status code must be 400")
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Create a dns rule
-func TestPostDnsRule(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           defaultTTL,
-		State:         util.InactiveState,
-	}
-	createRuleBytes, _ := json.Marshal(createRule)
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
-		bytes.NewReader(createRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	// Mock the response writer
 	mockWriter := &mockHttpWriterWithoutWrite{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write").Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[0].Func(mockWriter, getRequest)
+	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	rule := models.DnsConfigRule{}
-	_ = json.Unmarshal(mockWriter.response, &rule)
-	assert.Equal(t, exampleDomainName, rule.DomainName, errorDomainMissMatch)
-	assert.Equal(t, util.IPv4Type, rule.IpAddressType, errorIPTypeMissMatch)
-	assert.Equal(t, exampleIPAddress, rule.IpAddress, errorIPAddrMissMatch)
-	assert.Equal(t, defaultTTL, rule.TTL, errorTTLMissMatch)
-	assert.Equal(t, util.InactiveState, rule.State, errorStateMissMatch)
+		return recordInDb, 0
+	})
+
+	defer patch1.Reset()
+
+	// 1
+	service.URLPatterns()[2].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader), responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
 }
 
-// Create a dns rule with ACTIVE rule
-func TestPostDnsRuleWithActiveRule(t *testing.T) {
+// Query ConfigRules - No record Exists
+func TestGetConfigRulesFailure(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
@@ -628,321 +614,519 @@ func TestPostDnsRuleWithActiveRule(t *testing.T) {
 	}()
 
 	service := Mm5Service{}
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           TTL35,
-		State:         util.ActiveState,
-	}
-	createRuleBytes, _ := json.Marshal(createRule)
 
 	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
-		bytes.NewReader([]byte(createRuleBytes)))
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		nil)
+
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	//mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 417)
+
+	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+
+		return nil, -1
+	})
+
+	defer patch1.Reset()
+
+	// 1
+	service.URLPatterns()[2].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "417", responseHeader.Get(responseStatusHeader), responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Create ConfigRules - Validate Input Parameters
+func TestCreateAppDConfigInValidFilterType(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "2FLOW22",
+      "priority": 1,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IP_V6",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
 	mockWriter := &mockHttpWriterWithoutWrite{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor400)
+	mockWriter.AssertExpectations(t)
+}
+
+// Create ConfigRules - Filter type missing
+func TestCreateAppDConfigInValid1(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "priority": 1,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IP_V6",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor400)
+	mockWriter.AssertExpectations(t)
+}
+
+// Create ConfigRules - Priority Invalid value
+func TestCreateAppDConfigInValid2(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "FLOW",
+      "priority": 555,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IP_V6",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor400)
+	mockWriter.AssertExpectations(t)
+}
+
+// Create ConfigRules - Empty Traffic Filters
+func TestCreateAppDConfigInValid3(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "FLOW",
+      "priority": 1,
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IP_V6",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor400)
+	mockWriter.AssertExpectations(t)
+}
+
+// Create ConfigRules - Success case for none dataplane
+func TestCreateAppDConfigRuleNoneDataPlane(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	//taskId
+
+	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
+
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, "Parsing configuration file error")
+		}
+		return &mepConfig, nil
+	})
+	defer patchInit1.Reset()
+
+	service := Mm5Service{}
+	err := service.Init()
+	if err != nil {
+		assert.Fail(t, err.Error())
+		return
+	}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "FLOW",
+      "priority": 1,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IPv4",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	taskId := uuid.NewV4()
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte(fmt.Sprintf(writeObjectStatusFormat, taskId.String(), 0,
+		"Operation In progress"))).
+		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		inputData, err := ioutil.ReadAll(r.Body)
-		assert.Equal(t, nil, err, "Read http response failed")
-		defer r.Body.Close()
-		fmt.Printf("Input Data: %s \n", inputData)
-		assert.Equal(t, string(inputData), fmt.Sprintf("[{\"zone\":\".\",\"rr\":[{\"name\":\"www.example.com.\","+
-			"\"type\":\"A\",\"class\":\"IN\",\"ttl\":35,\"rData\":[\"%s\"]}]}]", exampleIPAddress),
-			"DNS request issues")
+	db := safeDB{}
+	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		log.Infof("Get path: %v", path)
+		db.String()
+		if db.Get(path) != nil {
+			log.Infof("Found the path in db: %s", string(db.Get(path)))
+			return db.Get(path), 0
+		}
 
+		return nil, util.SubscriptionNotFound
+	})
+	defer patch1.Reset()
+
+	patch2 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		log.Infof("Put path: %v", path)
+		log.Infof("Put value: %v", string(value))
+		db.String()
+		db.Put(path, value)
+		// Return Success.
+		return 0
+	})
+	defer patch2.Reset()
+
+	patch3 := gomonkey.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
+		log.Infof("Delete path: %v", paths)
+		db.String()
+		for _, path := range paths {
+			db.Delete(path)
+		}
+		return 0
+	})
+	defer patch3.Reset()
+
+	patch4 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
+		return taskId.String()
+	})
+	defer patch4.Reset()
+
+	patch5 := gomonkey.ApplyFunc((*http.Client).Do, func(client *http.Client, req *http.Request) (*http.Response,
+		error) {
+		response := http.Response{Status: "200 OK", StatusCode: 200}
+		return &response, nil
+	})
+	defer patch5.Reset()
+
+	dnsTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err2 := w.Write([]byte(""))
 		if err2 != nil {
-			t.Error(errorWriteRespErr)
+			t.Error("Error: Write Response Error")
 		}
 	}))
-	defer ts.Close()
 
-	patches := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
+	defer dnsTestServer.Close()
+
+	patch6 := gomonkey.ApplyFunc((*dns.RestDNSAgent).GetEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
+		log.Infof("DNS Agent End Point: %v", dnsTestServer.URL)
+		return dnsTestServer.URL
 	})
-	defer patches.Reset()
+	defer patch6.Reset()
 
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[0].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	rule := models.DnsConfigRule{}
-	_ = json.Unmarshal(mockWriter.response, &rule)
-	assert.Equal(t, exampleDomainName, rule.DomainName, errorDomainMissMatch)
-	assert.Equal(t, util.IPv4Type, rule.IpAddressType, errorIPTypeMissMatch)
-	assert.Equal(t, exampleIPAddress, rule.IpAddress, errorIPAddrMissMatch)
-	assert.Equal(t, 35, rule.TTL, errorTTLMissMatch)
-	assert.Equal(t, util.ActiveState, rule.State, errorStateMissMatch)
-
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader), responseCheckFor200)
 	mockWriter.AssertExpectations(t)
-}
 
-// Create a dns rule with ACTIVE rule with unreachable server
-func TestPostDnsRuleWithActiveRuleUnReachableServer(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
+	// Getting the task status
+
+	for true {
+		time.Sleep(100 * time.Millisecond)
+
+		mockWriterGet := &mockHttpWriterWithoutWrite{}
+		responseHeaderGet := http.Header{} // Create http response header
+		mockWriterGet.On("Header").Return(responseHeaderGet)
+		mockWriterGet.On("Write").Return(0, nil)
+		mockWriterGet.On("WriteHeader", 200)
+		getRequest, _ := http.NewRequest("GET",
+			fmt.Sprintf(getTaskStatusFormat, taskId.String()),
+			bytes.NewReader([]byte("")))
+		getRequest.URL.RawQuery = fmt.Sprintf(taskQueryFormat, taskId.String())
+
+		mockWriterGet.response = []byte{}
+		service.URLPatterns()[4].Func(mockWriterGet, getRequest)
+
+		getResp := models.TaskProgress{}
+		err := json.Unmarshal(mockWriterGet.response, &getResp)
+		if err != nil {
+			assert.Fail(t, err.Error(), string(mockWriterGet.response))
+			return
 		}
-	}()
-
-	service := Mm5Service{}
-
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           defaultTTL,
-		State:         util.ActiveState,
+		if getResp.ConfigResult == util.TASK_STATE_FAILURE {
+			assert.Fail(t, "Operation failed", getResp, getRequest, postRequest)
+			return
+		} else if getResp.ConfigResult == util.TASK_STATE_SUCCESS {
+			log.Info("Create finished successfully.")
+			break
+		}
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
 
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
-		bytes.NewReader(createRuleBytes))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 503)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[0].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "503", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	respError := models.ProblemDetails{}
-
-	_ = json.Unmarshal(mockWriter.response, &respError)
-	assert.Equal(t, "Remote server error", respError.Title, errorRspMissMatch)
-	assert.Equal(t, uint32(9), respError.Status, errorRspMissMatch)
-	assert.Equal(t, "failed to apply changes on remote server", respError.Detail, errorRspMissMatch)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Create a dns rule with ACTIVE rule and server return StatusBadRequest failure
-func TestPostDnsRuleWithActiveRuleAndStatusBadRequestInServer(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	createRule := dnsCreateRule{
-		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
-		TTL:           defaultTTL,
-		State:         util.ActiveState,
-	}
-	createRuleBytes, _ := json.Marshal(createRule)
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRulesUrlFormat, defaultAppInstanceId),
-		bytes.NewReader(createRuleBytes))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 503)
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
-
-	patches := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
-	})
-	defer patches.Reset()
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[0].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "503", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	respError := models.ProblemDetails{}
-
-	_ = json.Unmarshal(mockWriter.response, &respError)
-	assert.Equal(t, "Remote server error", respError.Title, errorRspMissMatch)
-	assert.Equal(t, uint32(9), respError.Status, errorRspMissMatch)
-	assert.Equal(t, "failed to apply changes on remote server", respError.Detail, errorRspMissMatch)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Delete a dns rule
-func TestDeleteDnsRule(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 204)
-
-	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: util.IPv4Type, IpAddress: exampleIPAddress,
-			TTL: defaultTTL, State: util.InactiveState}
-		outBytes, _ := json.Marshal(&entry)
-		return outBytes, 0
-	})
-	defer patches.Reset()
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[4].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	rule := models.DnsConfigRule{}
-	_ = json.Unmarshal(mockWriter.response, &rule)
-	assert.Equal(t, exampleDomainName, rule.DomainName, errorDomainMissMatch)
-	assert.Equal(t, util.IPv4Type, rule.IpAddressType, errorIPTypeMissMatch)
-	assert.Equal(t, exampleIPAddress, rule.IpAddress, errorIPAddrMissMatch)
-	assert.Equal(t, defaultTTL, rule.TTL, errorTTLMissMatch)
-	assert.Equal(t, util.InactiveState, rule.State, errorStateMissMatch)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Delete a dns rule which does not exists
-func TestDeleteDnsRuleNotFound(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 404)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[4].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "404", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	respError := models.ProblemDetails{}
-
-	_ = json.Unmarshal(mockWriter.response, &respError)
-	assert.Equal(t, "Can not found resource", respError.Title, errorRspMissMatch)
-	assert.Equal(t, uint32(5), respError.Status, errorRspMissMatch)
-	assert.Equal(t, "dns rule retrieval failed", respError.Detail, errorRspMissMatch)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Delete a dns rule
-func TestDeleteActiveDnsRule(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mm5Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader([]byte("")))
-	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 204)
-
-	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: util.IPv4Type, IpAddress: exampleIPAddress,
-			TTL: defaultTTL, State: util.InactiveState}
-		outBytes, _ := json.Marshal(&entry)
-		return outBytes, 0
-	})
-	defer patches.Reset()
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[4].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-	rule := models.DnsConfigRule{}
-	_ = json.Unmarshal(mockWriter.response, &rule)
-	assert.Equal(t, exampleDomainName, rule.DomainName, errorDomainMissMatch)
-	assert.Equal(t, util.IPv4Type, rule.IpAddressType, errorIPTypeMissMatch)
-	assert.Equal(t, exampleIPAddress, rule.IpAddress, errorIPAddrMissMatch)
-	assert.Equal(t, defaultTTL, rule.TTL, errorTTLMissMatch)
-	assert.Equal(t, util.InactiveState, rule.State, errorStateMissMatch)
-
-	mockWriter.AssertExpectations(t)
 }
 
 // Query capability
@@ -1045,7 +1229,7 @@ func TestGetCapabilitiesWithConsumers(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n")).
+		[]byte(respMsg)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1068,13 +1252,13 @@ func TestGetCapabilitiesWithConsumers(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerInstanceIds = append(entry.FilteringCriteria.SerInstanceIds, defCapabilityId)
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 		return records, 0
 	})
 	defer patch2.Reset()
@@ -1107,7 +1291,7 @@ func TestGetCapabilitiesWithMultiConsumers(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n")).
+		[]byte(respMsg)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1130,13 +1314,13 @@ func TestGetCapabilitiesWithMultiConsumers(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerInstanceIds = append(entry.FilteringCriteria.SerInstanceIds, defCapabilityId)
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1203,21 +1387,21 @@ func TestGetCapabilitiesWithMultiCapabilityMultiConsumers(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerInstanceIds = append(entry.FilteringCriteria.SerInstanceIds, defCapabilityId)
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
-		entry2 := mp1models.SerAvailabilityNotificationSubscription{
+		entry2 := models.SerAvailabilityNotificationSubscription{
 			SubscriptionId:    "09022fec-a63c-49fc-857a-dcd7ecaa40a2",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry2.FilteringCriteria.SerInstanceIds = append(entry2.FilteringCriteria.SerInstanceIds, defCapabilityId2)
 		outBytes2, _ := json.Marshal(&entry2)
-		records[fmt.Sprintf("csr/etcd/%s/%s", appInstanceId2, subscriberId2)] = outBytes2
+		records[fmt.Sprintf(recordDB, appInstanceId2, subscriberId2)] = outBytes2
 
 		return records, 0
 	})
@@ -1250,7 +1434,7 @@ func TestGetCapabilitiesWithMultiConsumersAndServiceNameFilter(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n")).
+		[]byte(respMsg)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1273,13 +1457,13 @@ func TestGetCapabilitiesWithMultiConsumersAndServiceNameFilter(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerNames = append(entry.FilteringCriteria.SerNames, "FaceRegService6")
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1312,7 +1496,7 @@ func TestGetCapabilitiesWithMultiConsumersAndCategoryFilter(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n")).
+		[]byte(respMsg)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1325,12 +1509,12 @@ func TestGetCapabilitiesWithMultiConsumersAndCategoryFilter(t *testing.T) {
 			Status:     "UP",
 			Version:    "3.2.1",
 			Properties: map[string]string{
-				"serName":             "FaceRegService6",
-				"mecState":            "ACTIVE",
-				"serCategory/href":    "/example/catalogue1",
-				"serCategory/id":      "id12345",
-				"serCategory/name":    "RNI",
-				"serCategory/version": "v1.1",
+				"serName":     "FaceRegService6",
+				"mecState":    "ACTIVE",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
 			},
 		})
 		return &response, nil
@@ -1339,18 +1523,18 @@ func TestGetCapabilitiesWithMultiConsumersAndCategoryFilter(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
-		entry.FilteringCriteria.SerCategories = append(entry.FilteringCriteria.SerCategories, mp1models.CategoryRef{
-			Href:    "/example/catalogue1",
+		entry.FilteringCriteria.SerCategories = append(entry.FilteringCriteria.SerCategories, models.CategoryRef{
+			Href:    svcCatResponse,
 			ID:      "id12345",
 			Name:    "RNI",
 			Version: "v1.1",
 		})
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1434,7 +1618,7 @@ func TestGetCapabilitySuccessCaseWithConsumers(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}\n")).
+		[]byte(respMsg1)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1458,13 +1642,13 @@ func TestGetCapabilitySuccessCaseWithConsumers(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerInstanceIds = append(entry.FilteringCriteria.SerInstanceIds, defCapabilityId)
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1498,7 +1682,7 @@ func TestGetCapabilitySuccessCaseWithConsumersAndSerNameFilter(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}\n")).
+		[]byte(respMsg1)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1522,13 +1706,13 @@ func TestGetCapabilitySuccessCaseWithConsumersAndSerNameFilter(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
 		entry.FilteringCriteria.SerNames = append(entry.FilteringCriteria.SerNames, "FaceRegService6")
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1543,11 +1727,11 @@ func TestGetCapabilitySuccessCaseWithConsumersAndSerNameFilter(t *testing.T) {
 			Status:     "UP",
 			Version:    "3.2.1",
 			Properties: map[string]string{
-				"serName":             "FaceRegService6",
-				"serCategory/href":    "/example/catalogue1",
-				"serCategory/id":      "id12345",
-				"serCategory/name":    "RNI",
-				"serCategory/version": "v1.1",
+				"serName":     "FaceRegService6",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
 			},
 		})
 		return &response, nil
@@ -1582,7 +1766,7 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write",
-		[]byte("{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}\n")).
+		[]byte(respMsg1)).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
@@ -1596,12 +1780,12 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 			Status:     "UP",
 			Version:    "3.2.1",
 			Properties: map[string]string{
-				"serName":             "FaceRegService6",
-				"mecState":            "ACTIVE",
-				"serCategory/href":    "/example/catalogue1",
-				"serCategory/id":      "id12345",
-				"serCategory/name":    "RNI",
-				"serCategory/version": "v1.1",
+				"serName":     "FaceRegService6",
+				"mecState":    "ACTIVE",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
 			},
 		}
 		return &response, nil
@@ -1610,18 +1794,18 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 
 	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
-		entry := mp1models.SerAvailabilityNotificationSubscription{
-			SubscriptionId:    "05ddef81-dd83-4a37-b0fe-85999585b929",
-			FilteringCriteria: mp1models.FilteringCriteria{},
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
 		}
-		entry.FilteringCriteria.SerCategories = append(entry.FilteringCriteria.SerCategories, mp1models.CategoryRef{
-			Href:    "/example/catalogue1",
+		entry.FilteringCriteria.SerCategories = append(entry.FilteringCriteria.SerCategories, models.CategoryRef{
+			Href:    svcCatResponse,
 			ID:      "id12345",
 			Name:    "RNI",
 			Version: "v1.1",
 		})
 		outBytes, _ := json.Marshal(&entry)
-		records[fmt.Sprintf("csr/etcd/%s/%s", defaultAppInstanceId, subscriberId1)] = outBytes
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
 
 		return records, 0
 	})
@@ -1636,11 +1820,11 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 			Status:     "UP",
 			Version:    "3.2.1",
 			Properties: map[string]string{
-				"serName":             "FaceRegService6",
-				"serCategory/href":    "/example/catalogue1",
-				"serCategory/id":      "id12345",
-				"serCategory/name":    "RNI",
-				"serCategory/version": "v1.1",
+				"serName":     "FaceRegService6",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
 			},
 		})
 		return &response, nil

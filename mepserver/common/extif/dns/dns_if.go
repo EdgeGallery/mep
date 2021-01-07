@@ -17,8 +17,6 @@
 // Package path implements dns client
 package dns
 
-import "net/http"
-
 // DNS rule record
 type RuleEntry struct {
 	DomainName    string `json:"domainName"`
@@ -41,7 +39,7 @@ func NewRuleRecord(domainName string, ipAddressType string, ipAddress string, TT
 // DNS agent interface
 type DNSAgent interface {
 	// Set/Add DNS entry
-	SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) (resp *http.Response, err error)
+	SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) error
 	// Delete DNS entry
-	DeleteResourceRecordTypeA(host, rrtype string) (resp *http.Response, err error)
+	DeleteResourceRecordTypeA(host, rrtype string) error
 }
