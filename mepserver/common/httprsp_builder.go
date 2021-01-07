@@ -20,6 +20,8 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+
+	"mepserver/common/models"
 	"net/http"
 	"strconv"
 
@@ -31,7 +33,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	"mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type SendHttpRsp struct {
@@ -149,6 +150,12 @@ func (t *SendHttpRsp) cvtHttpErrInfo(errInfo *workspace.SerErrInfo) (int, interf
 	case util.ResourceExists:
 		statusCode = http.StatusUnprocessableEntity
 		body.Title = "Resource already exists"
+	case util.DuplicateOperation:
+		body.Title = "Duplicate request error"
+	case util.ForbiddenOperation:
+		statusCode = http.StatusForbidden
+		body.Title = "Operation Not Allowed"
+
 	default:
 		body.Title = "Bad Request"
 	}

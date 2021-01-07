@@ -1,0 +1,15 @@
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 8080
+
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none

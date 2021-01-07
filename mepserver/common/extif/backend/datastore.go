@@ -20,6 +20,7 @@ package backend
 import (
 	"context"
 	"path/filepath"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/backend"
@@ -30,6 +31,7 @@ import (
 
 // Read a single record from the data store on given path
 func GetRecord(path string) (record []byte, errorCode int) {
+	log.Debugf("DB: Read request: %v", path)
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey(path), registry.WithPrefix()),
 	}
@@ -47,6 +49,7 @@ func GetRecord(path string) (record []byte, errorCode int) {
 
 // Read multiple records on the given path
 func GetRecords(path string) (records map[string][]byte, errorCode int) {
+	log.Debugf("DB: Read requests: %v", path)
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey(path), registry.WithPrefix()),
 	}
@@ -64,6 +67,7 @@ func GetRecords(path string) (records map[string][]byte, errorCode int) {
 
 // Read multiple records on the given path
 func GetRecordsWithCompleteKeyPath(path string) (records map[string][]byte, errorCode int) {
+	log.Debugf("DB: Read requests: %v", path)
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey(path), registry.WithPrefix()),
 	}
@@ -81,6 +85,7 @@ func GetRecordsWithCompleteKeyPath(path string) (records map[string][]byte, erro
 
 // Write new record to the given path
 func PutRecord(path string, value []byte) int {
+	log.Debugf("DB: Write request: %v", path)
 	opts := []registry.PluginOp{
 		registry.OpPut(registry.WithStrKey(path), registry.WithValue(value)),
 	}
@@ -94,6 +99,7 @@ func PutRecord(path string, value []byte) int {
 
 // Delete a record on the given path
 func DeleteRecord(path string) int {
+	log.Debugf("DB: Delete request: %v", path)
 	opts := []registry.PluginOp{
 		registry.OpDel(registry.WithStrKey(path), registry.WithPrefix()),
 	}
@@ -101,6 +107,22 @@ func DeleteRecord(path string) int {
 	if err != nil {
 		log.Errorf(nil, "delete entries from data-store failed")
 		return meputil.OperateDataWithEtcdErr
+	}
+	return 0
+}
+
+// Delete the db entries one by one as per the input paths
+func DeletePaths(paths []string, continueOnFailure bool) int {
+	for _, pathEntry := range paths {
+		errCode := DeleteRecord(pathEntry)
+		if errCode != 0 {
+			log.Errorf(nil, "cache(path: %s) delete from etcd failed, "+
+				"this might lead to data inconsistency!", strings.TrimPrefix(pathEntry, meputil.DBRootPath))
+			if continueOnFailure {
+				continue
+			}
+			return errCode
+		}
 	}
 	return 0
 }

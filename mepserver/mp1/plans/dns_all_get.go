@@ -19,6 +19,7 @@ package plans
 
 import (
 	"encoding/json"
+	"mepserver/common/models"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 
@@ -26,7 +27,6 @@ import (
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
 	"mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type DNSRulesGet struct {

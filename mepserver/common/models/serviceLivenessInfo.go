@@ -17,11 +17,10 @@
 package models
 
 import (
-	meputil "mepserver/common/util"
-	"strconv"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
+	meputil "mepserver/common/util"
+	"strconv"
 )
 
 type ServiceLivenessInfo struct {

@@ -21,11 +21,9 @@ import (
 
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
-
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mm5/models"
 	"mepserver/mm5/plans"
 )
 
@@ -44,67 +42,10 @@ type Mm5Service struct {
 
 func (m *Mm5Service) URLPatterns() []rest.Route {
 	return []rest.Route{
-		// DNS
-		{Method: rest.HTTP_METHOD_POST, Path: meputil.DNSConfigRulesPath, Func: dnsRuleCreate},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath, Func: getDnsRules},
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: getDnsRule},
-		{Method: rest.HTTP_METHOD_PUT, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleUpdate},
-		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.DNSConfigRulesPath + meputil.DNSRuleIdPath, Func: dnsRuleDelete},
-
 		// Platform Capability Query
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath, Func: getPlatformCapabilities},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath + meputil.CapabilityIdPath, Func: getPlatformCapability},
 	}
-}
-
-func dnsRuleCreate(w http.ResponseWriter, r *http.Request) {
-	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		(&plans.DecodeDnsConfigRestReq{}).WithBody(&models.DnsConfigRule{}),
-		&plans.CreateDNSRule{})
-	workPlan.Finally(&common.SendHttpRsp{})
-
-	workspace.WkRun(workPlan)
-}
-
-func getDnsRules(w http.ResponseWriter, r *http.Request) {
-	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		&plans.DecodeDnsConfigRestReq{},
-		&plans.DNSRulesGet{})
-	workPlan.Finally(&common.SendHttpRsp{})
-
-	workspace.WkRun(workPlan)
-}
-
-func getDnsRule(w http.ResponseWriter, r *http.Request) {
-	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		&plans.DecodeDnsConfigRestReq{},
-		&plans.DNSRuleGet{})
-	workPlan.Finally(&common.SendHttpRsp{})
-
-	workspace.WkRun(workPlan)
-}
-
-func dnsRuleUpdate(w http.ResponseWriter, r *http.Request) {
-	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		(&plans.DecodeDnsConfigRestReq{}).WithBody(&models.DnsConfigRule{}),
-		&plans.DNSRuleUpdate{})
-	workPlan.Finally(&common.SendHttpRsp{})
-
-	workspace.WkRun(workPlan)
-}
-
-func dnsRuleDelete(w http.ResponseWriter, r *http.Request) {
-	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(
-		&plans.DecodeDnsConfigRestReq{},
-		&plans.DNSRuleDelete{})
-	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
-
-	workspace.WkRun(workPlan)
 }
 
 func getPlatformCapabilities(w http.ResponseWriter, r *http.Request) {

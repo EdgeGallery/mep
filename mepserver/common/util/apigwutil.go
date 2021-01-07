@@ -67,7 +67,7 @@ func AddApigwService(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
 	err := SendPostRequest(kongServiceUrl, jsonStr)
 	if err != nil {
-		log.Error("AddApigwService failed", err)
+		log.Error("failed to add API gateway service", err)
 	}
 }
 
@@ -77,7 +77,7 @@ func AddApigwRoute(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
 	err := SendPostRequest(kongRouteUrl, jsonStr)
 	if err != nil {
-		log.Error("AddApigwRoute failed", err)
+		log.Error("failed to add API gateway route", err)
 	}
 }
 
@@ -97,7 +97,7 @@ func ApigwDelRoute(serName string) {
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
-		log.Error("ApigwDelRoute failed", err)
+		log.Error("failed to delete API gateway route", err)
 	}
 	log.Infof("res=%s", str)
 }
@@ -135,14 +135,14 @@ func SendRequest(url string, method string, jsonStr []byte) error {
 
 	config, err := TLSConfig("apigw_cacert")
 	if err != nil {
-		log.Error("unable to read certificate", err)
+		log.Error("unable to read certificate", nil)
 		return err
 	}
 	req.SetTLSClientConfig(config)
 
 	res, err := req.String()
 	if err != nil {
-		log.Error("send Request Failed", err)
+		log.Error("send request failed", nil)
 		return err
 	}
 	log.Infof("res=%s", res)
@@ -153,7 +153,7 @@ func SendRequest(url string, method string, jsonStr []byte) error {
 func TLSConfig(crtName string) (*tls.Config, error) {
 	appConfig, err := GetAppConfig()
 	if err != nil {
-		log.Error("get app config error", err)
+		log.Error("get app config error", nil)
 		return nil, err
 	}
 	certNameConfig := string(appConfig[crtName])
@@ -164,7 +164,7 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 
 	crt, err := ioutil.ReadFile(certNameConfig)
 	if err != nil {
-		log.Error("unable to read certificate", err)
+		log.Error("unable to read certificate", nil)
 		return nil, err
 	}
 
@@ -178,7 +178,7 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 	serverName := string(appConfig["server_name"])
 	serverNameIsValid, validateServerNameErr := ValidateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error", err)
+		log.Error("validate server name error", nil)
 		return nil, validateServerNameErr
 	}
 	sslCiphers := string(appConfig["ssl_ciphers"])

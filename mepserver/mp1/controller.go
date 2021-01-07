@@ -22,11 +22,11 @@ import (
 
 	"github.com/apache/servicecomb-service-center/pkg/rest"
 	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
+	"mepserver/common/models"
 
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mp1/models"
 	"mepserver/mp1/plans"
 )
 
