@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/rest"
@@ -63,6 +64,11 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
 			util.GetResourceInfo(t.R), body.Detail)
 		util.HttpErrResponse(t.W, util.RemoteServerErr, body)
+		return workspace.TaskFinish
+	}
+
+	if errInfo.ErrCode == util.SerErrServiceNotFound && strings.EqualFold(errInfo.Message, "failed to find the instance") {
+		t.writeResponse(t.W, t.HttpErrInf, make([]*models.ServiceInfo, 0))
 		return workspace.TaskFinish
 	}
 
