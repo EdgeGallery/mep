@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package interface for dataplane none
+// Package interface for data-plane none
 package none
 
 import (
