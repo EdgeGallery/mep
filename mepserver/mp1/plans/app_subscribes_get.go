@@ -20,6 +20,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"mepserver/common/models"
 	"net/http"
 	"net/url"
 	"path"
@@ -31,7 +32,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	"mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type GetSubscribes struct {

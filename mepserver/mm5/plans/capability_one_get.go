@@ -20,6 +20,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"mepserver/common/models"
 	"net/http"
 	"net/url"
 	"strings"
@@ -31,8 +32,6 @@ import (
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	meputil "mepserver/common/util"
-	"mepserver/mm5/models"
-	mp1models "mepserver/mp1/models"
 )
 
 type CapabilityGet struct {
@@ -45,7 +44,7 @@ type CapabilityGet struct {
 	HttpErrInf             *proto.Response `json:"httpErrInf,out"`
 	consumerList           []models.Consumer
 	serviceNameMapping     map[string]string
-	serviceCategoryMapping map[mp1models.CategoryRef]string
+	serviceCategoryMapping map[models.CategoryRef]string
 }
 
 func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
@@ -125,7 +124,7 @@ func (t *CapabilityGet) buildConsumerList() int {
 		}
 		appInstanceId := paths[len(paths)-2]
 
-		subscriptionNotify := &mp1models.SerAvailabilityNotificationSubscription{}
+		subscriptionNotify := &models.SerAvailabilityNotificationSubscription{}
 		jsonErr := json.Unmarshal(subscriptionData, subscriptionNotify)
 		if jsonErr != nil {
 			log.Errorf(nil, "failed to parse the subscription entry from data-store")
@@ -138,7 +137,7 @@ func (t *CapabilityGet) buildConsumerList() int {
 }
 
 func (t *CapabilityGet) fillConsumerListForSubscription(
-	subscriptionNotify *mp1models.SerAvailabilityNotificationSubscription,
+	subscriptionNotify *models.SerAvailabilityNotificationSubscription,
 	appInstanceId string) {
 	if len(subscriptionNotify.FilteringCriteria.SerInstanceIds) > 0 {
 		for _, serInstanceId := range subscriptionNotify.FilteringCriteria.SerInstanceIds {

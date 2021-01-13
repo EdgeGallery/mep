@@ -19,6 +19,7 @@ package plans
 
 import (
 	"context"
+	"mepserver/common/models"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
@@ -27,7 +28,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type UpdateInstance struct {

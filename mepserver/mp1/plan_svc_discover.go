@@ -20,6 +20,7 @@ package mp1
 import (
 	"context"
 	"encoding/json"
+	"mepserver/common/models"
 	"net/http"
 	"net/url"
 
@@ -31,7 +32,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 type DiscoverDecode struct {

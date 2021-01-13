@@ -14,28 +14,18 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
-package models
+package common
 
 import (
-	"encoding/json"
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	"mepserver/common/config"
+	"mepserver/common/extif/dataplane"
+	"mepserver/common/extif/dataplane/none"
+	meputil "mepserver/common/util"
 )
 
-type ProblemDetails struct {
-	ProbType string `json:"type,omitempty"`
-	Title    string `json:"title,omitempty"`
-	Status   uint32 `json:"status,omitempty"`
-	Detail   string `json:"detail,omitempty"`
-	Instance string `json:"instance,omitempty"`
-}
-
-// marshall object to json string
-func (pd ProblemDetails) String() string {
-	d, err := json.Marshal(pd)
-	if err != nil {
-		log.Errorf(nil, "json marshalling failed")
-		return ""
+func CreateDataPlane(config *config.MepServerConfig) dataplane.DataPlane {
+	if config.DataPlane.Type == meputil.DataPlaneNone {
+		return &none.NoneDataPlane{}
 	}
-	return string(d)
+	return nil
 }

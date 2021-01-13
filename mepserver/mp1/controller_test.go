@@ -22,16 +22,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"math/rand"
+	"mepserver/common/config"
+	"mepserver/common/extif/dataplane"
+	"mepserver/common/models"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strconv"
 	"testing"
 	"time"
-
-	"mepserver/mp1/models"
-	"reflect"
 
 	"github.com/agiledragon/gomonkey"
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -43,12 +44,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"reflect"
 
+	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
 	"mepserver/common/util"
-
-	pb "github.com/apache/servicecomb-service-center/server/core/proto"
 )
 
 type mockHttpWriter struct {
@@ -80,8 +81,7 @@ const writeObjectFormat = "{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794
 //===========================Services==============================================
 const postSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
 const getSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
-const getOneSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
-const delOneSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
+const getOrDelOneSubscribeOrSveUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
 const responseCheckFor201 = "Response status code must be 201"
 const responseCheckFor204 = "Response status code must be 204"
 const subtype1 = "SerAvailabilityNotificationSubscription"
@@ -91,8 +91,6 @@ const postAppTerminologiesUrl = "/mec_app_support/v1/applications/%s/services"
 const getAppTerminologiesUrl = "/mec_app_support/v1/applications/%s/services"
 const getOneAppTerminologiesUrl = "/mec_app_support/v1/applications/%s/services/%s"
 const delOneAppTerminologiesUrl = "/mec_app_support/v1/applications/%s/services/%s"
-const getOneServiceUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
-const delOneServiceUrl = "/mec_service_mgmt/v1/applications/%s/services/%s"
 const appIdAndServiceIdQueryFormat = ":appInstanceId=%s&;:serviceId=%s&;"
 const sampleServiceId = "f7e898d1c9ea9edd7496c761ddc92718"
 const sampleInstanceId = "f7e898d1c9ea9edd7496c761ddc92718"
@@ -104,10 +102,19 @@ const formatIntBase = 10
 const secString = "timestamp/seconds"
 const nanosecString = "timestamp/nanoseconds"
 
+//=====================================COMMON====================================================================
+const restApi = "REST API"
+const tokenEndPoint = "/mecSerMgmtApi/security/TokenEndPoint"
+const href = "/example/catalogue1"
+const callBack = "https://%d.%d.%d.%d:%d/example/catalogue1"
+const parseFail = "Parsing configuration file error"
+
 //=======================================END======================================================================
+
 // Generate test IP, instead of hard coding them
 var exampleIPAddress = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
 	rand.Intn(maxIPVal))
+var callBackRef = fmt.Sprintf(callBack, 192, 0, 2, 1, 8080)
 
 func (m *mockHttpWriter) Header() http.Header {
 	// Get the argument inputs
@@ -116,7 +123,7 @@ func (m *mockHttpWriter) Header() http.Header {
 	return args.Get(0).(http.Header)
 }
 func (m *mockHttpWriter) Write(response []byte) (int, error) {
-	fmt.Printf("Write: %v", response)
+	fmt.Printf("Write: %v", string(response))
 	// Get the argument inputs and marking the function is called with correct input
 	args := m.Called(response)
 
@@ -194,13 +201,14 @@ func TestGetDnsRules(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
-		records := make(map[string][]byte)
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
-			TTL: 30, State: util.InactiveState}
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
+			TTL: defaultTTL, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
-		records[dnsRuleId] = outBytes
-		return records, 0
+		return outBytes, 0
 	})
 	defer patches.Reset()
 
@@ -237,7 +245,12 @@ func TestGetEmptyDnsRules(t *testing.T) {
 	mockWriter.On("Header").Return(responseHeader)
 	mockWriter.On("Write", []byte("null\n")).Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
-
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		entry := models.AppDConfig{AppName: "appExample"}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[13].Func(mockWriter, getRequest)
 
@@ -347,8 +360,11 @@ func TestGetSingleDnsRule(t *testing.T) {
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -444,19 +460,20 @@ func TestPutSingleDnsRule(t *testing.T) {
 
 	service := Mp1Service{}
 
-	createRule := dnsCreateRule{
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.InactiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -470,8 +487,11 @@ func TestPutSingleDnsRule(t *testing.T) {
 	mockWriter.On("WriteHeader", 200)
 
 	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -494,21 +514,66 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 		}
 	}()
 
-	service := Mp1Service{}
+	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
 
-	createRule := dnsCreateRule{
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, parseFail)
+		}
+		return &mepConfig, nil
+	})
+	defer patchInit1.Reset()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err2 := w.Write([]byte(""))
+		if err2 != nil {
+			t.Error(errorWriteRespErr)
+		}
+	}))
+	defer ts.Close()
+
+	patchInit2 := gomonkey.ApplyFunc(dns.NewRestDNSAgent, func(config *config.MepServerConfig) *dns.RestDNSAgent {
+		parse, _ := url.Parse(ts.URL)
+		return &dns.RestDNSAgent{ServerEndPoint: parse}
+	})
+	defer patchInit2.Reset()
+
+	service := Mp1Service{}
+	_ = service.Init()
+
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.ActiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -522,27 +587,16 @@ func TestPutSingleDnsRuleActive(t *testing.T) {
 
 	mockWriter.On("WriteHeader", 200)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
-	})
-
 	defer patch1.Reset()
-	defer patch2.Reset()
 
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
@@ -563,19 +617,20 @@ func TestPutSingleDnsRuleReActive(t *testing.T) {
 
 	service := Mp1Service{}
 
-	createRule := dnsCreateRule{
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.ActiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -597,14 +652,17 @@ func TestPutSingleDnsRuleReActive(t *testing.T) {
 	}))
 	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.ActiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
+	patch2 := gomonkey.ApplyFunc(dns.NewRestDNSAgent, func(config *config.MepServerConfig) *dns.RestDNSAgent {
 		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
+		return &dns.RestDNSAgent{ServerEndPoint: parse}
 	})
 
 	defer patch1.Reset()
@@ -627,21 +685,66 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 		}
 	}()
 
-	service := Mp1Service{}
+	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
 
-	createRule := dnsCreateRule{
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, parseFail)
+		}
+		return &mepConfig, nil
+	})
+	defer patchInit1.Reset()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err2 := w.Write([]byte(""))
+		if err2 != nil {
+			t.Error(errorWriteRespErr)
+		}
+	}))
+	defer ts.Close()
+
+	patchInit2 := gomonkey.ApplyFunc(dns.NewRestDNSAgent, func(config *config.MepServerConfig) *dns.RestDNSAgent {
+		parse, _ := url.Parse(ts.URL)
+		return &dns.RestDNSAgent{ServerEndPoint: parse}
+	})
+	defer patchInit2.Reset()
+
+	service := Mp1Service{}
+	_ = service.Init()
+
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.InactiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -654,27 +757,16 @@ func TestPutSingleDnsRuleInactive(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.ActiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
-	})
-
 	defer patch1.Reset()
-	defer patch2.Reset()
 
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
@@ -693,21 +785,51 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 		}
 	}()
 
-	service := Mp1Service{}
+	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
 
-	createRule := dnsCreateRule{
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, parseFail)
+		}
+		return &mepConfig, nil
+	})
+	defer patchInit1.Reset()
+
+	service := Mp1Service{}
+	_ = service.Init()
+
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.ActiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -721,8 +843,11 @@ func TestPutSingleDnsRuleActiveWithServerNotReachable(t *testing.T) {
 	mockWriter.On("WriteHeader", 503)
 
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
@@ -745,21 +870,66 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 		}
 	}()
 
-	service := Mp1Service{}
+	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
 
-	createRule := dnsCreateRule{
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, parseFail)
+		}
+		return &mepConfig, nil
+	})
+	defer patchInit1.Reset()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err2 := w.Write([]byte(""))
+		if err2 != nil {
+			t.Error(errorWriteRespErr)
+		}
+	}))
+	defer ts.Close()
+
+	patchInit2 := gomonkey.ApplyFunc(dns.NewRestDNSAgent, func(config *config.MepServerConfig) *dns.RestDNSAgent {
+		parse, _ := url.Parse(ts.URL)
+		return &dns.RestDNSAgent{ServerEndPoint: parse}
+	})
+	defer patchInit2.Reset()
+
+	service := Mp1Service{}
+	_ = service.Init()
+
+	updateRule := dataplane.DNSRule{
+		DNSRuleID:     dnsRuleId,
 		DomainName:    exampleDomainName,
-		IpAddressType: util.IPv4Type,
-		IpAddress:     exampleIPAddress,
+		IPAddressType: util.IPv4Type,
+		IPAddress:     exampleIPAddress,
 		TTL:           defaultTTL,
 		State:         util.ActiveState,
 	}
-	createRuleBytes, _ := json.Marshal(createRule)
+	updateRuleBytes, _ := json.Marshal(updateRule)
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
 		fmt.Sprintf(getDnsRuleUrlFormat, defaultAppInstanceId, dnsRuleId),
-		bytes.NewReader(createRuleBytes))
+		bytes.NewReader(updateRuleBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndDnsRuleIdQueryFormat, defaultAppInstanceId, dnsRuleId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
@@ -772,27 +942,17 @@ func TestPutSingleDnsRuleActiveWithServerError(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 503)
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err2 := w.Write([]byte(""))
-		if err2 != nil {
-			t.Error(errorWriteRespErr)
-		}
-	}))
-	defer ts.Close()
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		entry := dns.RuleEntry{DomainName: exampleDomainName, IpAddressType: "IP_V4", IpAddress: exampleIPAddress,
+		dnsRule := dataplane.DNSRule{DNSRuleID: dnsRuleId, DomainName: exampleDomainName, IPAddressType: "IP_V4", IPAddress: exampleIPAddress,
 			TTL: 30, State: util.InactiveState}
+		var dnsRules []dataplane.DNSRule
+		dnsRules = append(dnsRules, dnsRule)
+		entry := models.AppDConfig{AppDNSRule: dnsRules}
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-	patch2 := gomonkey.ApplyFunc(dns.NewRestClient, func() *dns.RestClient {
-		parse, _ := url.Parse(ts.URL)
-		return &dns.RestClient{ServerEndPoint: parse}
-	})
 
 	defer patch1.Reset()
-	defer patch2.Reset()
 
 	// 15 is the order of the DNS put handler in the URLPattern
 	service.URLPatterns()[15].Func(mockWriter, getRequest)
@@ -925,7 +1085,7 @@ func TestAppSubscribePost(t *testing.T) {
 	service := Mp1Service{}
 	createSubscription := models.SerAvailabilityNotificationSubscription{
 		SubscriptionType:  "SerAvailabilityNotificationSubscription",
-		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
+		CallbackReference: callBackRef,
 		FilteringCriteria: models.FilteringCriteria{
 			SerInstanceIds: []string{
 				"f7e898d1c9ea9edd8a41295fc55c2373",
@@ -935,7 +1095,7 @@ func TestAppSubscribePost(t *testing.T) {
 			},
 			SerCategories: []models.CategoryRef{
 				{
-					Href:    "https://192.0.2.1:8080/example/catalogue1",
+					Href:    callBackRef,
 					ID:      "id12345",
 					Name:    "RNI",
 					Version: "1.2.2",
@@ -1031,7 +1191,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 	service := Mp1Service{}
 	createSubscription := models.SerAvailabilityNotificationSubscription{
 		SubscriptionType:  "SerAvailabilityNotificationSubscription",
-		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
+		CallbackReference: callBackRef,
 		FilteringCriteria: models.FilteringCriteria{
 			SerInstanceIds: []string{
 				"f7e898d1c9ea9edd8a41295fc55c2373",
@@ -1041,7 +1201,7 @@ func TestAppSubscribePostJsonMarshallFail(t *testing.T) {
 			},
 			SerCategories: []models.CategoryRef{
 				{
-					Href:    "https://192.0.2.1:8080/example/catalogue1",
+					Href:    callBackRef,
 					ID:      "id12345",
 					Name:    "RNI",
 					Version: "1.2.2",
@@ -1133,7 +1293,7 @@ func TestGetOneAppSubscribe(t *testing.T) {
 	service := Mp1Service{}
 	subscriptionId := uuid.NewV4().String()
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getOneSubscribeUrl, defaultAppInstanceId, subscriptionId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, subscriptionId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1159,7 +1319,7 @@ func TestDelOneAppSubscribe(t *testing.T) {
 	service := Mp1Service{}
 	subscriptionId := uuid.NewV4().String()
 	getRequest, _ := http.NewRequest("DELETE",
-		fmt.Sprintf(delOneSubscribeUrl, defaultAppInstanceId, subscriptionId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, subscriptionId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1187,7 +1347,7 @@ func TestAppTerminationSubscribePost(t *testing.T) {
 	service := Mp1Service{}
 	createSubscription := models.AppTerminationNotificationSubscription{
 		SubscriptionType:  "AppTerminationNotificationSubscription",
-		CallbackReference: "https://192.0.2.1:8080/example/catalogue1",
+		CallbackReference: callBackRef,
 		AppInstanceId:     "6abe4782-2c70-4e47-9a4e-0ee3a1a0fd1e",
 	}
 	createSubscriptionBytes, _ := json.Marshal(createSubscription)
@@ -1326,7 +1486,7 @@ func TestPostServiceRegister(t *testing.T) {
 	service := Mp1Service{}
 
 	svcCat := models.CategoryRef{
-		Href:    "/example/catalogue1",
+		Href:    href,
 		ID:      "id12345",
 		Name:    "RNI",
 		Version: "1.2.3",
@@ -1337,7 +1497,7 @@ func TestPostServiceRegister(t *testing.T) {
 
 	authInfo := models.SecurityInfoOAuth2Info{
 		GrantTypes:    theArray,
-		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
+		TokenEndpoint: tokenEndPoint,
 	}
 
 	sec1 := models.SecurityInfo{
@@ -1346,7 +1506,7 @@ func TestPostServiceRegister(t *testing.T) {
 	transInfo := models.TransportInfo{
 		ID:               "TransId12345",
 		Name:             "REST",
-		Description:      "REST API",
+		Description:      restApi,
 		TransType:        "REST_HTTP",
 		Protocol:         "HTTP",
 		Version:          "2.0",
@@ -1431,7 +1591,7 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	service := Mp1Service{}
 
 	svcCat := models.CategoryRef{
-		Href:    "/example/catalogue1",
+		Href:    href,
 		ID:      "id12345",
 		Name:    "RNI",
 		Version: "1.2.3",
@@ -1442,7 +1602,7 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 
 	authInfo := models.SecurityInfoOAuth2Info{
 		GrantTypes:    theArray,
-		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
+		TokenEndpoint: tokenEndPoint,
 	}
 
 	sec1 := models.SecurityInfo{
@@ -1451,7 +1611,7 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	transInfo := models.TransportInfo{
 		ID:               "TransId12345",
 		Name:             "REST",
-		Description:      "REST API",
+		Description:      restApi,
 		TransType:        "REST_HTTP",
 		Protocol:         "HTTP",
 		Version:          "2.0",
@@ -1535,7 +1695,7 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 	service := Mp1Service{}
 
 	svcCat := models.CategoryRef{
-		Href:    "/example/catalogue1",
+		Href:    href,
 		ID:      "id12345",
 		Name:    "RNI",
 		Version: "1.2.3",
@@ -1546,7 +1706,7 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 
 	authInfo := models.SecurityInfoOAuth2Info{
 		GrantTypes:    theArray,
-		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
+		TokenEndpoint: tokenEndPoint,
 	}
 
 	sec1 := models.SecurityInfo{
@@ -1555,7 +1715,7 @@ func TestPostServiceRegisterFindInstanceByKeyFailed(t *testing.T) {
 	transInfo := models.TransportInfo{
 		ID:               "TransId12345",
 		Name:             "REST",
-		Description:      "REST API",
+		Description:      restApi,
 		TransType:        "REST_HTTP",
 		Protocol:         "HTTP",
 		Version:          "2.0",
@@ -1701,7 +1861,7 @@ func TestPutServiceUpdate(t *testing.T) {
 	service := Mp1Service{}
 
 	svcCat := models.CategoryRef{
-		Href:    "/example/catalogue1",
+		Href:    href,
 		ID:      "id12345",
 		Name:    "RNI",
 		Version: "1.2.3",
@@ -1712,7 +1872,7 @@ func TestPutServiceUpdate(t *testing.T) {
 
 	authInfo := models.SecurityInfoOAuth2Info{
 		GrantTypes:    theArray,
-		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
+		TokenEndpoint: tokenEndPoint,
 	}
 
 	sec1 := models.SecurityInfo{
@@ -1721,7 +1881,7 @@ func TestPutServiceUpdate(t *testing.T) {
 	transInfo := models.TransportInfo{
 		ID:               "TransId12345",
 		Name:             "REST",
-		Description:      "REST API",
+		Description:      restApi,
 		TransType:        "REST_HTTP",
 		Protocol:         "HTTP",
 		Version:          "2.0",
@@ -1745,7 +1905,7 @@ func TestPutServiceUpdate(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getOneServiceUrl, defaultAppInstanceId, sampleServiceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, sampleServiceId),
 		bytes.NewReader(serviceInfBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1786,7 +1946,7 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 	service := Mp1Service{}
 
 	svcCat := models.CategoryRef{
-		Href:    "/example/catalogue1",
+		Href:    href,
 		ID:      "id12345",
 		Name:    "RNI",
 		Version: "1.2.3",
@@ -1797,7 +1957,7 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 
 	authInfo := models.SecurityInfoOAuth2Info{
 		GrantTypes:    theArray,
-		TokenEndpoint: "/mecSerMgmtApi/security/TokenEndPoint",
+		TokenEndpoint: tokenEndPoint,
 	}
 
 	sec1 := models.SecurityInfo{
@@ -1806,7 +1966,7 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 	transInfo := models.TransportInfo{
 		ID:               "TransId12345",
 		Name:             "REST",
-		Description:      "REST API",
+		Description:      restApi,
 		TransType:        "REST_HTTP",
 		Protocol:         "HTTP",
 		Version:          "2.0",
@@ -1830,7 +1990,7 @@ func TestPutServiceUpdateFindInstanceFail(t *testing.T) {
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("PUT",
-		fmt.Sprintf(getOneServiceUrl, defaultAppInstanceId, sampleServiceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, sampleServiceId),
 		bytes.NewReader(serviceInfBytes))
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1857,7 +2017,7 @@ func TestGetOneServiceWithInvalidId(t *testing.T) {
 	service := Mp1Service{}
 	serviceId := uuid.NewV4().String()
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getOneServiceUrl, defaultAppInstanceId, serviceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, serviceId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1882,7 +2042,7 @@ func TestGetOneServiceWithValidId(t *testing.T) {
 
 	service := Mp1Service{}
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getOneServiceUrl, defaultAppInstanceId, sampleServiceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, sampleServiceId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1931,7 +2091,7 @@ func TestDelOneServiceWithValidId(t *testing.T) {
 	service := Mp1Service{}
 	serviceId := uuid.NewV4().String()
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(delOneServiceUrl, defaultAppInstanceId, serviceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, serviceId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
@@ -1957,7 +2117,7 @@ func TestDelOneServiceWithInValidId(t *testing.T) {
 	service := Mp1Service{}
 	serviceId := uuid.NewV4().String()
 	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(delOneServiceUrl, defaultAppInstanceId, serviceId),
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, serviceId),
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)

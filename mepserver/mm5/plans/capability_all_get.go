@@ -20,6 +20,7 @@ package plans
 import (
 	"context"
 	"encoding/json"
+	"mepserver/common/models"
 	"net/http"
 	"net/url"
 	"strings"
@@ -32,8 +33,6 @@ import (
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
-	"mepserver/mm5/models"
-	mp1models "mepserver/mp1/models"
 )
 
 type DecodeCapabilityQueryReq struct {
@@ -71,7 +70,7 @@ type CapabilitiesGet struct {
 	HttpErrInf             *proto.Response `json:"httpErrInf,out"`
 	consumerList           map[string][]models.Consumer
 	serviceNameMapping     map[string]string
-	serviceCategoryMapping map[mp1models.CategoryRef]string
+	serviceCategoryMapping map[models.CategoryRef]string
 }
 
 func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
@@ -142,7 +141,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 		}
 		appInstanceId := paths[len(paths)-2]
 
-		subscriptionNotify := &mp1models.SerAvailabilityNotificationSubscription{}
+		subscriptionNotify := &models.SerAvailabilityNotificationSubscription{}
 		jsonErr := json.Unmarshal(subscriptionData, subscriptionNotify)
 		if jsonErr != nil {
 			log.Errorf(nil, "failed to parse the subscription entry from data-store")
@@ -155,7 +154,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 }
 
 func (t *CapabilitiesGet) fillConsumerListForSubscription(
-	subscriptionNotify *mp1models.SerAvailabilityNotificationSubscription,
+	subscriptionNotify *models.SerAvailabilityNotificationSubscription,
 	appInstanceId string) {
 	if len(subscriptionNotify.FilteringCriteria.SerInstanceIds) > 0 {
 		for _, serInstanceId := range subscriptionNotify.FilteringCriteria.SerInstanceIds {
@@ -185,9 +184,9 @@ func (t *CapabilitiesGet) fillConsumerData(serInstanceId string, appInstanceId s
 }
 
 // Get service id mapping based on filtering condition
-func getServiceMapping() (map[string]string, map[mp1models.CategoryRef]string) {
+func getServiceMapping() (map[string]string, map[models.CategoryRef]string) {
 	serviceNameIdMapping := make(map[string]string, 0)
-	serviceCategoryMapping := make(map[mp1models.CategoryRef]string, 0)
+	serviceCategoryMapping := make(map[models.CategoryRef]string, 0)
 
 	resp, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {
@@ -195,7 +194,7 @@ func getServiceMapping() (map[string]string, map[mp1models.CategoryRef]string) {
 	}
 	for _, instance := range resp.Instances {
 		serviceNameIdMapping[instance.Properties["serName"]] = instance.GetServiceId() + instance.GetInstanceId()
-		serviceCategoryMapping[mp1models.CategoryRef{
+		serviceCategoryMapping[models.CategoryRef{
 			Href:    instance.Properties["serCategory/href"],
 			ID:      instance.Properties["serCategory/id"],
 			Name:    instance.Properties["serCategory/name"],

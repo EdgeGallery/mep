@@ -28,12 +28,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	uuid "github.com/satori/go.uuid"
 	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -648,6 +650,16 @@ func IsHttpStatusOK(statusCode int) bool {
 	return statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices
 }
 
+// Join url paths
+func JoinURL(base string, paths ...string) string {
+	return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"),
+		strings.TrimLeft(path.Join(paths...), "/"))
+}
+
+func GenerateUniqueId() string {
+	return uuid.NewV4().String()
+}
+
 type AppConfigProperties map[string]string
 
 // read app.conf file to AppConfigProperties object
@@ -690,4 +702,21 @@ func BufferHeartbeatInterval(Interval int) int {
 	buffer := math.Ceil(float64(Interval) * 0.05)
 	buffer = math.Min(buffer, 5)
 	return Interval + int(buffer)
+}
+
+// Return IP address type, expects the ip is validated before
+func FindIPAddressType(ip string) string {
+	if strings.Count(ip, ":") >= 1 {
+		return IP_TYPE_IPV6
+	} else {
+		return IP_TYPE_IPV4
+	}
+}
+func StringInList(searchStr string, stringList []string) bool {
+	for _, oneStr := range stringList {
+		if oneStr == searchStr {
+			return true
+		}
+	}
+	return false
 }

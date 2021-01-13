@@ -20,6 +20,7 @@ package event
 import (
 	"encoding/json"
 	"errors"
+	"mepserver/common/models"
 	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -36,7 +37,6 @@ import (
 	"golang.org/x/net/context"
 
 	util2 "mepserver/common/util"
-	"mepserver/mp1/models"
 )
 
 const ConsumeIdLength = 16

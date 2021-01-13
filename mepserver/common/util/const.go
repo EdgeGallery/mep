@@ -42,6 +42,8 @@ const (
 	ResourceExists                                = 16
 	HeartbeatServiceNotFound                      = 17
 	ServiceInactive                               = 18
+	DuplicateOperation                            = 19
+	ForbiddenOperation                            = 20
 )
 
 const (
@@ -49,18 +51,22 @@ const (
 	Mm5RootPath           = "/mepcfg"
 	MecServicePath        = "/mec_service_mgmt/v1"
 	MecAppSupportPath     = "/mec_app_support/v1"
-	MecRuleConfigPath     = "/mec_app_config/v1"
 	MecPlatformConfigPath = "/mec_platform_config/v1"
-	AppServicesPath       = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
-	AppSubscribePath      = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
-	ServicesPath          = RootPath + MecServicePath + "/services"
-	EndAppSubscribePath   = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
-	DNSRulesPath          = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
-	DNSConfigRulesPath    = Mm5RootPath + MecRuleConfigPath + "/rules/:appInstanceId/dns_rules"
-	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
-	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
+	MecAppDConfigPath     = "/app_lcm/v1"
+
+	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
+	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
+	ServicesPath        = RootPath + MecServicePath + "/services"
+	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
+	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
+	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
+
+	CapabilityPath   = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
+	AppDConfigPath   = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
+	AppDQueryResPath = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
+	TrafficRuleIdPath  = "/:trafficRuleId"
 	SubscriptionIdPath = "/:subscriptionId"
 	ServiceIdPath      = "/:serviceId"
 	CapabilityIdPath   = "/:capabilityId"
@@ -78,6 +84,16 @@ const (
 	IPv6Type = "IP_V6"
 )
 
+const DBRootPath = "/cse-sr/etsi/"
+const (
+	EndAppSubKeyPath      = DBRootPath + "app-end-subscribe/"
+	AvailAppSubKeyPath    = DBRootPath + "subscribe/"
+	AppDConfigKeyPath     = DBRootPath + "appd/"
+	AppDLCMJobsPath       = DBRootPath + "mep/applcm/jobs/"
+	AppDLCMTasksPath      = DBRootPath + "mep/applcm/tasks/"
+	AppDLCMTaskStatusPath = DBRootPath + "mep/applcm/taskstatus/"
+)
+
 const (
 	PostMethod   = "POST"
 	DeleteMethod = "DELETE"
@@ -91,8 +107,7 @@ const FormatIntBase = 10
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"
-const EndAppSubKeyPath string = "/cse-sr/etsi/app-end-subscribe/"
-const AvailAppSubKeyPath string = "/cse-sr/etsi/subscribe/"
+
 const RequestBodyLength = 4096
 const ServicesMaxCount = 50
 const AppSubscriptionCount = 50
@@ -112,8 +127,6 @@ const HookTimerLimit time.Duration = 5
 
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
 
-const EndDNSRuleKeyPath string = "/cse-sr/etsi/dns-rule/"
-
 const ErrorRequestBodyMessage = "request body invalid"
 
 // As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
@@ -123,7 +136,10 @@ const MaxFQDNLength = 253
 // Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
 const MaxIPLength = 45
 
-const MaxDNSRuleId = 36
+const MaxDNSRuleIdLength = 36
+const MaxTrafficRuleIdLength = 36
+
+const MaxAppDAppInstId = 32
 
 const MaxPortNumber = 65535
 const MaxPortLength = 5
@@ -141,4 +157,65 @@ const (
 
 const (
 	RRClassIN = "IN"
+)
+
+const MepServerConfigPath = "/usr/mep/conf/mep/config.yaml"
+
+// Data plane options
+const (
+	DataPlaneNone = "none"
+)
+
+// Dns agent options
+const (
+	DnsAgentTypeLocal     = "local"
+	DnsAgentTypeDataPlane = "dataplane"
+	DnsAgentTypeAll       = "all"
+)
+
+type AppDRuleType int
+
+const (
+	RuleTypeDns AppDRuleType = iota
+	RuleTypeTraffic
+)
+
+// Operation list
+type OperType int
+
+const (
+	OperCreate OperType = iota // Operation type create
+	OperModify                 // Operation type modify
+	OperDelete                 // Operation type delete
+)
+
+// AppD rule state machine
+type AppDRuleStatus int
+
+const (
+	WaitMp2           AppDRuleStatus = iota // wait to be process
+	WaitLocal                               // Local handling pending(for DNS)
+	WaitConfigDBWrite                       // Wait for Config DB write
+)
+
+// Function table index
+type FuncType int
+
+const (
+	ApplyFunc  FuncType = iota // Normal operation of apply rule
+	RevertFunc                 // Revert handler index
+
+)
+
+const TaskProgressFailure = -1
+
+const (
+	TASK_STATE_SUCCESS    = "SUCCESS"
+	TASK_STATE_PROCESSING = "PROCESSING"
+	TASK_STATE_FAILURE    = "FAILURE"
+)
+
+const (
+	IP_TYPE_IPV4 = "IP_V4"
+	IP_TYPE_IPV6 = "IP_V6"
 )

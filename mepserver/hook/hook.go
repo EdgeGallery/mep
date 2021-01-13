@@ -19,6 +19,7 @@ package hook
 
 import (
 	"context"
+	"mepserver/common/models"
 	"sync"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
 	"mepserver/mp1"
-	"mepserver/mp1/models"
 )
 
 type endPoint struct {
