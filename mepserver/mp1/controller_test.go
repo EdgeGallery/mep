@@ -60,12 +60,14 @@ type mockHttpWriter struct {
 //============================= dns ============================================
 const defaultAppInstanceId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
 const dnsRuleId = "7d71e54e-81f3-47bb-a2fc-b565a326d794"
+const trafficRuleId = "8ft68t22-81f3-47bb-a2fc-56996er4tf37"
 
 const panicFormatString = "Panic: %v"
 const getDnsRulesUrlFormat = "/mep/mec_app_support/v1/applications/%s/dns_rules"
 const getDnsRuleUrlFormat = "/mep/mec_app_support/v1/applications/%s/dns_rules/%s"
 const appInstanceQueryFormat = ":appInstanceId=%s&;"
 const appIdAndDnsRuleIdQueryFormat = ":appInstanceId=%s&;:dnsRuleId=%s&;"
+const appIdAndTrafficRuleIdQueryFormat = ":appInstanceId=%s&;:trafficRuleId=%s&;"
 const appInstanceIdHeader = "X-AppinstanceID"
 const responseStatusHeader = "X-Response-Status"
 const responseCheckFor200 = "Response status code must be 200"
@@ -77,6 +79,16 @@ const maxIPVal = 255
 const ipAddFormatter = "%d.%d.%d.%d"
 const writeObjectFormat = "{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\"," +
 	"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"%s\"}\n"
+const writeTrafficObjectFormat = "{\"trafficRuleId\":\"" + trafficRuleId + "\",\"filterType\":\"FLOW\",\"priority\":5," +
+	"\"trafficFilter\":null,\"action\":\"DROP\",\"dstInterface\":{\"interfaceType\":\"\",\"tunnelInfo\":{\"tunnelType\":\"\"," +
+	"\"tunnelDstAddress\":\"\",\"tunnelSrcAddress\":\"\"},\"srcMacAddress\":\"\",\"dstMacAddress\":\"\"," +
+	"\"dstIpAddress\":\"\"},\"state\":\"%s\"}\n"
+const writeTrafficPutObjectFormat = "{\"trafficRuleId\":\"" + trafficRuleId + "\",\"filterType\":\"FLOW\"," +
+	"\"priority\":5," +
+	"\"trafficFilter\":[],\"action\":\"DROP\",\"dstInterface\":{\"interfaceType\":\"\"," +
+	"\"tunnelInfo\":{\"tunnelType\":\"\"," +
+	"\"tunnelDstAddress\":\"\",\"tunnelSrcAddress\":\"\"},\"srcMacAddress\":\"\",\"dstMacAddress\":\"\"," +
+	"\"dstIpAddress\":\"\"},\"state\":\"%s\"}\n"
 
 //===========================Services==============================================
 const postSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
@@ -96,7 +108,8 @@ const sampleServiceId = "f7e898d1c9ea9edd7496c761ddc92718"
 const sampleInstanceId = "f7e898d1c9ea9edd7496c761ddc92718"
 const serviceDiscoverUrlFormat = "/mep/mec_service_mgmt/v1/applications/%s/services"
 const serNameQueryFormat = ":appInstanceId=%s&;ser_name=%s&;"
-const getHeartbeatUrl = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+const getAllTrafficRuleUrl = "/mec_app_support/v1/applications/%s/traffic_rules"
+const getOneTrafficRuleUrl = "/mec_app_support/v1/applications/%s/traffic_rules/%s"
 const heartBeatUrl = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
 const formatIntBase = 10
 const secString = "timestamp/seconds"
@@ -173,6 +186,156 @@ type dnsCreateRule struct {
 	IpAddress     string `json:"ipAddress"`
 	TTL           int    `json:"ttl"`
 	State         string `json:"state"`
+}
+
+//Query traffic rule gets in mp1 interface
+func TestGetsTrafficRules(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getAllTrafficRuleUrl, defaultAppInstanceId),
+		bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte(fmt.Sprintf("["+writeTrafficObjectFormat[:len(writeTrafficObjectFormat)-1]+"]\n",
+		util.InactiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		trafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.InactiveState}
+		var trafficRules []dataplane.TrafficRule
+		trafficRules = append(trafficRules, trafficRule)
+		entry := models.AppDConfig{AppTrafficRule: trafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	// 21 is the order of the traffic get all handler in the URLPattern
+	service.URLPatterns()[21].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+
+}
+
+//Query traffic rule gets in mp1 interface
+func TestGetTrafficRules(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte(fmt.Sprintf(writeTrafficObjectFormat, util.InactiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		//trafficRuleFilter := make([]dataplane.TrafficFilter, 1)
+		trafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.InactiveState}
+		var trafficRules []dataplane.TrafficRule
+		trafficRules = append(trafficRules, trafficRule)
+		entry := models.AppDConfig{AppTrafficRule: trafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	// 22 is the order of the traffic get one handler in the URLPattern
+	service.URLPatterns()[22].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+
+}
+
+// Update a dns rule
+func TestPutTrafficRule(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	updateRule := dataplane.TrafficRule{
+		TrafficRuleID: trafficRuleId,
+		FilterType:    "FLOW",
+		Priority:      5,
+		TrafficFilter: []dataplane.TrafficFilter{},
+		Action:        "DROP",
+		State:         util.InactiveState,
+	}
+	updateRuleBytes, _ := json.Marshal(updateRule)
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader(updateRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(fmt.Sprintf(writeTrafficPutObjectFormat, util.InactiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		TrafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.InactiveState}
+		var TrafficRules []dataplane.TrafficRule
+		TrafficRules = append(TrafficRules, TrafficRule)
+		entry := models.AppDConfig{AppTrafficRule: TrafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	// 23 is the order of the Traffic Rule put handler in the URLPattern
+	service.URLPatterns()[23].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
 }
 
 // Query dns rules request in mp1 interface
