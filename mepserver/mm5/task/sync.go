@@ -459,6 +459,9 @@ func (t *task) processDNSEntryRevert(dnsNewRule *dataplane.DNSRule, dnsOldRule *
 
 func (t *task) addDNSOnMp2(ruleId string, newRule interface{}, existingRule interface{}) error {
 	dnsRule := newRule.(*dataplane.DNSRule)
+	if dnsRule.State == "" {
+		dnsRule.State = util.ActiveState
+	}
 	if dnsRule.State != util.ActiveState {
 		// Send only if the state is active
 		return nil
@@ -482,6 +485,14 @@ func (t *task) setDNSOnMp2(ruleId string, newRule interface{}, existingRule inte
 	}
 
 	dnsExistingRule := existingRule.(*dataplane.DNSRule)
+
+	if dnsRule.State == "" {
+		dnsRule.State = util.ActiveState
+	}
+	if dnsExistingRule.State == "" {
+		dnsExistingRule.State = util.ActiveState
+	}
+
 	if dnsExistingRule.State == util.InactiveState && dnsRule.State == util.ActiveState {
 		// Add rule
 		return t.dataPlane.AddDNSRule(appInfo, ruleId, dnsRule.DomainName, dnsRule.IPAddressType,
@@ -500,6 +511,9 @@ func (t *task) deleteDNSOnMp2(ruleId string, newRule interface{}, existingRule i
 		return fmt.Errorf(ExistRuleError)
 	}
 	dnsExistingRule := existingRule.(*dataplane.DNSRule)
+	if dnsExistingRule.State == "" {
+		dnsExistingRule.State = util.ActiveState
+	}
 	if dnsExistingRule.State == util.InactiveState {
 		// No need to delete as the state was already inactive and not available in the Mp2
 		return nil
@@ -514,6 +528,9 @@ func (t *task) deleteDNSOnMp2(ruleId string, newRule interface{}, existingRule i
 
 func (t *task) addDNSOnLocalDns(ruleId string, newRule interface{}, existingRule interface{}) error {
 	dnsRule := newRule.(*dataplane.DNSRule)
+	if dnsRule.State == "" {
+		dnsRule.State = util.ActiveState
+	}
 	if dnsRule.State != util.ActiveState {
 		// Send only if the state is active
 		return nil
@@ -542,6 +559,9 @@ func (t *task) deleteDNSOnLocalDns(ruleId string, newRule interface{}, existingR
 		return fmt.Errorf(ExistRuleError)
 	}
 	dnsExistingRule := existingRule.(*dataplane.DNSRule)
+	if dnsExistingRule.State == "" {
+		dnsExistingRule.State = util.ActiveState
+	}
 	if dnsExistingRule.State == util.InactiveState {
 		// No need to delete as the state was already inactive and not available in the remote server
 		return nil
@@ -562,6 +582,9 @@ func (t *task) deleteDNSOnLocalDns(ruleId string, newRule interface{}, existingR
 
 func (t *task) addTrafficOnMp2(ruleId string, newRule interface{}, existingRule interface{}) error {
 	trRule := newRule.(*dataplane.TrafficRule)
+	if trRule.State == "" {
+		trRule.State = util.ActiveState
+	}
 	if trRule.State != util.ActiveState {
 		// Send only if the state is active
 		return nil
@@ -587,6 +610,12 @@ func (t *task) setTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 		ApplicationName: t.appName,
 	}
 
+	if trRule.State == "" {
+		trRule.State = util.ActiveState
+	}
+	if trExistingRule.State == "" {
+		trExistingRule.State = util.ActiveState
+	}
 	if trExistingRule.State == util.InactiveState && trRule.State == util.ActiveState {
 		// Add rule
 		return t.dataPlane.AddTrafficRule(appInfo, ruleId, trRule.FilterType, trRule.Action,
@@ -604,8 +633,11 @@ func (t *task) deleteTrafficOnMp2(ruleId string, newRule interface{}, existingRu
 	if existingRule == nil {
 		return fmt.Errorf(ExistRuleError)
 	}
-	dnsExistingRule := existingRule.(*dataplane.TrafficRule)
-	if dnsExistingRule.State == util.InactiveState {
+	trExistingRule := existingRule.(*dataplane.TrafficRule)
+	if trExistingRule.State == "" {
+		trExistingRule.State = util.ActiveState
+	}
+	if trExistingRule.State == util.InactiveState {
 		// No need to delete as the state was already inactive and not available in the Mp2
 		return nil
 	}
