@@ -115,6 +115,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 		t.SetFirstErrorCode(meputil.SerErrFailBase, errorString)
 		return verrs
 	}
+	log.Infof("AppD config received(Method: %s, Body:%s)", r.Method, string(msg))
 	return nil
 }
 

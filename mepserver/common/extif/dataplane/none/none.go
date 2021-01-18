@@ -18,6 +18,7 @@
 package none
 
 import (
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/config"
 	"mepserver/common/extif/dataplane"
 )
@@ -32,26 +33,32 @@ func (n *NoneDataPlane) InitDataPlane(config *config.MepServerConfig) (err error
 
 func (n *NoneDataPlane) AddTrafficRule(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int,
 	filter []dataplane.TrafficFilter) (err error) {
+	log.Infof("Added traffic rule(%s) successfully to data-plane for app %v.", trafficRuleId, appInfo)
 	return nil
 }
 
 func (n *NoneDataPlane) SetTrafficRule(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int, filter []dataplane.TrafficFilter) (err error) {
+	log.Infof("Updated traffic rule(%s) successfully on data-plane for app %v.", trafficRuleId, appInfo)
 	return nil
 }
 
 func (n *NoneDataPlane) DeleteTrafficRule(appInfo dataplane.ApplicationInfo, trafficRuleId string) (err error) {
+	log.Infof("Deleted traffic rule(%s) successfully from data-plane for app %v.", trafficRuleId, appInfo)
 	return nil
 }
 
 func (n *NoneDataPlane) AddDNSRule(appInfo dataplane.ApplicationInfo, dnsRuleId, domainName, ipAddressType, ipAddress string, ttl uint32) (err error) {
+	log.Infof("Added dns rule(%s) successfully to data-plane for app %v.", dnsRuleId, appInfo)
 	return nil
 }
 
 func (n *NoneDataPlane) SetDNSRule(appInfo dataplane.ApplicationInfo, dnsRuleId, domainName, ipAddressType, ipAddress string,
 	ttl uint32) (err error) {
+	log.Infof("Updated dns rule(%s) successfully on data-plane for app %v.", dnsRuleId, appInfo)
 	return nil
 }
 
 func (n *NoneDataPlane) DeleteDNSRule(appInfo dataplane.ApplicationInfo, dnsRuleId string) (err error) {
+	log.Infof("Deleted dns rule(%s) successfully from data-plane for app %v.", dnsRuleId, appInfo)
 	return nil
 }
