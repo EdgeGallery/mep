@@ -136,6 +136,10 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		// services
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: m.serviceDiscover},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: m.getOneService},
+		//traffic Rules
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath, Func: m.getTrafficRules},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.getTrafficRule},
+		{Method: rest.HTTP_METHOD_PUT, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.trafficRuleUpdate},
 	}
 }
 
@@ -336,6 +340,38 @@ func (m *Mp1Service) heartbeatService(w http.ResponseWriter, r *http.Request) {
 		(&plans.DecodeHeartbeatRestReq{}).WithBodies(&models.ServiceLivenessUpdate{}),
 		&plans.UpdateHeartbeat{})
 	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) getTrafficRules(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeTrafficRestReq{},
+		&plans.TrafficRulesGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) getTrafficRule(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeTrafficRestReq{},
+		&plans.TrafficRuleGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) trafficRuleUpdate(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		(&plans.DecodeTrafficRestReq{}).WithBody(&dataplane.TrafficRule{}),
+		(&plans.TrafficRuleUpdate{}).WithDataPlane(m.dataPlane))
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }

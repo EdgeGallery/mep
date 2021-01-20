@@ -26,6 +26,7 @@ import (
 	"mepserver/common/models"
 	"mepserver/common/util"
 	"net/http"
+	"runtime/debug"
 	"sync"
 )
 
@@ -47,6 +48,7 @@ func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DN
 }
 
 func (w *Worker) StartNewTask(appName, appInstanceId, taskId string) {
+	log.Infof("New task created(app-name: %s, app-id: %s, task-id: %s)", appName, appInstanceId, taskId)
 	w.waitWorkerFinish.Add(1)
 	go w.processDataPlaneSync(appName, appInstanceId, taskId)
 	return
@@ -57,7 +59,7 @@ func (w *Worker) processDataPlaneSync(appName, appInstanceId, taskId string) {
 	defer w.waitWorkerFinish.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf(nil, "Sync process panic: %v", r)
+			log.Errorf(nil, "Sync process panic: %v \n %s", r, string(debug.Stack()))
 		}
 	}()
 
