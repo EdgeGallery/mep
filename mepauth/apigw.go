@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"mepauth/routers"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -99,27 +100,28 @@ func setupKongMepServer(apiGwUrl string) error {
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	err := addServiceRoute(util.MepserverName, "https://"+mepServerHost+":"+mepServerPort+"/"+util.MepserverRootPath)
+	err := addServiceRoute(util.MepserverName, []string{"/" + util.MepserverRootPath},
+		"https://"+mepServerHost+":"+mepServerPort, false)
 	if err != nil {
 		log.Error("Add mep server route to kong failed")
 		return err
 	}
 	// enable mep server jwt plugin
-	mepserverPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + "/plugins"
+	mepServerPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, util.JwtPlugin)
-	err = util.SendPostRequest(mepserverPluginUrl, []byte(jwtConfig))
+	err = util.SendPostRequest(mepServerPluginUrl, []byte(jwtConfig))
 	if err != nil {
 		log.Error("Enable mep server jwt plugin failed")
 		return err
 	}
 	// enable mep server appid-header plugin
-	err = util.SendPostRequest(mepserverPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s" }`, util.AppidPlugin)))
+	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s" }`, util.AppidPlugin)))
 	if err != nil {
 		log.Error("Enable mep server appid-header plugin failed.")
 		return err
 	}
 	// enable mep server pre-function plugin
-	err = util.SendPostRequest(mepserverPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
 		util.PreFunctionPlugin, util.MepserverPreFunctionConf)))
 	if err != nil {
 		log.Error("Enable mep server pre-function plugin failed.")
@@ -128,14 +130,14 @@ func setupKongMepServer(apiGwUrl string) error {
 	// enable mep server rate-limiting plugin
 	ratePluginReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
 		util.RateLimitPlugin, util.MepserverRateConf))
-	err = util.SendPostRequest(mepserverPluginUrl, ratePluginReq)
+	err = util.SendPostRequest(mepServerPluginUrl, ratePluginReq)
 	if err != nil {
 		log.Error("Enable mep server appid-header plugin failed")
 		return err
 	}
 	// enable mep server response-transformer plugin
 	respPluginReq := []byte(util.ResponseTransformerConf)
-	err = util.SendPostRequest(mepserverPluginUrl, respPluginReq)
+	err = util.SendPostRequest(mepServerPluginUrl, respPluginReq)
 	if err != nil {
 		log.Error("Enable mep server response-transformer plugin failed")
 		return err
@@ -159,7 +161,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		return errors.New(msg)
 	}
 	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
-	err := addServiceRoute(util.MepauthName, mepAuthURL)
+	err := addServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
 	if err != nil {
 		log.Error("Add mep server route to kong failed.")
 		return err
@@ -212,12 +214,14 @@ func getTrustedIpList(trustedNetworksList []string) string {
 	return ipList
 }
 
-func addServiceRoute(serviceName string, targetURL string) error {
+func addServiceRoute(serviceName string, servicePaths []string, targetURL string, needStripPath bool) error {
 	apiGwURL, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
 		log.Error("Failed to get api gateway url.")
 		return getApiGwUrlErr
 	}
+
+	paths := strings.Join(servicePaths, `", "`)
 
 	kongServiceURL := apiGwURL + ServicesPath
 	serviceReq := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`,
@@ -229,12 +233,18 @@ func addServiceRoute(serviceName string, targetURL string) error {
 	}
 
 	kongRouteURL := apiGwURL + ServicesPath + "/" + serviceName + "/routes"
+
 	preserveHost := ""
 	if serviceName == util.MepauthName {
 		preserveHost = ` ,"preserve_host": true`
 	}
-	reqStr := `{ "paths": ["/%s"], "name": "%s"` + preserveHost + `}`
-	routeReq := []byte(fmt.Sprintf(reqStr, serviceName, serviceName))
+	stripPath := ""
+	if !needStripPath {
+		stripPath = ` ,"strip_path": false`
+	}
+
+	reqStr := `{ "paths": ["%s"], "name": "%s"` + preserveHost + stripPath + `}`
+	routeReq := []byte(fmt.Sprintf(reqStr, paths, serviceName))
 
 	err := util.SendPostRequest(kongRouteURL, routeReq)
 	if err != nil {

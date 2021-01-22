@@ -217,7 +217,7 @@ func akSignatureIsValid(r *http.Request, ak string, sk []byte, signHeader string
 		SecretKey: sk,
 	}
 	// since we put mepauth behind kong, mepagent would use /route_path/mepauth_url to sign
-	reqUrl := "https://" + r.Host + "/" + util.MepauthName + r.URL.String()
+	reqUrl := "https://" + r.Host + r.URL.String()
 	reqToBeSigned, errNewRequest := http.NewRequest("POST", reqUrl, strings.NewReader(""))
 	if errNewRequest != nil {
 		log.Error("prepare http request to generate signature is failed")
