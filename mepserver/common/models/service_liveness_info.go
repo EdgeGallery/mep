@@ -21,7 +21,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	meputil "mepserver/common/util"
 	"strconv"
-
 )
 
 type ServiceLivenessInfo struct {
