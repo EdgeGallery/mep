@@ -57,7 +57,7 @@ type TrafficRule struct {
 	Priority      int             `json:"priority" validate:"required,min=1,max=255"`
 	TrafficFilter []TrafficFilter `json:"trafficFilter" validate:"required,dive,max=16"` //TBD to decide max number.
 	Action        string          `json:"action" validate:"required,oneof=DROP FORWARD_DECAPSULATED FORWARD_AS_IS PASSTHROUGH DUPLICATE_DECAPSULATED DUPLICATE_AS_IS"`
-	DstInterface  DstInterface    `json:"dstInterface" validate:"omitempty"`
+	DstInterface  []DstInterface  `json:"dstInterface" validate:"omitempty,dive,max=2"`
 	State         string          `json:"state" validate:"omitempty,oneof=ACTIVE INACTIVE"`
 }
 

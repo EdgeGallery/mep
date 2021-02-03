@@ -80,15 +80,10 @@ const ipAddFormatter = "%d.%d.%d.%d"
 const writeObjectFormat = "{\"dnsRuleId\":\"7d71e54e-81f3-47bb-a2fc-b565a326d794\",\"domainName\":\"www.example.com\"," +
 	"\"ipAddressType\":\"IP_V4\",\"ipAddress\":\"%s\",\"ttl\":30,\"state\":\"%s\"}\n"
 const writeTrafficObjectFormat = "{\"trafficRuleId\":\"" + trafficRuleId + "\",\"filterType\":\"FLOW\",\"priority\":5," +
-	"\"trafficFilter\":null,\"action\":\"DROP\",\"dstInterface\":{\"interfaceType\":\"\",\"tunnelInfo\":{\"tunnelType\":\"\"," +
-	"\"tunnelDstAddress\":\"\",\"tunnelSrcAddress\":\"\"},\"srcMacAddress\":\"\",\"dstMacAddress\":\"\"," +
-	"\"dstIpAddress\":\"\"},\"state\":\"%s\"}\n"
+	"\"trafficFilter\":null,\"action\":\"DROP\",\"dstInterface\":null,\"state\":\"%s\"}\n"
 const writeTrafficPutObjectFormat = "{\"trafficRuleId\":\"" + trafficRuleId + "\",\"filterType\":\"FLOW\"," +
 	"\"priority\":5," +
-	"\"trafficFilter\":[],\"action\":\"DROP\",\"dstInterface\":{\"interfaceType\":\"\"," +
-	"\"tunnelInfo\":{\"tunnelType\":\"\"," +
-	"\"tunnelDstAddress\":\"\",\"tunnelSrcAddress\":\"\"},\"srcMacAddress\":\"\",\"dstMacAddress\":\"\"," +
-	"\"dstIpAddress\":\"\"},\"state\":\"%s\"}\n"
+	"\"trafficFilter\":[],\"action\":\"DROP\",\"dstInterface\":null,\"state\":\"%s\"}\n"
 
 //===========================Services==============================================
 const postSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
