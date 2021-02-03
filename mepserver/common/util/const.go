@@ -61,9 +61,10 @@ const (
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
 
-	CapabilityPath   = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
-	AppDConfigPath   = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
-	AppDQueryResPath = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
+	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
+	AppDConfigPath        = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
+	AppDQueryResPath      = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
+	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
@@ -119,6 +120,7 @@ const singleDigitRegex string = `^.*\d.*$`
 const lowerCaseRegex string = `^.*[a-z].*$`
 const upperCaseRegex string = `^.*[A-Z].*$`
 const ServerNameRegex string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
+const DomainPattern string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
 
 const pwdLengthMin int = 8
 const pwdLengthMax int = 16

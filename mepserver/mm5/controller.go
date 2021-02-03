@@ -97,6 +97,9 @@ func (m *Mm5Service) URLPatterns() []rest.Route {
 		// Platform Capability Query
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath, Func: m.getPlatformCapabilities},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.CapabilityPath + meputil.CapabilityIdPath, Func: m.getPlatformCapability},
+
+		// App Termination
+		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppInsTerminationPath, Func: m.terminateAppInstance},
 	}
 }
 
@@ -173,4 +176,16 @@ func (m *Mm5Service) getResourceTasks(w http.ResponseWriter, r *http.Request) {
 
 	workspace.WkRun(workPlan)
 
+}
+
+func (m *Mm5Service) terminateAppInstance(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.DecodeAppTerminationReq{},
+		(&plans.DeleteAppDConfigWithSync{}).WithWorker(&m.mp2Worker),
+		&plans.DeleteService{},
+		&plans.DeleteFromMepauth{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
 }

@@ -720,3 +720,23 @@ func StringInList(searchStr string, stringList []string) bool {
 	}
 	return false
 }
+
+// Validates domain name
+func ValidateDomainName(name string) error {
+	if len(name) > maxHostNameLen {
+		return errors.New("validate domain name failed")
+	}
+	return ValidateByPattern(DomainPattern, name)
+}
+
+// Validates given string with pattern
+func ValidateByPattern(pattern string, param string) error {
+	res, errMatch := regexp.MatchString(pattern, param)
+	if errMatch != nil {
+		return errMatch
+	}
+	if !res {
+		return errors.New("validate failed")
+	}
+	return nil
+}
