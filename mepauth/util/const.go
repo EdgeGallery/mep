@@ -24,7 +24,8 @@ const AkRegex string = `^\w{20}$`
 const SkRegex string = `^\w{64}$`
 const AuthHeaderRegex string = `^SDK-HMAC-SHA256 Access=([\w=+/]{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
 const MepserverName = "mepserver"
-const MepserverRootPath = "mep"
+const MepServerServiceMgmt = "/mep/mec_service_mgmt/v1"
+const MepServerAppSupport = "/mep/mec_app_support/v1"
 const MepauthName = "mepauth"
 const MepserverRateConf = `{ "minute": 1000, "policy": "local", "hide_client_headers": true }`
 const MepserverPreFunctionConf = `{ "functions": ["ngx.var.upstream_x_forwarded_for=UNKNOWN"] }`

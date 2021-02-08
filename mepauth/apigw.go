@@ -100,7 +100,7 @@ func setupKongMepServer(apiGwUrl string) error {
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	err := addServiceRoute(util.MepserverName, []string{"/" + util.MepserverRootPath},
+	err := addServiceRoute(util.MepserverName, []string{util.MepServerServiceMgmt, util.MepServerAppSupport},
 		"https://"+mepServerHost+":"+mepServerPort, false)
 	if err != nil {
 		log.Error("Add mep server route to kong failed")
