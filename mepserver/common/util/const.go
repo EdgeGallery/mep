@@ -61,9 +61,9 @@ const (
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
 
-	CapabilityPath   = RootPath + MecPlatformConfigPath + "/capabilities"
-	AppDConfigPath   = RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
-	AppDQueryResPath = RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
+	CapabilityPath   = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
+	AppDConfigPath   = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
+	AppDQueryResPath = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
