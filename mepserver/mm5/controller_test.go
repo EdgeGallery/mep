@@ -1844,7 +1844,7 @@ func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
 	mockWriter.AssertExpectations(t)
 }
 
-func TestAppInstanceTerminationFailed(t *testing.T) {
+func TestAppInstanceTermination3(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf(panicFormatString, r)
@@ -1863,7 +1863,7 @@ func TestAppInstanceTerminationFailed(t *testing.T) {
 	responseGetHeader := http.Header{} // Create http response header
 	mockWriterGet.On("Header").Return(responseGetHeader)
 	mockWriterGet.On("Write").Return(0, nil)
-	mockWriterGet.On("WriteHeader", 404)
+	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
 }
