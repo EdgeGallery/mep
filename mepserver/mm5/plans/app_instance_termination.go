@@ -68,6 +68,7 @@ type DeleteService struct {
 
 // OnRequest
 func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
+	log.Info("Deleting service")
 	resp, errInt := backend.GetRecords("/cse-sr/inst/files///")
 	if errInt != 0 {
 		log.Errorf(nil, "query error from etcd")
@@ -118,9 +119,8 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		}
 	}
 	if len(findResp) == 0 {
-		err := fmt.Errorf("no instances is available")
-		log.Errorf(nil, "no instances is available")
-		t.SetFirstErrorCode(meputil.SerInstanceNotFound, err.Error())
+		log.Infof("no instances is available")
+		t.HttpRsp = ""
 		return workspace.TaskFinish
 	}
 	log.Info("Sucessfully application's services are terminated")
@@ -233,18 +233,15 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 
 	log.Info("Deleting the DNS and traffic rule")
 	/*
-			1. Check if AppInstanceId already exist and return error if not exist.(query from db)
+			1. Check if AppInstanceId already exists and return an error if not exist. (query from DB)
 		    2. Check if any other ongoing operation for this AppInstance Id in the system.
-			3. update the this request to DB (job, task and task status)
+			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	log.Info("AppInstance exist?")
 	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) == false {
 		log.Errorf(nil, "app instance not found")
-		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
 		return workspace.TaskFinish
 	}
-	log.Info("AppInstanceId exist!")
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if IsAnyOngoingOperationExist(t.AppInstanceId) == true {
@@ -252,19 +249,16 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}
-	log.Info("Nothing is there")
 
 	var appDConfig models.AppDConfig
 	appDConfig.Operation = http.MethodDelete
 
 	taskId := meputil.GenerateUniqueId()
-	log.Info("Updating the DB")
 	errCode, msg := UpdateProcessingDatabase(t.AppInstanceId, taskId, &appDConfig)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish
 	}
-	log.Info("Process data plane in sync")
 	t.Worker.ProcessDataPlaneSync(appDConfig.AppName, t.AppInstanceId, taskId)
 
 	err := task.CheckErrorInDB(t.AppInstanceId, taskId)
@@ -274,7 +268,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Info("Sucessfully deleted the dns and traffic rule")
+	log.Info("Successfully deleted DNS and traffic rule")
 
 	return workspace.TaskFinish
 }
