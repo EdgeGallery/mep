@@ -156,7 +156,7 @@ func TestSetupKongMepServer(t *testing.T) {
 			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
 				return nil
 			})
-			patches.ApplyFunc(addServiceRoute, func(_, _ string) error {
+			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
 				return nil
 			})
 			defer patches.Reset()
@@ -168,7 +168,7 @@ func TestSetupKongMepServer(t *testing.T) {
 			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
 				return errors.New("send post request error")
 			})
-			patches.ApplyFunc(addServiceRoute, func(_, _ string) error {
+			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
 				return nil
 			})
 			defer patches.Reset()
@@ -188,7 +188,7 @@ func TestSetupKongMepAuth(t *testing.T) {
 			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
 				return nil
 			})
-			patches.ApplyFunc(addServiceRoute, func(_, _ string) error {
+			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
 				return nil
 			})
 			beego.AppConfig.Set("HTTPSAddr", "127.0.0.1")
@@ -202,7 +202,7 @@ func TestSetupKongMepAuth(t *testing.T) {
 			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
 				return errors.New("send post request error")
 			})
-			patches.ApplyFunc(addServiceRoute, func(_, _ string) error {
+			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
 				return nil
 			})
 			defer patches.Reset()
@@ -226,7 +226,7 @@ func TestAddServiceRoute(t *testing.T) {
 				return nil
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", "https://127.0.0.1:8080")
+			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - get api gateway url error", func() {
@@ -238,7 +238,7 @@ func TestAddServiceRoute(t *testing.T) {
 				return nil
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", "https://127.0.0.1:8080")
+			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - send post request error", func() {
@@ -250,7 +250,7 @@ func TestAddServiceRoute(t *testing.T) {
 				return errors.New("send post request error")
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", "https://127.0.0.1:8080")
+			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldNotBeNil)
 		})
 	})
