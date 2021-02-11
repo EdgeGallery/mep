@@ -22,6 +22,6 @@ type FilteringCriteria struct {
 	SerInstanceIds []string      `json:"serInstanceIds" validate:"omitempty,min=0,dive,max=32,validateId"`
 	SerNames       []string      `json:"serNames"  validate:"omitempty,min=0,dive,max=128,validateName"`
 	SerCategories  []CategoryRef `json:"serCategories" validate:"omitempty,dive"`
-	States         []string      `json:"states" validate:"omitempty,min=0,dive,oneof=ACTIVE INACTIVE"`
+	States         []string      `json:"states" validate:"omitempty,min=0,dive,oneof=ACTIVE INACTIVE SUSPENDED"`
 	IsLocal        bool          `json:"isLocal,omitempty"`
 }
