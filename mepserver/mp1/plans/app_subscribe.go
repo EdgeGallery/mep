@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"mepserver/common/models"
-	"net"
 	"net/http"
 	"net/url"
 
@@ -34,7 +33,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	"mepserver/common/arch/workspace"
 	"mepserver/common/util"
@@ -65,18 +64,14 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	if mp1SubscribeInfo == nil {
 		return workspace.TaskFinish
 	}
-	errCheck := t.checkSubscribeSerInstanceExist(mp1SubscribeInfo)
-	if errCheck != nil {
-		log.Error("subscriber instance not exist", nil)
-		t.SetFirstErrorCode(util.SerErrServiceNotFound, "subscriber instance not exist")
-		return workspace.TaskFinish
-	}
+
 	subscribeJSON, err := json.Marshal(mp1SubscribeInfo)
 	if err != nil {
 		log.Errorf(nil, "can not marshal subscribe info")
 		t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscribe info error")
 		return workspace.TaskFinish
 	}
+
 	callbackUriNotValid := t.ValidateCallbackUri(subscribeJSON)
 	if callbackUriNotValid {
 		log.Error("url validation failed", nil)
@@ -123,45 +118,22 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 		callBack = appTermAvl.CallbackReference
 	}
 	if callBack != "" {
-		isInSameNet := isValidCallbackURI(callBack)
-		if isInSameNet {
-			log.Error("Invalid CallbackReference uri containing invalid host", nil)
-			t.SetFirstErrorCode(util.RequestParamErr, "Invalid CallbackReference uri containing invalid host")
+		isValid := isValidCallbackURI(callBack)
+		if !isValid {
+			log.Error("Invalid CallbackReference uri", nil)
+			t.SetFirstErrorCode(util.RequestParamErr, "Invalid CallbackReference uri")
 			return true
 		}
 	}
 	return false
 }
-
 func isValidCallbackURI(reference string) bool {
-	addrs, err := net.InterfaceAddrs()
+	_, err := url.ParseRequestURI(reference)
 	if err != nil {
-		log.Info("Interface address not able to find")
+		log.Info("not a valid url " + reference)
 		return false
 	}
-	urlInfo, err1 := url.Parse(reference)
-	if err1 != nil {
-		log.Info("url parse is failed.")
-		return false
-	}
-	urlIP := net.ParseIP(urlInfo.Hostname())
-	if urlIP == nil {
-		return true
-	}
-	for _, address := range addrs {
-		// check the address type
-		if ipnet, ok := address.(*net.IPNet); ok {
-			_, ipnetA, parseErr := net.ParseCIDR(ipnet.String())
-			if parseErr != nil {
-				continue
-			}
-			// Check whether given IP is in the network
-			if ipnetA.Contains(urlIP) {
-				return true
-			}
-		}
-	}
-	return false
+	return true
 }
 
 func (t *SubscribeIst) marshalError(appInstanceId string) workspace.TaskCode {

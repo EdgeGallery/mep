@@ -65,7 +65,7 @@ func AddApigwService(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	serUrl := routeInfo.SerInfo.Uris[0]
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	err := SendPostRequest(kongServiceUrl, jsonStr)
+	err := SendPostRequest(kongServiceUrl, jsonStr, false)
 	if err != nil {
 		log.Error("failed to add API gateway service", err)
 	}
@@ -75,7 +75,7 @@ func AddApigwRoute(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongRouteUrl := GetApigwUrl() + serviceUrl + serName + "/routes"
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	err := SendPostRequest(kongRouteUrl, jsonStr)
+	err := SendPostRequest(kongRouteUrl, jsonStr, false)
 	if err != nil {
 		log.Error("failed to add API gateway route", err)
 	}
@@ -86,7 +86,7 @@ func EnableJwtPlugin(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongPluginUrl := GetApigwUrl() + serviceUrl + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig))
+	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), false)
 	if err != nil {
 		log.Error("Enable kong jwt plugin failed", err)
 	}
@@ -110,16 +110,16 @@ func GetAppConfig() (AppConfigProperties, error) {
 }
 
 // Send post request
-func SendPostRequest(url string, jsonStr []byte) error {
-	return SendRequest(url, PostMethod, jsonStr)
+func SendPostRequest(url string, jsonStr []byte, skipInsecureVerify bool) error {
+	return SendRequest(url, PostMethod, jsonStr, skipInsecureVerify)
 }
 
 // Send delete request
-func SendDelRequest(url string) error {
-	return SendRequest(url, DeleteMethod, nil)
+func SendDelRequest(url string, skipInsecureVerify bool) error {
+	return SendRequest(url, DeleteMethod, nil, skipInsecureVerify)
 }
 
-func SendRequest(url string, method string, jsonStr []byte) error {
+func SendRequest(url string, method string, jsonStr []byte, skipInsecureVerify bool) error {
 	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
 	var req *httplib.BeegoHTTPRequest
 	switch method {
@@ -133,7 +133,7 @@ func SendRequest(url string, method string, jsonStr []byte) error {
 		req = httplib.Get(url)
 	}
 
-	config, err := TLSConfig("apigw_cacert")
+	config, err := TLSConfig("apigw_cacert", skipInsecureVerify)
 	if err != nil {
 		log.Error("unable to read certificate", nil)
 		return err
@@ -150,7 +150,7 @@ func SendRequest(url string, method string, jsonStr []byte) error {
 }
 
 // Update tls configuration
-func TLSConfig(crtName string) (*tls.Config, error) {
+func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
 	appConfig, err := GetAppConfig()
 	if err != nil {
 		log.Error("get app config error", nil)
@@ -190,10 +190,11 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
 	}
 	return &tls.Config{
-		RootCAs:      rootCAs,
-		ServerName:   serverName,
-		MinVersion:   tls.VersionTLS12,
-		CipherSuites: cipherSuites,
+		RootCAs:            rootCAs,
+		ServerName:         serverName,
+		MinVersion:         tls.VersionTLS12,
+		CipherSuites:       cipherSuites,
+		InsecureSkipVerify: skipInsecureVerify,
 	}, nil
 }
 

@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// Package works for event handling
 package event
 
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"mepserver/common/models"
+	"strconv"
 	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -31,7 +31,6 @@ import (
 	"github.com/apache/servicecomb-service-center/server/notify"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/discovery"
 	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
-	"github.com/apache/servicecomb-service-center/server/service/cache"
 	"github.com/apache/servicecomb-service-center/server/service/metrics"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
 	"golang.org/x/net/context"
@@ -39,17 +38,19 @@ import (
 	util2 "mepserver/common/util"
 )
 
-const ConsumeIdLength = 16
+//ConsumeIDLength Consumer Id Length
+const ConsumeIDLength = 16
 
+//InstanceEtsiEventHandler notification handler
 type InstanceEtsiEventHandler struct {
 }
 
-// event handler type
+//Type event handler type
 func (h *InstanceEtsiEventHandler) Type() discovery.Type {
 	return backend.INSTANCE
 }
 
-// event handling
+//OnEvent event handling
 func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 	action := evt.Type
 	instance, ok := evt.KV.Value.(*proto.MicroServiceInstance)
@@ -57,10 +58,11 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 		log.Error("cast to instance failed", nil)
 		return
 	}
-	providerId, providerInstanceId, domainProject := apt.GetInfoFromInstKV(evt.KV.Key)
+	log.Infof("receive event %s", action)
+	providerID, providerInstanceID, domainProject := apt.GetInfoFromInstKV(evt.KV.Key)
 	if len(domainProject) == 0 {
 		log.Warnf("caught [%s] instance [%s/%s] event, endpoints %v, but empty domain project string",
-			action, providerId, providerInstanceId, instance.Endpoints)
+			action, providerID, providerInstanceID, instance.Endpoints)
 		return
 	}
 
@@ -76,6 +78,8 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 		return
 	case proto.EVT_CREATE:
 		metrics.ReportInstances(domainName, 1)
+	case proto.EVT_UPDATE:
+		metrics.ReportInstances(domainName, 0)
 	case proto.EVT_DELETE:
 		metrics.ReportInstances(domainName, -1)
 		if !apt.IsDefaultDomainProject(domainProject) {
@@ -86,99 +90,184 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 
 	if notify.NotifyCenter().Closed() {
 		log.Warnf("caught [%s] instance [%s/%s] event, endpoints %v, but notify service is closed",
-			action, providerId, providerInstanceId, instance.Endpoints)
+			action, providerID, providerInstanceID, instance.Endpoints)
 		return
 	}
 
 	ctx := context.WithValue(context.WithValue(context.Background(),
 		svcutil.CTX_CACHEONLY, "1"),
 		svcutil.CTX_GLOBAL, "1")
-	ms, err := svcutil.GetService(ctx, domainProject, providerId)
+	ms, err := svcutil.GetService(ctx, domainProject, providerID)
 	if ms == nil || err != nil {
 		log.Errorf(errors.New("failed to find instance"),
 			"caught [%s] instance [%s/%s] event, endpoints %v, get cached provider's file failed",
-			action, providerId, providerInstanceId, instance.Endpoints)
+			action, providerID, providerInstanceID, instance.Endpoints)
 		return
 	}
 
-	log.Infof("caught [%s] service[%s][%s/%s/%s/%s] instance[%s] event, endpoints %v",
-		action, providerId, ms.Environment, ms.AppId, ms.ServiceName, ms.Version, providerInstanceId,
-		instance.Endpoints)
+	log.Infof("caught [%s] service[%s][%s/%s/%s/%s] instance[%s] event, endpoints %v, domainproject %s",
+		action, providerID, ms.Environment, ms.AppId, ms.ServiceName, ms.Version, providerInstanceID,
+		instance.Endpoints, domainProject)
 
-	consumerIds := getConsumerIds()
-
-	log.Infof("there are %d consumerIDs, %s", len(consumerIds), consumerIds)
-	PublishInstanceEvent(evt, domainProject, proto.MicroServiceToKey(domainProject, ms), consumerIds)
+	SendRestMessageToApp(instance, string(action))
 }
 
-func getConsumerIds() []string {
-	var consumerIds []string
+// SendRestMessageToApp sendRestMessageToApp
+func SendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
+	instanceID := instance.ServiceId + instance.InstanceId
+	serName := instance.Properties["serName"]
+	isLocal := instance.Properties["isLocal"]
+	state := instance.Properties["mecState"]
+	serCategory := models.CategoryRef{
+		Href:    instance.Properties["serCategory/href"],
+		ID:      instance.Properties["serCategory/id"],
+		Name:    instance.Properties["serCategory/name"],
+		Version: instance.Properties["serCategory/version"],
+	}
+	callBackUris := getCallBackUris(instanceID, serName, isLocal, state, serCategory)
+	if len(callBackUris) == 0 {
+		log.Info("callback uris is empty")
+		return
+	}
+
+	doSend(action, instance, callBackUris)
+}
+
+func doSend(action string, instance *proto.MicroServiceInstance, callbackUris map[string]string) {
+	var notificationInfo models.ServiceAvailabilityNotification
+	notificationInfo.ServiceReferences = make([]models.ServiceReferences, 1, 1)
+	notificationInfo.NotificationType = "ServiceAvailabilityNotification"
+	notificationInfo.ServiceReferences[0].SerName = instance.Properties["serName"]
+	notificationInfo.ServiceReferences[0].SerInstanceID = instance.ServiceId + instance.InstanceId
+	notificationInfo.ServiceReferences[0].State = instance.Properties["mecState"]
+	href := "/mec_service_mgmt/v1/services/" + instance.ServiceId + instance.InstanceId
+
+	//Currently we cant identify only state changed. So Only attributes change will be supported
+	if action == "CREATE" {
+		notificationInfo.ServiceReferences[0].ChangeType = "ADDED"
+		notificationInfo.ServiceReferences[0].Link.Href = href
+	} else if action == "DELETE" {
+		notificationInfo.ServiceReferences[0].ChangeType = "REMOVED"
+	} else if action == "UPDATE" {
+		notificationInfo.ServiceReferences[0].ChangeType = "ATTRIBUTES_CHANGED"
+		notificationInfo.ServiceReferences[0].Link.Href = href
+	}
+	for subscription, callBackURI := range callbackUris {
+		SendMsg(notificationInfo, callBackURI, subscription)
+	}
+}
+
+//SendMsg send message
+func SendMsg(notificationInfo models.ServiceAvailabilityNotification, callBackURI string, susbcription string) {
+	log.Infof("subscription key %s uri %s", susbcription, callBackURI)
+	app := strings.Split(susbcription, "/")
+	subscriptionID := app[len(app)-1]
+	appInstID := app[len(app)-2]
+	location := fmt.Sprintf("%s/applications/%s/subscriptions/%s", util2.MecServicePath, appInstID,
+		subscriptionID)
+	notificationInfo.Links.Susbcription.Href = location
+	notificationInfoJSON, err := json.Marshal(notificationInfo)
+	if err != nil {
+		return
+	}
+
+	err = util2.SendPostRequest(callBackURI, notificationInfoJSON, true)
+	if err != nil {
+		log.Error("failed to send notification", nil)
+	}
+}
+
+func getCallBackUris(instanceID string, serName string, isLocal string, state string, serCategory models.CategoryRef) map[string]string {
+	notifyInfos := GetAllSubscriberInfoFromDB()
+	callBackUris := make(map[string]string, len(notifyInfos))
+
+	for subKey, notifyInfo := range notifyInfos {
+		callBackURI := notifyInfo.CallbackReference
+		filter := notifyInfo.FilteringCriteria
+		if isInFilter(filter, instanceID, serName, isLocal, state, serCategory) {
+			callBackUris[subKey] = callBackURI
+		}
+	}
+
+	return callBackUris
+}
+func isInFilter(filter models.FilteringCriteria, instanceID string, serName string, isLocal string, state string, serCategory models.CategoryRef) bool {
+	localFilter := false
+	stateFilter := false
+	if strconv.FormatBool(filter.IsLocal) == isLocal {
+		localFilter = true
+	}
+	state = stateConvert(state)
+	if filter.States == nil || len(filter.States) == 0 {
+		stateFilter = true
+	} else if util2.StringContains(filter.States, state) != -1 {
+		stateFilter = true
+	}
+
+	localFilter = true
+	if !localFilter || !stateFilter {
+		return false
+	}
+	if isAllFilterEmpty(filter) {
+		return true
+	}
+	return isFilterContain(filter, instanceID, serName, serCategory)
+}
+
+func stateConvert(state string) string {
+	log.Infof("state %s", state)
+	return state
+}
+func isAllFilterEmpty(filter models.FilteringCriteria) bool {
+	if len(filter.SerNames) == 0 && len(filter.SerInstanceIds) == 0 && len(filter.SerCategories) == 0 && len(filter.States) == 0 && !filter.IsLocal {
+		return true
+	}
+	return false
+}
+func isFilterContain(filter models.FilteringCriteria, instanceID string, serName string, serCategory models.CategoryRef) bool {
+	if (len(filter.SerInstanceIds) != 0 && util2.StringContains(filter.SerInstanceIds, instanceID) != -1) ||
+		(len(filter.SerNames) != 0 && util2.StringContains(filter.SerNames, serName) != -1) ||
+		(len(filter.SerCategories) != 0 && isServiceCategoryMatched(filter.SerCategories, serCategory)) {
+		return true
+	}
+	return false
+}
+
+func isServiceCategoryMatched(serCategories []models.CategoryRef, serCategory models.CategoryRef) bool {
+	for _, tempSerCat := range serCategories {
+		if tempSerCat.Href == serCategory.Href &&
+			tempSerCat.ID == serCategory.ID &&
+			tempSerCat.Name == serCategory.Name &&
+			tempSerCat.Version == serCategory.Version {
+			return true
+		}
+	}
+	return false
+}
+
+//GetAllSubscriberInfoFromDB GetAllSubscriberInfoFromDB
+func GetAllSubscriberInfoFromDB() map[string]*models.SerAvailabilityNotificationSubscription {
+	subscribeKeyPath := util2.GetSubscribeKeyPath(util2.SerAvailabilityNotificationSubscription)
+	notifyInfos := make(map[string]*models.SerAvailabilityNotificationSubscription, 1000)
 	opts := []registry.PluginOp{
-		registry.OpGet(registry.WithStrKey("/cse-sr/inst/files"), registry.WithPrefix()),
+		registry.OpGet(registry.WithStrKey(subscribeKeyPath), registry.WithPrefix()),
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
 		log.Errorf(nil, "get subscription from etcd failed")
-		return consumerIds
+		return nil
 	}
-
 	for _, kvs := range resp.Kvs {
-		key := kvs.Key
-		keystring := string(key)
-		value := kvs.Value
-
-		var mp1Req models.ServiceInfo
-		err = json.Unmarshal(value, &mp1Req)
-		if err != nil {
-			log.Errorf(nil, "parse serviceInfo failed")
+		notifyInfo := &models.SerAvailabilityNotificationSubscription{}
+		if err := json.Unmarshal(kvs.Value, notifyInfo); err != nil {
+			continue
 		}
-		consumerKeys := strings.Split(keystring, "/")
-		if len(consumerKeys) < 2 {
-			log.Errorf(nil, "parse instance key error")
-			return consumerIds
-		}
-		consumerId := consumerKeys[len(consumerKeys)-2]
-		if len(consumerId) != ConsumeIdLength {
-			log.Errorf(nil, "get consumer id failed")
-			return consumerIds
-		}
-		if util2.StringContains(consumerIds, consumerId) == -1 {
-			consumerIds = append(consumerIds, consumerId)
-		}
+		notifyInfos[string(kvs.Key)] = notifyInfo
 	}
-	return consumerIds
+	return notifyInfos
 }
 
-// new instance event handler
+//NewInstanceEtsiEventHandler new instance event handler
 func NewInstanceEtsiEventHandler() *InstanceEtsiEventHandler {
 	return &InstanceEtsiEventHandler{}
-}
-
-// publish instance event
-func PublishInstanceEvent(evt discovery.KvEvent, domainProject string, serviceKey *proto.MicroServiceKey,
-	subscribers []string) {
-	defer cache.FindInstances.Remove(serviceKey)
-	if len(subscribers) == 0 {
-		log.Warn("the subscribers size is 0")
-		return
-	}
-	value, ok := evt.KV.Value.(*proto.MicroServiceInstance)
-	if !ok {
-		log.Error("interface cast is failed", nil)
-		return
-	}
-
-	response := &proto.WatchInstanceResponse{
-		Response: proto.CreateResponse(proto.Response_SUCCESS, "Watch instance successfully."),
-		Action:   string(evt.Type),
-		Key:      serviceKey,
-		Instance: value,
-	}
-	for _, consumerId := range subscribers {
-		job := notify.NewInstanceEventWithTime(consumerId, domainProject, evt.Revision, evt.CreateAt, response)
-		err := notify.NotifyCenter().Publish(job)
-		if err != nil {
-			log.Errorf(nil, "instance notification published failed")
-		}
-	}
 }

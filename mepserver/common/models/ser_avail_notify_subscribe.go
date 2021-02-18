@@ -33,3 +33,29 @@ type Links struct {
 type Self struct {
 	Href string `json:"href,omitempty"`
 }
+
+// ServiceAvailabilityNotification serviceAvailabilityNotification
+type ServiceAvailabilityNotification struct {
+	NotificationType  string              `json:"notificationType,omitempty"`
+	ServiceReferences []ServiceReferences `json:"serviceReferences,omitempty"`
+	Links             SerSubscription     `json:"_links,omitempty"`
+}
+
+// SerSubscription serSubscription
+type SerSubscription struct {
+	Susbcription SerLinkType `json:"subscription,omitempty"`
+}
+
+// ServiceReferences serviceReferences
+type ServiceReferences struct {
+	Link          SerLinkType `json:"link,omitempty"`
+	SerName       string      `json:"serName,omitempty"`
+	SerInstanceID string      `json:"serInstanceId,omitempty"`
+	State         string      `json:"state,omitempty"`
+	ChangeType    string      `json:"changeType,omitempty"`
+}
+
+// SerLinkType serLinkType
+type SerLinkType struct {
+	Href string `json:"href,omitempty"`
+}
