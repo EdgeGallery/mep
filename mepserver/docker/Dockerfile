@@ -14,8 +14,8 @@
 
 FROM golang:1.14.2 as builder
 
-ENV GOPROXY https://goproxy.io
-ENV GO111MODULE on
+# ENV GOPROXY https://goproxy.io
+# ENV GO111MODULE on
 ENV HOME=/usr/mep
 
 RUN apt update &&\
