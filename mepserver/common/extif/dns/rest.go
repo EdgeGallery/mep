@@ -75,7 +75,7 @@ type RestDNSAgent struct {
 	client         http.Client
 }
 
-func NewRestDNSAgent(config *config.MepServerConfig) *RestDNSAgent {
+func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
 	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", remoteServerHost, remoteServerPort))
 	if err != nil {
 		log.Errorf(nil, "could not parse the DNS server endpoint.")

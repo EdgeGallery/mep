@@ -26,6 +26,7 @@ import (
 
 const DataIn string = "in"
 const FormatIntBase int = 10
+const invalid = "invalid"
 
 type JSONPathInfo struct {
 	ParentNode reflect.Value
@@ -208,7 +209,7 @@ func getFieldFromPath(p reflect.Value, v reflect.Value, path string) JSONPathInf
 func reflectValueToString(v reflect.Value) string {
 	switch v.Kind() {
 	case reflect.Invalid:
-		return "invalid"
+		return invalid
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return strconv.FormatInt(v.Int(), FormatIntBase)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -218,9 +219,9 @@ func reflectValueToString(v reflect.Value) string {
 	case reflect.String:
 		return v.String()
 	case reflect.Chan, reflect.Func, reflect.Ptr, reflect.Slice, reflect.Map:
-		return "invalid"
+		return invalid
 	default:
-		return "invalid"
+		return invalid
 	}
 }
 

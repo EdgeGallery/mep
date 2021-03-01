@@ -35,6 +35,7 @@ import (
 
 const PropertiesMapSize = 5
 const FormatIntBase = 10
+const serviceLivenessInterval = "livenessInterval"
 
 type ServiceInfo struct {
 	SerInstanceId     string        `json:"serInstanceId,omitempty"`
@@ -99,9 +100,9 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 		meputil.InfoToProperties(properties, "ScopeOfLocality", s.ScopeOfLocality)
 		meputil.InfoToProperties(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
 		meputil.InfoToProperties(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
-		meputil.InfoToProperties(properties, "livenessInterval", strconv.Itoa(0))
+		meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(0))
 		if s.LivenessInterval != 0 {
-			meputil.InfoToProperties(properties, "livenessInterval", strconv.Itoa(meputil.DefaultHeartbeatInterval))
+			meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(meputil.DefaultHeartbeatInterval))
 			s.LivenessInterval = meputil.DefaultHeartbeatInterval
 		}
 		meputil.InfoToProperties(properties, "mecState", s.State)
@@ -194,7 +195,7 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	epType := inst.Properties["endPointType"]
 	s.ScopeOfLocality = inst.Properties["ScopeOfLocality"]
 	var err error
-	s.LivenessInterval, err = strconv.Atoi(inst.Properties["livenessInterval"])
+	s.LivenessInterval, err = strconv.Atoi(inst.Properties[serviceLivenessInterval])
 	if err != nil {
 		log.Warn("parse int liveness Interval fail")
 	}

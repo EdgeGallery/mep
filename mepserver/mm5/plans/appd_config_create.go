@@ -172,20 +172,20 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Also check if any other ongoing operation for this AppInstanceId
 			2. Add the this request to DB (job, task and task status)
 	*/
-	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) == true {
+	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
 		log.Errorf(nil, "duplicate app instance")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app instance")
 		return workspace.TaskFinish
 	}
 
-	if IsAppNameAlreadyExists(appDConfigInput.AppName) == true {
+	if IsAppNameAlreadyExists(appDConfigInput.AppName) {
 		log.Errorf(nil, "duplicate app name")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app name")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) == true {
+	if IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "app instance has other operation in progress")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
