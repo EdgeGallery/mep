@@ -56,14 +56,14 @@ func (t *UpdateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Check if any other ongoing operation for this AppInstance Id in the system.
 			3. update the this request to DB (job, task and task status)
 	*/
-	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) == false {
+	if !IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
 		log.Errorf(nil, "app instance not found")
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) == true {
+	if IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "app instance has other operation in progress")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish

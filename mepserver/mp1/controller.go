@@ -129,7 +129,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
 			Func: m.heartbeatService},
 		//Liveness and readiness
-		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func: func(w http.ResponseWriter, r *http.Request) {
+		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func: func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
 		}},

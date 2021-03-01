@@ -34,6 +34,9 @@ import (
 	_ "mepserver/mp1/event"
 )
 
+var rootKey = "ROOT_KEY"
+var tlsKey = "TLS_KEY"
+
 func main() {
 
 	err := initialEncryptComponent()
@@ -54,13 +57,13 @@ func main() {
 }
 
 func encryptCertPwd() error {
-	pwd := []byte(os.Getenv("TLS_KEY"))
-	if len(os.Getenv("TLS_KEY")) == 0 {
+	pwd := []byte(os.Getenv(tlsKey))
+	if len(os.Getenv(tlsKey)) == 0 {
 		err := errors.New("tls password is not set in environment variable")
 		log.Errorf(err, "read password failed")
 		return err
 	}
-	os.Unsetenv("TLS_KEY")
+	os.Unsetenv(tlsKey)
 	_, verifyErr := util.ValidatePassword(&pwd)
 	if verifyErr != nil {
 		log.Errorf(verifyErr, "Certificate password complexity validation failed")
@@ -75,13 +78,13 @@ func encryptCertPwd() error {
 }
 
 func initialEncryptComponent() error {
-	keyComponentFromUser := []byte(os.Getenv("ROOT_KEY"))
-	if len(os.Getenv("ROOT_KEY")) == 0 {
+	keyComponentFromUser := []byte(os.Getenv(rootKey))
+	if len(os.Getenv(rootKey)) == 0 {
 		err := errors.New("root key is not present inside environment variable")
 		log.Errorf(err, "read root key component failed")
 		return err
 	}
-	os.Unsetenv("ROOT_KEY")
+	os.Unsetenv(rootKey)
 	verifyErr := util.ValidateKeyComponentUserInput(&keyComponentFromUser)
 	if verifyErr != nil {
 		log.Errorf(verifyErr, "root key component from user validation failed")
