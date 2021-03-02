@@ -66,6 +66,9 @@ const (
 	AppDQueryResPath      = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
 	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
 
+	KongHttpLogPath        = RootPath + "/kongLog"
+	SubscribeStatisticPath = RootPath + "/subscribeStatistic"
+
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
 	SubscriptionIdPath = "/:subscriptionId"
@@ -220,4 +223,8 @@ const (
 const (
 	IP_TYPE_IPV4 = "IP_V4"
 	IP_TYPE_IPV6 = "IP_V6"
+)
+
+const (
+	KongHttpLogIndex = "http-log"
 )

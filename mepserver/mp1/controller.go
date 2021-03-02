@@ -19,15 +19,16 @@ package mp1
 
 import (
 	"fmt"
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/rest"
-	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 	"mepserver/common/config"
 	"mepserver/common/extif/dataplane"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"net/http"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/rest"
+	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
@@ -55,7 +56,7 @@ func init() {
 func initRouter() {
 	mp1 := &Mp1Service{}
 	if err := mp1.Init(); err != nil {
-		log.Errorf(err, "Mm5 interface initialization failed.")
+		log.Errorf(err, "Mp1 interface initialization failed.")
 		//os.Exit(1) # Init function cannot be mocked by test. Hence removed this.
 	}
 	rest.RegisterServant(mp1)

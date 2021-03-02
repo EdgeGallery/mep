@@ -18,15 +18,16 @@ package mm5
 
 import (
 	"fmt"
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/rest"
-	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 	"mepserver/common/config"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/mm5/task"
 	"net/http"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/rest"
+	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
@@ -100,6 +101,11 @@ func (m *Mm5Service) URLPatterns() []rest.Route {
 
 		// App Termination
 		{Method: rest.HTTP_METHOD_DELETE, Path: meputil.AppInsTerminationPath, Func: m.terminateAppInstance},
+
+		// Monitor Interface
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.KongHttpLogPath, Func: m.insertHttpLog},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.KongHttpLogPath, Func: m.queryHttpLog},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.SubscribeStatisticPath, Func: m.querySubscribeStatistic},
 	}
 }
 
@@ -185,6 +191,33 @@ func (m *Mm5Service) terminateAppInstance(w http.ResponseWriter, r *http.Request
 		(&plans.DeleteAppDConfigWithSync{}).WithWorker(&m.mp2Worker),
 		&plans.DeleteService{},
 		&plans.DeleteFromMepauth{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mm5Service) insertHttpLog(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.CreateKongHttpLog{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mm5Service) queryHttpLog(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.GetKongHttpLog{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mm5Service) querySubscribeStatistic(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.SubscriptionInfoReq{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)

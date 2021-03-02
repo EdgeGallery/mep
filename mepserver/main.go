@@ -22,16 +22,17 @@ import (
 	"mepserver/mp1/plans"
 	"os"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/server"
-	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
-	_ "github.com/apache/servicecomb-service-center/server/init"
 	_ "mepserver/common/tls"
 	"mepserver/common/util"
 	_ "mepserver/mm5"
 	_ "mepserver/mp1"
-	_ "mepserver/mp1/uuid"
 	_ "mepserver/mp1/event"
+	_ "mepserver/mp1/uuid"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/server"
+	_ "github.com/apache/servicecomb-service-center/server/bootstrap"
+	_ "github.com/apache/servicecomb-service-center/server/init"
 )
 
 func main() {

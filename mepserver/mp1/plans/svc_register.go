@@ -90,9 +90,9 @@ func (t *DecodeRestReq) ParseBody(r *http.Request) error {
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(nil, "json unmasrshalling failed")
+		log.Errorf(nil, "json unmarshalling failed")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
-		return errors.New("json unmasrshalling failed")
+		return errors.New("json unmarshalling failed")
 	}
 	err = meputil.ValidateRestBody(t.RestBody)
 	if err != nil {
