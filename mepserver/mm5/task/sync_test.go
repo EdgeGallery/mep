@@ -28,7 +28,6 @@ import (
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/common/util"
-	"sync"
 	"testing"
 )
 
@@ -72,9 +71,8 @@ func TestProcessDataPlaneSync(t *testing.T) {
 	defer patch4.Reset()
 	noneDataPlane := &none.NoneDataPlane{}
 	dnsRules := dns.NewRestDNSAgent(&config.MepServerConfig{})
-	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(1)
-	worker := Worker{waitWorkerFinish: waitGroup, dataPlane: noneDataPlane, dnsAgent: dnsRules}
+	worker := Worker{dataPlane: noneDataPlane, dnsAgent: dnsRules}
+	worker.waitWorkerFinish.Add(1)
 	taskId := uuid.NewV4().String()
 	worker.ProcessDataPlane("AppName", defaultAppInstanceId, taskId)
 }
@@ -103,9 +101,8 @@ func TestProcessDataPlaneSyncForError(t *testing.T) {
 	defer patch2.Reset()
 	defer patch3.Reset()
 	defer patch4.Reset()
-	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(1)
-	worker := Worker{waitWorkerFinish: waitGroup}
+	worker := Worker{}
+	worker.waitWorkerFinish.Add(1)
 	taskId := uuid.NewV4().String()
 	worker.ProcessDataPlane("AppName", defaultAppInstanceId, taskId)
 
@@ -249,7 +246,7 @@ func TestNewTask(t *testing.T) {
 
 	noneDataPlane := &none.NoneDataPlane{}
 	dnsRules := dns.NewRestDNSAgent(&config.MepServerConfig{})
-	worker := Worker{waitWorkerFinish: sync.WaitGroup{}, dataPlane: noneDataPlane, dnsAgent: dnsRules}
+	worker := Worker{dataPlane: noneDataPlane, dnsAgent: dnsRules}
 	newTask("AppName", defaultAppInstanceId, ruleId, worker.dataPlane, worker.dnsAgent, worker.dnsTypeConfig)
 
 }
