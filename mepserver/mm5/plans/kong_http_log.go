@@ -20,6 +20,7 @@ import (
 	"context"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
+	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mp1"
 	"net/http"
@@ -37,13 +38,32 @@ func init() {
 }
 
 func createEsClient() *es.Client {
-	esHost := "http://114.116.17.54:9200"
+	esHost := "http://localhost:9200"
 	esClient, err := es.NewClient(es.SetSniff(false), es.SetURL(esHost))
 	if err != nil {
 		log.Error("Connect to es fail.", err)
 		return EsClient
 	}
 	log.Info("Connect to es success")
+	exists, err := esClient.IndexExists(meputil.KongHttpLogIndex).Do(context.Background())
+	if err != nil {
+		log.Error("Index exists", err)
+		return esClient
+	}
+	mapping := models.GetHttpLogMapping()
+	if exists {
+		log.Info("Index exists")
+	} else {
+		createIndex, err := esClient.CreateIndex(meputil.KongHttpLogIndex).BodyString(mapping).Do(context.Background())
+		if err != nil {
+			log.Error("CreateIndex fail.", err)
+			return esClient
+		}
+		if !createIndex.Acknowledged {
+			log.Error("CreateIndex fail, not Acknowledged.", err)
+			return esClient
+		}
+	}
 	return esClient
 }
 
@@ -101,36 +121,35 @@ func statisticMepServices(services map[string]interface{}) {
 }
 
 func statisticDiscoveryServices() interface{} {
-	dayCount := make(map[string]int)
-	for i := 0; i < 7; i++ {
+	dayCount := make([]int, meputil.WeekDay)
+	for i := 0; i < meputil.WeekDay; i++ {
 		boolQuery := es.NewBoolQuery()
 		serviceNameQuery := es.NewTermsQuery("service.name", "mepserver")
 		boolQuery.Filter(serviceNameQuery)
 
-		upstreamUriQuery := es.NewRegexpQuery("upstream_uri.keyword",
-			"/mep/mec_service_mgmt/v1/services*")
+		upstreamUriQuery := es.NewPrefixQuery("upstream_uri.keyword",
+			"/mep/mec_service_mgmt/v1/services")
 		boolQuery.Filter(upstreamUriQuery)
 
 		requestMethodQuery := es.NewMatchQuery("request.method", "GET")
 		boolQuery.Filter(requestMethodQuery)
 
-		timeRangeQuery := es.NewRangeQuery("started_at").Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
-			i-1) + "d/d")
+		timeRangeQuery := getTimeRange(i)
 		boolQuery.Filter(timeRangeQuery)
 
 		resp, err := EsClient.Count(meputil.KongHttpLogIndex).Query(boolQuery).Do(context.Background())
 		if err != nil {
-			dayCount["day"+strconv.Itoa(i)] = 0
+			dayCount[i] = 0
 		} else {
-			dayCount["day"+strconv.Itoa(i)] = int(resp)
+			dayCount[i] = int(resp)
 		}
 	}
 	return dayCount
 }
 
 func statisticRegisterServices() interface{} {
-	dayCount := make(map[string]int)
-	for i := 0; i < 7; i++ {
+	dayCount := make([]int, meputil.WeekDay)
+	for i := 0; i < meputil.WeekDay; i++ {
 		boolQuery := es.NewBoolQuery()
 		serviceNameQuery := es.NewTermsQuery("service.name", "mepserver")
 		boolQuery.Filter(serviceNameQuery)
@@ -142,37 +161,46 @@ func statisticRegisterServices() interface{} {
 		requestMethodQuery := es.NewMatchQuery("request.method", "POST")
 		boolQuery.Filter(requestMethodQuery)
 
-		timeRangeQuery := es.NewRangeQuery("started_at").Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
-			i-1) + "d/d")
+		timeRangeQuery := getTimeRange(i)
 		boolQuery.Filter(timeRangeQuery)
 
 		resp, err := EsClient.Count(meputil.KongHttpLogIndex).Query(boolQuery).Do(context.Background())
 		if err != nil {
-			dayCount["day"+strconv.Itoa(i)] = 0
+			dayCount[i] = 0
 		} else {
-			dayCount["day"+strconv.Itoa(i)] = int(resp)
+			dayCount[i] = int(resp)
 		}
 	}
 	return dayCount
 }
 
+func getTimeRange(i int) *es.RangeQuery {
+	if i == 0 {
+		return es.NewRangeQuery("started_at").Gte("now/d")
+	} else if i == 1 {
+		return es.NewRangeQuery("started_at").Gte("now-1d/d").Lt("now/d")
+	} else {
+		return es.NewRangeQuery("started_at").Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
+			i-1) + "d/d")
+	}
+}
+
 func statisticAppServices(res map[string]interface{}, names []string) {
 	for _, serviceName := range names {
-		dayCount := make(map[string]int)
-		for i := 0; i < 7; i++ {
+		dayCount := make([]int, meputil.WeekDay)
+		for i := 0; i < meputil.WeekDay; i++ {
 			boolQuery := es.NewBoolQuery()
-			serviceNameQuery := es.NewTermQuery("service.name.keyword", serviceName)
+			serviceNameQuery := es.NewPrefixQuery("service.name.keyword", serviceName)
 			boolQuery.Filter(serviceNameQuery)
 
-			timeRangeQuery := es.NewRangeQuery("started_at").Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
-				i-1) + "d/d")
+			timeRangeQuery := getTimeRange(i)
 			boolQuery.Filter(timeRangeQuery)
 
 			resp, err := EsClient.Count(meputil.KongHttpLogIndex).Query(boolQuery).Do(context.Background())
 			if err != nil {
-				dayCount["day"+strconv.Itoa(i)] = 0
+				dayCount[i] = 0
 			} else {
-				dayCount["day"+strconv.Itoa(i)] = int(resp)
+				dayCount[i] = int(resp)
 			}
 		}
 		res[serviceName] = dayCount

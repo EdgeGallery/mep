@@ -227,4 +227,5 @@ const (
 
 const (
 	KongHttpLogIndex = "http-log"
+	WeekDay          = 7
 )
