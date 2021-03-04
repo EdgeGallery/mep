@@ -45,6 +45,9 @@ func TestInitAPIGateway(t *testing.T) {
 			patches.ApplyFunc(setupKongMepAuth, func(_ string, _ *[]byte) error {
 				return nil
 			})
+			patches.ApplyFunc(setupHttpLogPlugin, func(_ string) error {
+				return nil
+			})
 			err := initAPIGateway(nil)
 			So(err, ShouldBeNil)
 		})
