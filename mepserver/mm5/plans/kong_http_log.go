@@ -82,6 +82,11 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return workspace.TaskFinish
 	}
+
+	if EsClient == nil {
+		createEsClient()
+	}
+
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
 	if err != nil {
 		log.Error("Create doc fail.", err)
@@ -98,6 +103,9 @@ type GetKongHttpLog struct {
 }
 
 func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
+	if EsClient == nil {
+		createEsClient()
+	}
 	// 注册服务的调用
 	appServices := make(map[string]interface{})
 	// 获取MEP上注册的服务列表
