@@ -28,6 +28,7 @@ import (
 )
 
 const ServicesPath string = "/services"
+const ConfigFormat string = `{ "name": "%s", "config": %s }`
 
 func initAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
@@ -121,14 +122,14 @@ func setupKongMepServer(apiGwUrl string) error {
 		return err
 	}
 	// enable mep server pre-function plugin
-	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(ConfigFormat,
 		util.PreFunctionPlugin, util.MepserverPreFunctionConf)))
 	if err != nil {
 		log.Error("Enable mep server pre-function plugin failed.")
 		return err
 	}
 	// enable mep server rate-limiting plugin
-	ratePluginReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+	ratePluginReq := []byte(fmt.Sprintf(ConfigFormat,
 		util.RateLimitPlugin, util.MepserverRateConf))
 	err = util.SendPostRequest(mepServerPluginUrl, ratePluginReq)
 	if err != nil {
@@ -168,7 +169,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 	}
 	// enable mep auth rate-limiting plugin
 	mepAuthPluginURL := apiGwURL + ServicesPath + "/" + util.MepauthName + "/plugins"
-	mepAuthRatePluReq := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+	mepAuthRatePluReq := []byte(fmt.Sprintf(ConfigFormat,
 		util.RateLimitPlugin, util.MepauthRateConf))
 	err = util.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
 	if err != nil {
@@ -187,7 +188,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		trustedNetworksList := strings.Split(string(*trustedNetworks), ";")
 		allIpValid, err := util.ValidateIpAndCidr(trustedNetworksList)
 		if (err == nil) && allIpValid {
-			mepIpRestrict := []byte(fmt.Sprintf(`{ "name": "%s", "config": %s }`,
+			mepIpRestrict := []byte(fmt.Sprintf(ConfigFormat,
 				util.IpRestrictPlugin, getTrustedIpList(trustedNetworksList)))
 			err = util.SendPostRequest(mepAuthPluginURL, mepIpRestrict)
 			if err != nil {

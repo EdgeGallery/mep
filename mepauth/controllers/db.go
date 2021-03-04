@@ -32,6 +32,7 @@ import (
 )
 
 const dataFile string = "/usr/mep/mepauthdata.json"
+const DEFAULT string = "default"
 
 // Insert or update data into mepauth data file
 func InsertOrUpdateDataToFile(data *models.AuthInfoRecord) error {
@@ -80,28 +81,28 @@ func ReadDataFromFile(ak string) (models.AuthInfoRecord, error) {
 
 func InsertData(data interface{}) error {
 	o := orm.NewOrm()
-	o.Using("default")
+	o.Using(DEFAULT)
 	_, err := o.Insert(data)
 	return err
 }
 
 func InsertOrUpdateData(data interface{}, cols ...string) error {
 	o := orm.NewOrm()
-	o.Using("default")
+	o.Using(DEFAULT)
 	_, err := o.InsertOrUpdate(data, cols...)
 	return err
 }
 
 func DeleteData(data interface{}, cols ...string) error {
 	o := orm.NewOrm()
-	o.Using("default")
+	o.Using(DEFAULT)
 	_, err := o.Delete(data, cols...)
 	return err
 }
 
 func ReadData(data interface{}, cols ...string) error {
 	o := orm.NewOrm()
-	o.Using("default")
+	o.Using(DEFAULT)
 	err := o.Read(data, cols...)
 	return err
 }
