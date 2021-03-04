@@ -31,6 +31,8 @@ import (
 	es "github.com/olivere/elastic/v7"
 )
 
+const startedAt = "started_at"
+
 var EsClient *es.Client
 
 func init() {
@@ -176,11 +178,11 @@ func statisticRegisterServices() interface{} {
 
 func getTimeRange(i int) *es.RangeQuery {
 	if i == 0 {
-		return es.NewRangeQuery("started_at").Gte("now/d")
+		return es.NewRangeQuery(startedAt).Gte("now/d")
 	} else if i == 1 {
-		return es.NewRangeQuery("started_at").Gte("now-1d/d").Lt("now/d")
+		return es.NewRangeQuery(startedAt).Gte("now-1d/d").Lt("now/d")
 	} else {
-		return es.NewRangeQuery("started_at").Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
+		return es.NewRangeQuery(startedAt).Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
 			i-1) + "d/d")
 	}
 }
