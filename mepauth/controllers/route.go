@@ -28,6 +28,8 @@ import (
 	"mepauth/util"
 )
 
+const RouteId string = "routeId"
+
 type OneRouteController struct {
 	beego.Controller
 }
@@ -38,7 +40,7 @@ func (c *OneRouteController) Get() {
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
 	}
-	err := ReadData(routeRecord, "routeId")
+	err := ReadData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}
@@ -74,8 +76,8 @@ func (c *OneRouteController) Put() {
 func addApigwRoute(routeInfo *models.RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongRouteUrl := fmt.Sprintf("https://%s:%s/services/%s/routes",
-		util.GetAppConfig("apigw_host"),
-		util.GetAppConfig("apigw_port"),
+		util.GetAppConfig(util.ApigwHost),
+		util.GetAppConfig(util.ApigwPort),
 		serName)
 	req := httplib.Post(kongRouteUrl)
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
@@ -92,8 +94,8 @@ func addApigwRoute(routeInfo *models.RouteInfo) {
 func addApigwService(routeInfo *models.RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongServiceUrl := fmt.Sprintf("https://%s:%s/services",
-		util.GetAppConfig("apigw_host"),
-		util.GetAppConfig("apigw_port"))
+		util.GetAppConfig(util.ApigwHost),
+		util.GetAppConfig(util.ApigwPort))
 	req := httplib.Post(kongServiceUrl)
 	serUrl := routeInfo.SerInfo.Uris[0]
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
@@ -111,8 +113,8 @@ func addApigwService(routeInfo *models.RouteInfo) {
 
 func addJwtPlugin(serName string) {
 	jwtPluginUrl := fmt.Sprintf("https://%s:%s/services/%s/plugins",
-		util.GetAppConfig("apigw_host"),
-		util.GetAppConfig("apigw_port"),
+		util.GetAppConfig(util.ApigwHost),
+		util.GetAppConfig(util.ApigwPort),
 		serName)
 	req := httplib.Post(jwtPluginUrl)
 	jsonPluginStr := []byte(`{ "name": "jwt" }`)
@@ -133,14 +135,14 @@ func (c *OneRouteController) Delete() {
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
 	}
-	err := ReadData(routeRecord, "routeId")
+	err := ReadData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}
 
 	apigwDelRoute(routeRecord.SerName)
 
-	err = DeleteData(routeRecord, "routeId")
+	err = DeleteData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}
@@ -150,7 +152,7 @@ func (c *OneRouteController) Delete() {
 
 func apigwDelRoute(serName string) {
 	kongRouteUrl := fmt.Sprintf("https://%s:%s/services/%s/routes/%s",
-		util.GetAppConfig("apigw_host"), util.GetAppConfig("apigw_port"), serName, serName)
+		util.GetAppConfig(util.ApigwHost), util.GetAppConfig(util.ApigwPort), serName, serName)
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {

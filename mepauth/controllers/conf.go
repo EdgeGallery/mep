@@ -29,6 +29,8 @@ import (
 	"mepauth/util"
 )
 
+const appInsId string = "app_ins_id"
+
 type ConfController struct {
 	beego.Controller
 }
@@ -57,7 +59,7 @@ func (c *ConfController) Put() {
 			Sk:       string(cipherSkBytes),
 			Nonce:    string(nonceBytes),
 		}
-		err := InsertOrUpdateData(authInfoRecord, "app_ins_id")
+		err := InsertOrUpdateData(authInfoRecord, appInsId)
 		if err != nil && err.Error() != util.PgOkMsg {
 			c.Data["json"] = err.Error()
 		}
@@ -75,7 +77,7 @@ func (c *ConfController) Delete() {
 		AppInsId: appInsId,
 	}
 
-	err := DeleteData(authInfoRecord, "app_ins_id")
+	err := DeleteData(authInfoRecord, appInsId)
 	if err != nil {
 		c.writeErrorResponse("Delete fail.", util.BadRequest)
 		return
@@ -92,7 +94,7 @@ func (c *ConfController) Get() {
 		AppInsId: appInsId,
 	}
 
-	err := ReadData(authInfoRecord, "app_ins_id")
+	err := ReadData(authInfoRecord, appInsId)
 	if err != nil && err.Error() != util.PgOkMsg {
 		c.Data["json"] = err.Error()
 	}
@@ -153,7 +155,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Nonce:    string(nonceBytes),
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
-	err = InsertOrUpdateData(authInfoRecord, "app_ins_id")
+	err = InsertOrUpdateData(authInfoRecord, appInsId)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")
