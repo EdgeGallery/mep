@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"mepauth/models"
 	"mepauth/routers"
 	"strings"
 
@@ -50,7 +51,24 @@ func initAPIGateway(trustedNetworks *[]byte) error {
 		return err
 	}
 
+	err = setupHttpLogPlugin(apiGwUrl)
+	if err != nil {
+		return err
+	}
+
 	log.Info("Initialization of consumer is successful")
+	return nil
+}
+
+func setupHttpLogPlugin(apiGwUrl string) error {
+	// enable global http log plugin
+	pluginUrl := apiGwUrl + "/plugins"
+	pluginConfig := fmt.Sprintf(models.GetHttpLogPluginData())
+	err := util.SendPostRequest(pluginUrl, []byte(pluginConfig))
+	if err != nil {
+		log.Error("Enable http log plugin failed")
+		return err
+	}
 	return nil
 }
 
