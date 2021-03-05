@@ -40,7 +40,8 @@ func init() {
 }
 
 func createEsClient() *es.Client {
-	esHost := "http://localhost:9200"
+	log.Info("Create Es Client")
+	esHost := "http://mep-elasticsearch:9200"
 	esClient, err := es.NewClient(es.SetSniff(false), es.SetURL(esHost))
 	if err != nil {
 		log.Error("Connect to es fail.", err)
@@ -76,15 +77,12 @@ type CreateKongHttpLog struct {
 }
 
 func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
+	log.Info("CreateKongHttpLog")
 	msg, err := ioutil.ReadAll(t.R.Body)
 	if err != nil {
 		log.Error("read failed", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return workspace.TaskFinish
-	}
-
-	if EsClient == nil {
-		createEsClient()
 	}
 
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
@@ -103,9 +101,7 @@ type GetKongHttpLog struct {
 }
 
 func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
-	if EsClient == nil {
-		createEsClient()
-	}
+	log.Info("GetKongHttpLog")
 	// 注册服务的调用
 	appServices := make(map[string]interface{})
 	// 获取MEP上注册的服务列表
@@ -232,5 +228,6 @@ func getAllServiceNames() []string {
 	for _, service := range serviceInfos {
 		serviceNames = append(serviceNames, service.SerName)
 	}
+	log.Infof("serviceNames: %s", serviceNames)
 	return serviceNames
 }
