@@ -55,9 +55,16 @@ func replaceAPIGwAddr() models.EndPointInfo {
 }
 
 func timerTask() {
-	for range time.Tick(util.HookTimerLimit * time.Second) {
-		go refreshAPIGwAddr()
-	}
+	TimeTicker := time.NewTicker(util.HookTimerLimit * time.Second)
+	go func() {
+		for {
+			select {
+			case  <-TimeTicker.C:
+				go refreshAPIGwAddr()
+			}
+		}
+	}()
+	defer TimeTicker.Stop()
 }
 
 func refreshAPIGwAddr() {
