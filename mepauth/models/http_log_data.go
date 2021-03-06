@@ -20,7 +20,7 @@ func GetHttpLogPluginData() string {
 	const pluginData = `{
     "name": "http-log",
     "config": {
-        "http_endpoint": "https://mepserver:8088/mep/kongLog",
+        "http_endpoint": "https://mep-mm5:80/mep/kongLog",
         "method": "POST",
         "timeout": 1000,
         "keepalive": 1000
