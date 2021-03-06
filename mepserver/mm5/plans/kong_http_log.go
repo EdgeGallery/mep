@@ -32,6 +32,7 @@ import (
 )
 
 const startedAt = "started_at"
+const esHost = "http://mep-elasticsearch:9200"
 
 var EsClient *es.Client
 
@@ -41,22 +42,23 @@ func init() {
 
 func createEsClient() *es.Client {
 	log.Info("Create Es Client")
-	esHost := "http://mep-elasticsearch:9200"
 	esClient, err := es.NewClient(es.SetSniff(false), es.SetURL(esHost))
 	if err != nil {
 		log.Error("Connect to es fail.", err)
 		return EsClient
 	}
 	log.Info("Connect to es success")
+
 	exists, err := esClient.IndexExists(meputil.KongHttpLogIndex).Do(context.Background())
 	if err != nil {
 		log.Error("Index exists", err)
 		return esClient
 	}
-	mapping := models.GetHttpLogMapping()
+
 	if exists {
 		log.Info("Index exists")
 	} else {
+		mapping := models.GetHttpLogMapping()
 		createIndex, err := esClient.CreateIndex(meputil.KongHttpLogIndex).BodyString(mapping).Do(context.Background())
 		if err != nil {
 			log.Error("CreateIndex fail.", err)
@@ -76,6 +78,8 @@ type CreateKongHttpLog struct {
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
+// When call the api through kong api gateway, the kong http-log plugin will send message to this interface.
+// The interface will store the data to elasticsearch for search by other api.
 func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	log.Info("CreateKongHttpLog")
 	msg, err := ioutil.ReadAll(t.R.Body)
@@ -100,15 +104,16 @@ type GetKongHttpLog struct {
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
+// The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
 func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	log.Info("GetKongHttpLog")
-	// 注册服务的调用
+	// 3rd app services list
 	appServices := make(map[string]interface{})
-	// 获取MEP上注册的服务列表
+	// registered services name list
 	serviceNames := getAllServiceNames()
 	statisticAppServices(appServices, serviceNames)
 
-	// MEP自身能力的调用
+	// MEP self capability
 	mepServices := make(map[string]interface{})
 	statisticMepServices(mepServices)
 
@@ -120,9 +125,9 @@ func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
 }
 
 func statisticMepServices(services map[string]interface{}) {
-	// 服务注册
+	// service register data
 	services["serviceRegister"] = statisticRegisterServices()
-	// 服务发现
+	// service discovery data
 	services["serviceDiscovery"] = statisticDiscoveryServices()
 }
 
@@ -181,10 +186,9 @@ func statisticRegisterServices() interface{} {
 }
 
 func getTimeRange(i int) *es.RangeQuery {
+	// range by day
 	if i == 0 {
 		return es.NewRangeQuery(startedAt).Gte("now/d")
-	} else if i == 1 {
-		return es.NewRangeQuery(startedAt).Gte("now-1d/d").Lt("now/d")
 	} else {
 		return es.NewRangeQuery(startedAt).Gte("now-" + strconv.Itoa(i) + "d/d").Lt("now-" + strconv.Itoa(
 			i-1) + "d/d")
@@ -220,11 +224,13 @@ func getAllServiceNames() []string {
 		log.Errorf(nil, "FindInstanceByKey failed.")
 		return serviceNames
 	}
+
 	_, serviceInfos := mp1.Mp1CvtSrvDiscover(findInstancesResponse)
 	if serviceInfos == nil {
 		log.Errorf(nil, "Mp1CvtSrvDiscover failed.")
 		return serviceNames
 	}
+
 	for _, service := range serviceInfos {
 		serviceNames = append(serviceNames, service.SerName)
 	}

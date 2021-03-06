@@ -63,8 +63,7 @@ func initAPIGateway(trustedNetworks *[]byte) error {
 func setupHttpLogPlugin(apiGwUrl string) error {
 	// enable global http log plugin
 	pluginUrl := apiGwUrl + "/plugins"
-	pluginConfig := fmt.Sprintf(models.GetHttpLogPluginData())
-	err := util.SendPostRequest(pluginUrl, []byte(pluginConfig))
+	err := util.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
 	if err != nil {
 		log.Error("Enable http log plugin failed")
 		return err
