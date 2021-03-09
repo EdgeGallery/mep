@@ -33,10 +33,7 @@ import (
 
 const startedAt = "started_at"
 
-//const esHost = "http://mep-elasticsearch:9200"
-const esHost = "http://114.116.17.54:9200"
-
-//const esHost = "http://119.8.47.5:32383"
+const esHost = "http://mep-elasticsearch:9200"
 
 var EsClient *es.Client
 
