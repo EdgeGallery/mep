@@ -32,7 +32,11 @@ import (
 )
 
 const startedAt = "started_at"
-const esHost = "http://mep-elasticsearch:9200"
+
+//const esHost = "http://mep-elasticsearch:9200"
+const esHost = "http://114.116.17.54:9200"
+
+//const esHost = "http://119.8.47.5:32383"
 
 var EsClient *es.Client
 
@@ -108,27 +112,40 @@ type GetKongHttpLog struct {
 func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	log.Info("GetKongHttpLog")
 	// 3rd app services list
-	appServices := make(map[string]interface{})
 	// registered services name list
 	serviceNames := getAllServiceNames()
-	statisticAppServices(appServices, serviceNames)
+	appList := statisticAppServices(serviceNames)
 
 	// MEP self capability
-	mepServices := make(map[string]interface{})
-	statisticMepServices(mepServices)
+	mepList := statisticMepServices()
 
 	res := make(map[string]interface{})
-	res["appServices"] = appServices
-	res["mepServices"] = mepServices
+	res["appServices"] = appList
+	res["mepServices"] = mepList
 	t.HttpRsp = res
 	return workspace.TaskFinish
 }
 
-func statisticMepServices(services map[string]interface{}) {
+func statisticMepServices() []interface{} {
+	list := make([]interface{}, 0)
+
 	// service register data
-	services["serviceRegister"] = statisticRegisterServices()
+	registerMap := make(map[string]interface{})
+	registerMap["name"] = "serviceRegister"
+	registerMap["desc"] = ""
+	registerMap["callTimes"] = statisticRegisterServices()
+	list = append(list, registerMap)
+	//services["serviceRegister"] = statisticRegisterServices()
+
 	// service discovery data
-	services["serviceDiscovery"] = statisticDiscoveryServices()
+	discoveryMap := make(map[string]interface{})
+	discoveryMap["name"] = "serviceDiscovery"
+	discoveryMap["desc"] = ""
+	discoveryMap["callTimes"] = statisticDiscoveryServices()
+	list = append(list, discoveryMap)
+	//services["serviceDiscovery"] = statisticDiscoveryServices()
+
+	return list
 }
 
 func statisticDiscoveryServices() interface{} {
@@ -195,8 +212,10 @@ func getTimeRange(i int) *es.RangeQuery {
 	}
 }
 
-func statisticAppServices(res map[string]interface{}, names []string) {
+func statisticAppServices(names []string) []interface{} {
+	list := make([]interface{}, 0)
 	for _, serviceName := range names {
+		serviceMap := make(map[string]interface{})
 		dayCount := make([]int, meputil.WeekDay)
 		for i := 0; i < meputil.WeekDay; i++ {
 			boolQuery := es.NewBoolQuery()
@@ -213,8 +232,12 @@ func statisticAppServices(res map[string]interface{}, names []string) {
 				dayCount[i] = int(resp)
 			}
 		}
-		res[serviceName] = dayCount
+		serviceMap["name"] = serviceName
+		serviceMap["desc"] = ""
+		serviceMap["callTimes"] = dayCount
+		list = append(list, serviceMap)
 	}
+	return list
 }
 
 func getAllServiceNames() []string {

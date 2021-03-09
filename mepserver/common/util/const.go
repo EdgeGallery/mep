@@ -53,6 +53,7 @@ const (
 	MecAppSupportPath     = "/mec_app_support/v1"
 	MecPlatformConfigPath = "/mec_platform_config/v1"
 	MecAppDConfigPath     = "/app_lcm/v1"
+	MecServiceGovernPath  = "/service_govern/v1"
 
 	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
 	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
@@ -66,8 +67,8 @@ const (
 	AppDQueryResPath      = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
 	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
 
-	KongHttpLogPath        = RootPath + "/kongLog"
-	SubscribeStatisticPath = RootPath + "/subscribeStatistic"
+	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
+	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
