@@ -53,7 +53,8 @@ type ServiceInfo struct {
 	Links             Link          `json:"_links,omitempty"`
 }
 type Link struct {
-	Self Selves `json:"self"`
+	Self          Selves `json:"self"`
+	AppInstanceId string `json:"appInstanceId"`
 }
 type Selves struct {
 	Href string `json:"liveness,omitempty"`
@@ -189,6 +190,9 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.Version = inst.Version
 	s.State = inst.Properties["mecState"]
 
+	s.Links = Link{
+		AppInstanceId: inst.Properties["appInstanceId"],
+	}
 	s.SerName = inst.Properties["serName"]
 	s.TransportID = inst.Properties["transportId"]
 	s.Serializer = inst.Properties["serializer"]

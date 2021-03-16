@@ -16,6 +16,11 @@ type SubscriptionInfoReq struct {
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
+type SubRelation struct {
+	SubscribeAppId string   `json:"subscribeAppId"`
+	ServiceList    []string `json:"serviceList"`
+}
+
 // This interface is query numbers of app subscribe other services and services subscribed by other app.
 func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	// query subscription info from DB, all the subscription info stored in DB
@@ -26,16 +31,26 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	appSubscribeSet := make(map[string]bool)
 	// services set for all the services who subscribe by app
 	serviceSubscribedSet := make(map[string]bool)
+	// subscribe relations
+	relations := make(map[string][]string)
 
 	for key, value := range subscriptionInfos {
 		log.Info("key: ", key)
-		pos := strings.LastIndex(key, "/")
-		appInstance := key[0:pos]
-		appSubscribeSet[appInstance] = true
+		//pos := strings.LastIndex(key, "/")
+		str := strings.Split(key, "/")
+		appInstanceId := str[len(str)-2]
+		appSubscribeSet[appInstanceId] = true
 
 		serviceNames := value.FilteringCriteria.SerNames
 		for _, name := range serviceNames {
 			serviceSubscribedSet[name] = true
+		}
+
+		serInstanceIds := value.FilteringCriteria.SerInstanceIds
+		if values, ok := relations[appInstanceId]; ok {
+			relations[appInstanceId] = append(values, serInstanceIds...)
+		} else {
+			relations[appInstanceId] = serInstanceIds
 		}
 	}
 
@@ -48,6 +63,20 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	result := make(map[string]int)
 	result["appSubscribeNum"] = appSubscribeNum
 	result["serviceSubscribedNum"] = serviceSubscribedNum
-	t.HttpRsp = result
+
+	subscribeRes := make(map[string]interface{})
+	subscribeRes["subscribeNum"] = result
+
+	relationsList := make([]SubRelation, 0)
+	for k, v := range relations {
+		rel := SubRelation{
+			SubscribeAppId: k,
+			ServiceList:    v,
+		}
+		relationsList = append(relationsList, rel)
+	}
+	subscribeRes["subscribeRelations"] = relationsList
+
+	t.HttpRsp = subscribeRes
 	return workspace.TaskFinish
 }
