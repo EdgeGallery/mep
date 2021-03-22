@@ -85,6 +85,7 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
+	log.Info("mepauth start")
 	// Initialize database
 	initDb()
 
@@ -134,9 +135,12 @@ func main() {
 
 	controllers.InitAuthInfoList()
 
+	log.Info("beego will start")
 	beego.BeeApp.Server.TLSConfig = tlsConf
 	beego.ErrorController(&controllers.ErrorController{})
+	log.Info("before beego run")
 	beego.Run()
+	log.Info("after beego run")
 }
 
 func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
