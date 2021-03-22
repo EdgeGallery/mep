@@ -85,10 +85,13 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
+	log.Info("mepauth start")
 	// Initialize database
 	initDb()
 
+	log.Info("mepauth start")
 	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
+	log.Info("readPropertiesFile")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
 		log.Error("Failed to read the config parameters from properties file")
@@ -98,11 +101,13 @@ func main() {
 	// function handling the sensitive information will clear after the usage.
 	// clean of mepauth.properties file use kubectl apply -f empty-mepauth-prop.yaml
 	defer clearAppConfigOnExit(appConfig)
+	log.Info("ValidateInputArgs")
 	validation := util.ValidateInputArgs(appConfig)
 	if !validation {
 		return
 	}
 	keyComponentUserStr := appConfig["KEY_COMPONENT"]
+	log.Info("ValidateKeyComponentUserInput")
 	err = util.ValidateKeyComponentUserInput(keyComponentUserStr)
 	if err != nil {
 		log.Error("input validation failed.")
@@ -110,33 +115,39 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
+	log.Info("doInitialization")
 	initSuccess := doInitialization(appConfig["TRUSTED_LIST"])
 	if !initSuccess {
 		return
 	}
-
+	log.Info("EncryptAndSaveJwtPwd")
 	err = util.EncryptAndSaveJwtPwd(appConfig["JWT_PRIVATE_KEY"])
 	if err != nil {
 		log.Error("Failed to encrypt and save jwt private key password.")
 		return
 	}
+	log.Info("ConfigureAkAndSk")
 	err = controllers.ConfigureAkAndSk(string(*appConfig["APP_INST_ID"]),
 		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"])
 	if err != nil {
 		log.Error("failed to configure ak sk values")
 		return
 	}
+	log.Info("TLSConfig")
 	tlsConf, err := util.TLSConfig("HTTPSCertFile")
 	if err != nil {
 		log.Error("failed to config tls for beego")
 		return
 	}
-
+	log.Info("InitAuthInfoList")
 	controllers.InitAuthInfoList()
 
+	log.Info("beego will start")
 	beego.BeeApp.Server.TLSConfig = tlsConf
 	beego.ErrorController(&controllers.ErrorController{})
+	log.Info("before beego run")
 	beego.Run()
+	log.Info("after beego run")
 }
 
 func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
