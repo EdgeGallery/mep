@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
@@ -142,6 +143,7 @@ func main() {
 	log.Info("InitAuthInfoList")
 	controllers.InitAuthInfoList()
 
+	time.Sleep(30 * time.Second)
 	log.Info("beego will start")
 	beego.BeeApp.Server.TLSConfig = tlsConf
 	beego.ErrorController(&controllers.ErrorController{})
