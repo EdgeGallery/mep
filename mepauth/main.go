@@ -50,11 +50,11 @@ func initDb() {
 		util.GetAppConfig("db_sslmode"))
 	err = orm.RegisterDataBase("default", "postgres", dataSource)
 	if err != nil {
-		log.Error("RegisterDriver failed")
+		log.Error("RegisterDataBase failed")
 	}
 	err = orm.RunSyncdb("default", false, true)
 	if err != nil {
-		log.Error("RegisterDriver failed")
+		log.Error("RunSyncdb failed")
 	}
 }
 
