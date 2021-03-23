@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Huawei Technologies Co., Ltd.
+ * Copyright 2020-2021 Huawei Technologies Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,51 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/astaxie/beego/orm"
+
 	"github.com/agiledragon/gomonkey"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+func TestInitDb(t *testing.T) {
+	Convey("initDb", t, func() {
+		Convey("for success", func() {
+			patch1 := gomonkey.ApplyFunc(orm.RegisterDriver, func(string, orm.DriverType) error {
+				return nil
+			})
+			defer patch1.Reset()
+			patch2 := gomonkey.ApplyFunc(orm.RegisterDataBase, func(string, string, string, ...int) error {
+				return nil
+			})
+			defer patch2.Reset()
+			patch3 := gomonkey.ApplyFunc(orm.RunSyncdb, func(string, bool, bool) error {
+				return nil
+			})
+			defer patch3.Reset()
+			patch4 := gomonkey.ApplyFunc(util.GetAppConfig, func(string) string {
+				return "success"
+			})
+			defer patch4.Reset()
+			initDb()
+		})
+		Convey("for fail", func() {
+			patch1 := gomonkey.ApplyFunc(orm.RegisterDriver, func(string, orm.DriverType) error {
+				return errors.New("RegisterDriver error")
+			})
+			defer patch1.Reset()
+			patch2 := gomonkey.ApplyFunc(orm.RegisterDataBase, func(string, string, string, ...int) error {
+				return errors.New("RegisterDataBase error")
+			})
+			defer patch2.Reset()
+			patch3 := gomonkey.ApplyFunc(orm.RunSyncdb, func(string, bool, bool) error {
+				return errors.New("RunSyncdb error")
+			})
+			defer patch3.Reset()
+			initDb()
+		})
+	})
+}
 
 func TestScanConfig(t *testing.T) {
 
@@ -50,6 +91,7 @@ func TestReadPropertiesFile(t *testing.T) {
 			config, err := readPropertiesFile("")
 			So(config, ShouldBeNil)
 			So(err, ShouldBeNil)
+
 			config, err = readPropertiesFile("main.go")
 			So(config, ShouldNotBeNil)
 			So(err, ShouldBeNil)

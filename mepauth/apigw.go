@@ -62,7 +62,7 @@ func initAPIGateway(trustedNetworks *[]byte) error {
 
 func setupHttpLogPlugin(apiGwUrl string) error {
 	// enable global http log plugin
-	pluginUrl := apiGwUrl + "/plugins"
+	pluginUrl := apiGwUrl + util.PluginPath
 	err := util.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
 	if err != nil {
 		log.Error("Enable http log plugin failed")
@@ -125,7 +125,7 @@ func setupKongMepServer(apiGwUrl string) error {
 		return err
 	}
 	// enable mep server jwt plugin
-	mepServerPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + "/plugins"
+	mepServerPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + util.PluginPath
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, util.JwtPlugin)
 	err = util.SendPostRequest(mepServerPluginUrl, []byte(jwtConfig))
 	if err != nil {
@@ -185,7 +185,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		return err
 	}
 	// enable mep auth rate-limiting plugin
-	mepAuthPluginURL := apiGwURL + ServicesPath + "/" + util.MepauthName + "/plugins"
+	mepAuthPluginURL := apiGwURL + ServicesPath + "/" + util.MepauthName + util.PluginPath
 	mepAuthRatePluReq := []byte(fmt.Sprintf(ConfigFormat,
 		util.RateLimitPlugin, util.MepauthRateConf))
 	err = util.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
