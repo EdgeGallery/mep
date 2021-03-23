@@ -37,7 +37,10 @@ import (
 )
 
 func initDb() {
-	orm.RegisterDriver("postgres", orm.DRPostgres)
+	err := orm.RegisterDriver("postgres", orm.DRPostgres)
+	if err != nil {
+		log.Error("RegisterDriver failed")
+	}
 	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
 		util.GetAppConfig("db_user"),
 		util.GetAppConfig("db_passwd"),
@@ -45,8 +48,14 @@ func initDb() {
 		util.GetAppConfig("db_host"),
 		util.GetAppConfig("db_port"),
 		util.GetAppConfig("db_sslmode"))
-	orm.RegisterDataBase("default", "postgres", dataSource)
-	orm.RunSyncdb("default", false, true)
+	err = orm.RegisterDataBase("default", "postgres", dataSource)
+	if err != nil {
+		log.Error("RegisterDriver failed")
+	}
+	err = orm.RunSyncdb("default", false, true)
+	if err != nil {
+		log.Error("RegisterDriver failed")
+	}
 }
 
 func scanConfig(r io.Reader) (util.AppConfigProperties, error) {
