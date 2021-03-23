@@ -96,6 +96,7 @@ func main() {
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
 		log.Error("Failed to read the config parameters from properties file")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	// Clearing all the sensitive information on exit for error case. For the success case
@@ -105,13 +106,16 @@ func main() {
 	log.Info("ValidateInputArgs")
 	validation := util.ValidateInputArgs(appConfig)
 	if !validation {
+		log.Error("input validation failed.")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	keyComponentUserStr := appConfig["KEY_COMPONENT"]
 	log.Info("ValidateKeyComponentUserInput")
 	err = util.ValidateKeyComponentUserInput(keyComponentUserStr)
 	if err != nil {
-		log.Error("input validation failed.")
+		log.Error("ValidateKeyComponentUserInput failed.")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
@@ -119,12 +123,15 @@ func main() {
 	log.Info("doInitialization")
 	initSuccess := doInitialization(appConfig["TRUSTED_LIST"])
 	if !initSuccess {
+		log.Error("doInitialization failed.")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	log.Info("EncryptAndSaveJwtPwd")
 	err = util.EncryptAndSaveJwtPwd(appConfig["JWT_PRIVATE_KEY"])
 	if err != nil {
 		log.Error("Failed to encrypt and save jwt private key password.")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	log.Info("ConfigureAkAndSk")
@@ -132,18 +139,20 @@ func main() {
 		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"])
 	if err != nil {
 		log.Error("failed to configure ak sk values")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	log.Info("TLSConfig")
 	tlsConf, err := util.TLSConfig("HTTPSCertFile")
 	if err != nil {
 		log.Error("failed to config tls for beego")
+		time.Sleep(5 * time.Second)
 		return
 	}
 	log.Info("InitAuthInfoList")
 	controllers.InitAuthInfoList()
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(5 * time.Second)
 	log.Info("beego will start")
 	beego.BeeApp.Server.TLSConfig = tlsConf
 	beego.ErrorController(&controllers.ErrorController{})
