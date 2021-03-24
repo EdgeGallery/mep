@@ -105,6 +105,27 @@ func TestInitAPIGateway(t *testing.T) {
 	})
 }
 
+func TestSetupHttpLogPlugin(t *testing.T) {
+	Convey("Setup HttpLog Plugin", t, func() {
+		Convey("for success", func() {
+			patch1 := ApplyFunc(util.SendPostRequest, func(string, []byte) error {
+				return nil
+			})
+			defer patch1.Reset()
+			err := setupHttpLogPlugin("")
+			So(err, ShouldBeNil)
+		})
+		Convey("for fail", func() {
+			patch1 := ApplyFunc(util.SendPostRequest, func(string, []byte) error {
+				return errors.New("error")
+			})
+			defer patch1.Reset()
+			err := setupHttpLogPlugin("")
+			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
 func TestSetApiGwConsumer(t *testing.T) {
 	err := beego.LoadAppConfig("ini", "../conf/app.conf")
 	if err != nil {
@@ -212,6 +233,14 @@ func TestSetupKongMepAuth(t *testing.T) {
 			err := setupKongMepAuth("https://127.0.0.1:8444", nil)
 			So(err, ShouldNotBeNil)
 		})
+	})
+}
+
+func TestGetTrustedIpList(t *testing.T) {
+	Convey("Get TrustedIp List", t, func() {
+		list := []string{"abc.com"}
+		ipList := getTrustedIpList(list)
+		So(ipList, ShouldNotBeNil)
 	})
 }
 

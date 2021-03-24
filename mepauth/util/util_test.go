@@ -17,8 +17,12 @@
 package util
 
 import (
+	"encoding/pem"
+	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/astaxie/beego"
 
 	. "github.com/agiledragon/gomonkey"
 	log "github.com/sirupsen/logrus"
@@ -67,12 +71,35 @@ func TestGenRandRootKeyComponent(t *testing.T) {
 
 func TestGetPublicKey(t *testing.T) {
 	Convey("get public key", t, func() {
-		patches := ApplyFunc(GetAppConfig, func(_ string) string {
-			return ""
+		Convey("for success", func() {
+			patch1 := ApplyFunc(beego.AppConfig.String, func(string) string {
+				return "abed"
+			})
+			defer patch1.Reset()
+
+			patch2 := ApplyFunc(ioutil.ReadFile, func(string) ([]byte, error) {
+				return []byte("abc"), nil
+			})
+			defer patch2.Reset()
+
+			patch3 := ApplyFunc(pem.Decode, func([]byte) (*pem.Block, []byte) {
+				block := &pem.Block{
+					Type: "PUBLIC KEY",
+				}
+				return block, nil
+			})
+			defer patch3.Reset()
+			GetPublicKey()
+
 		})
-		defer patches.Reset()
-		_, err := GetPublicKey()
-		So(err, ShouldNotBeNil)
+		Convey("for fail", func() {
+			patches := ApplyFunc(GetAppConfig, func(_ string) string {
+				return ""
+			})
+			defer patches.Reset()
+			_, err := GetPublicKey()
+			So(err, ShouldNotBeNil)
+		})
 	})
 }
 
@@ -110,4 +137,57 @@ func TestGetCipherSuites(t *testing.T) {
 		suite = getCipherSuites("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256")
 		So(suite, ShouldNotBeNil)
 	})
+}
+
+func TestInitRootKeyAndWorkKey(t *testing.T) {
+	Convey("InitRootKeyAndWorkKey", t, func() {
+		Convey("for success", func() {
+			patch1 := ApplyFunc(isFileOrDirExist, func(string) bool {
+				return true
+			})
+			defer patch1.Reset()
+
+			err := InitRootKeyAndWorkKey()
+			So(err, ShouldBeNil)
+		})
+	})
+}
+
+func TestGenAndSaveWorkKey(t *testing.T) {
+	Convey("genAndSaveWorkKey", t, func() {
+		Convey("for success", func() {
+			patch1 := ApplyFunc(EncryptByAES256GCM, func([]byte, []byte, []byte) ([]byte, error) {
+				return []byte("value"), nil
+			})
+			defer patch1.Reset()
+
+			patch2 := ApplyFunc(ioutil.WriteFile, func(string, []byte, os.FileMode) error {
+				return nil
+			})
+			defer patch2.Reset()
+
+			_, err := genAndSaveWorkKey(nil, "", "")
+			So(err, ShouldBeNil)
+		})
+	})
+}
+
+func TestDecryptKey(t *testing.T) {
+	Convey("decryptKey", t, func() {
+		Convey("for success", func() {
+			patch1 := ApplyFunc(ioutil.ReadFile, func(string) ([]byte, error) {
+				return []byte("value"), nil
+			})
+			defer patch1.Reset()
+
+			patch2 := ApplyFunc(DecryptByAES256GCM, func([]byte, []byte, []byte) ([]byte, error) {
+				return []byte("value"), nil
+			})
+			defer patch2.Reset()
+
+			_, err := decryptKey(nil, "", "")
+			So(err, ShouldBeNil)
+		})
+	})
+
 }
