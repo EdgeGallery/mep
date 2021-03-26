@@ -62,6 +62,7 @@ func setApiGwConsumer(apiGwUrl string) error {
 	err := util.SendPostRequest(consumerUrl, jsonConsumerByte)
 	if err != nil {
 		log.Error("Consumer initialization failed")
+		log.Errorf("Post error: %s", err.Error())
 		return err
 	}
 
