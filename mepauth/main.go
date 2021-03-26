@@ -171,10 +171,12 @@ func doInitialization(trustedNetworks *[]byte) bool {
 	err := initAPIGateway(trustedNetworks)
 	if err != nil {
 		log.Error("Failed to init api gateway.")
+		time.Sleep(5 * time.Second)
 		return false
 	}
 	err = util.InitRootKeyAndWorkKey()
 	if err != nil {
+		time.Sleep(5 * time.Second)
 		log.Error("Failed to init root key and work key.")
 		return false
 	}
