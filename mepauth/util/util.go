@@ -152,8 +152,11 @@ func GetPrivateKey() (*rsa.PrivateKey, error) {
 
 // Get api gateway URL
 func GetAPIGwURL() (string, error) {
+	log.Info("Inside GetAPIGwURL")
 	apiGwHost := GetAppConfig("apigw_host")
 	apiGwPort := GetAppConfig("apigw_port")
+	log.Infof("apiGwHost: %s", apiGwHost)
+	log.Infof("apiGwPort: %s", apiGwPort)
 	apiGwParamsAreValid, validateApiGwParamsErr := ValidateApiGwParams(apiGwHost, apiGwPort)
 	if validateApiGwParamsErr != nil || !apiGwParamsAreValid {
 		log.Error("validate Consumer url failed")
