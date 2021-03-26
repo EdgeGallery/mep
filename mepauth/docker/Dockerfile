@@ -41,7 +41,7 @@ RUN chmod 550 $HOME/app $HOME/start.sh &&\
     chmod -R 500 $HOME/views &&\
     chmod 440 -R $HOME/views/error/404.tpl
 
-FROM alpine:latest
+FROM ubuntu:18.04
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
 # Create the home directory for the new mep user.
 RUN mkdir -p /usr/mep

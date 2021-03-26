@@ -36,15 +36,18 @@ func initAPIGateway(trustedNetworks *[]byte) error {
 	}
 	err := setApiGwConsumer(apiGwUrl)
 	if err != nil {
+		log.Error("Failed to setApiGwConsumer")
 		return err
 	}
 	err = setupKongMepServer(apiGwUrl)
 	if err != nil {
+		log.Error("Failed to setupKongMepServer")
 		return err
 	}
 
 	err = setupKongMepAuth(apiGwUrl, trustedNetworks)
 	if err != nil {
+		log.Error("Failed to setupKongMepAuth")
 		return err
 	}
 
