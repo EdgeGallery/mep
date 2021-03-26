@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"github.com/astaxie/beego"
@@ -86,6 +87,12 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Main process panic: %v \n %s", r, string(debug.Stack()))
+			time.Sleep(5 * time.Second)
+		}
+	}()
 	log.Info("mepauth start")
 	// Initialize database
 	initDb()
@@ -168,16 +175,18 @@ func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
 }
 
 func doInitialization(trustedNetworks *[]byte) bool {
+	log.Info("initAPIGateway")
 	err := initAPIGateway(trustedNetworks)
 	if err != nil {
 		log.Error("Failed to init api gateway.")
 		time.Sleep(5 * time.Second)
 		return false
 	}
+	log.Info("InitRootKeyAndWorkKey")
 	err = util.InitRootKeyAndWorkKey()
 	if err != nil {
-		time.Sleep(5 * time.Second)
 		log.Error("Failed to init root key and work key.")
+		time.Sleep(5 * time.Second)
 		return false
 	}
 	return true
