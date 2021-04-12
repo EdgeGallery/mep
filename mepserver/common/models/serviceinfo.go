@@ -131,14 +131,29 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 
 func (s *ServiceInfo) toEndpoints() ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
-		return s.TransportInfo.Endpoint.Uris, meputil.Uris
+		var gwUris []string
+		var serviceUris []string
+		serviceId := util.GenerateUuid()[0:20]
+		serviceName := s.SerName + serviceId
+		for _, uri := range s.TransportInfo.Endpoint.Uris {
+			gwUris = append(gwUris, uri)
+			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
+		}
+		registerToApiGw(gwUris, serviceName, serviceId)
+		return serviceUris, meputil.Uris
 	}
 	endPoints := make([]string, 0, 1)
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
-		uuid := util.GenerateUuid()[0:20]
-		registerToApigw(s, uuid)
-		uri := fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName+uuid)
-		return []string{uri}, meputil.Uris
+		var serviceUris []string
+		for _, address := range s.TransportInfo.Endpoint.Addresses {
+			var gwUris []string
+			serviceId := util.GenerateUuid()[0:20]
+			serviceName := s.SerName + serviceId
+			gwUris = append(gwUris, fmt.Sprintf("http://%s:%d/%s", address.Host, address.Port, serviceName))
+			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
+			registerToApiGw(gwUris, serviceName, serviceId)
+		}
+		return serviceUris, meputil.Uris
 	}
 
 	if s.TransportInfo.Endpoint.Alternative != nil {
@@ -218,16 +233,10 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.transportInfoFromProperties(inst.Properties)
 }
 
-func registerToApigw(serviceInfo *ServiceInfo, serviceId string) {
-	serName := serviceInfo.SerName + serviceId
-	address := serviceInfo.TransportInfo.Endpoint.Addresses[0]
-	uri := fmt.Sprintf("http://%s:%d/",
-		address.Host,
-		address.Port)
-	uris := []string{uri}
-	log.Infof("SerName: %s, Address: %s", serName, address)
+func registerToApiGw(uris []string, serviceName, serviceId string) {
+	log.Infof("SerName: %s, uris: %v", serviceName, uris)
 	serInfo := meputil.SerInfo{
-		SerName: serName,
+		SerName: serviceName,
 		Uris:    uris,
 	}
 	routeInfo := meputil.RouteInfo{
@@ -235,7 +244,7 @@ func registerToApigw(serviceInfo *ServiceInfo, serviceId string) {
 		AppId:   serviceId,
 		SerInfo: serInfo,
 	}
-	log.Infof("serInfo: %s, routeInfo: %s", serName, routeInfo)
+	log.Infof("serInfo: %s, routeInfo: %s", serviceName, routeInfo)
 	meputil.AddApigwService(routeInfo)
 	meputil.AddApigwRoute(routeInfo)
 	meputil.EnableJwtPlugin(routeInfo)
