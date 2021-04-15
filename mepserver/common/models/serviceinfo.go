@@ -149,7 +149,7 @@ func (s *ServiceInfo) toEndpoints() ([]string, string) {
 			var gwUris []string
 			serviceId := util.GenerateUuid()[0:20]
 			serviceName := s.SerName + serviceId
-			gwUris = append(gwUris, fmt.Sprintf("http://%s:%d/%s", address.Host, address.Port, serviceName))
+			gwUris = append(gwUris, fmt.Sprintf("http://%s:%d/", address.Host, address.Port))
 			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
 			registerToApiGw(gwUris, serviceName, serviceId)
 		}
