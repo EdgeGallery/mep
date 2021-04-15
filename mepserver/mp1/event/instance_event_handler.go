@@ -136,7 +136,7 @@ func SendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
 func doSend(action string, instance *proto.MicroServiceInstance, callbackUris map[string]string) {
 	var notificationInfo models.ServiceAvailabilityNotification
 	notificationInfo.ServiceReferences = make([]models.ServiceReferences, 1, 1)
-	notificationInfo.NotificationType = "ServiceAvailabilityNotification"
+	notificationInfo.NotificationType = "SerAvailabilityNotification"
 	notificationInfo.ServiceReferences[0].SerName = instance.Properties["serName"]
 	notificationInfo.ServiceReferences[0].SerInstanceID = instance.ServiceId + instance.InstanceId
 	notificationInfo.ServiceReferences[0].State = instance.Properties["mecState"]

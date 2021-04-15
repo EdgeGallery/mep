@@ -112,7 +112,7 @@ func TestNewInstanceEtsiEventHandler(t *testing.T) {
 		notifyInfos := map[string]*models.SerAvailabilityNotificationSubscription{
 			"/cse-sr/etsi/subscribe/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/83b35ec2-0afe-4563-ab25-d36f3709221d": {
 				SubscriptionId:    "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f",
-				SubscriptionType:  "ServiceAvailabilityNotification",
+				SubscriptionType:  "SerAvailabilityNotification",
 				CallbackReference: "http://hello:80/state/notify",
 				FilteringCriteria: models.FilteringCriteria{
 					SerInstanceIds: []string{
@@ -122,7 +122,7 @@ func TestNewInstanceEtsiEventHandler(t *testing.T) {
 			},
 			"/cse-sr/etsi/subscribe/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/83b35ec2-0afe-4563-ab25-d36f3709221a": {
 				SubscriptionId:    "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f",
-				SubscriptionType:  "ServiceAvailabilityNotification",
+				SubscriptionType:  "SerAvailabilityNotification",
 				CallbackReference: "http://hello:80/state/notify",
 				FilteringCriteria: models.FilteringCriteria{
 					SerNames: []string{
@@ -132,7 +132,7 @@ func TestNewInstanceEtsiEventHandler(t *testing.T) {
 			},
 			"/cse-sr/etsi/subscribe/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/83b35ec2-0afe-4563-ab25-d36f3709221b": {
 				SubscriptionId:    "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f",
-				SubscriptionType:  "ServiceAvailabilityNotification",
+				SubscriptionType:  "SerAvailabilityNotification",
 				CallbackReference: "http://hello:80/state/notify",
 				FilteringCriteria: models.FilteringCriteria{
 					SerNames: []string{
@@ -142,7 +142,7 @@ func TestNewInstanceEtsiEventHandler(t *testing.T) {
 			},
 			"/cse-sr/etsi/subscribe/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/83b35ec2-0afe-4563-ab25-d36f3709221c": {
 				SubscriptionId:    "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f",
-				SubscriptionType:  "ServiceAvailabilityNotification",
+				SubscriptionType:  "SerAvailabilityNotification",
 				CallbackReference: "http://hello:80/state/notify",
 				FilteringCriteria: models.FilteringCriteria{
 					SerNames: []string{
