@@ -25,6 +25,7 @@ import (
 	_ "mepserver/common/tls"
 	"mepserver/common/util"
 	_ "mepserver/mm5"
+	_ "mepserver/mm5/plans"
 	_ "mepserver/mp1"
 	_ "mepserver/mp1/event"
 	_ "mepserver/mp1/uuid"
