@@ -1,0 +1,17 @@
+tmp/
+target/
+
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Log files ###
+*.log
+
+### Generated files
+openapitools/
+gen/
+.openapi-generator/
