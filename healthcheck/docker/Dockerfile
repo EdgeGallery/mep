@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Huawei Technologies Co., Ltd.
+# Copyright 2021 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,11 +31,10 @@ COPY . $HOME
 
 WORKDIR $HOME
 
-RUN go build -buildmode=pie -ldflags '-linkmode "external" -extldflags "-static"' src/main/main.go
+RUN go build -buildmode=pie -ldflags '-linkmode "external" -extldflags "-static"' src/main.go
 
 RUN chmod 550 $HOME/main &&\
     chmod -R 750 $HOME/conf &&\
-    chmod 640 $HOME/conf/app_conf.yaml &&\
     chmod 500 -R $HOME/views &&\
     chmod 440 -R $HOME/views/error/404.tpl
 
