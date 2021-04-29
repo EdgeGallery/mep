@@ -20,14 +20,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"io"
+	"os"
+	"path/filepath"
+	"unsafe"
 
 	_ "mepauth/config"
 	"mepauth/controllers"
@@ -37,13 +37,24 @@ import (
 )
 
 func initDb() {
+
+	// Validate password
+	dbPwd := []byte(util.GetAppConfig("db_passwd"))
+	dbPwdStr := string(dbPwd)
+	util.ClearByteArray(dbPwd)
+	dbParamsAreValid, validateDbParamsErr := util.ValidateDbParams(dbPwdStr)
+	if validateDbParamsErr != nil || !dbParamsAreValid {
+		log.Error("Password validation failed")
+		return
+	}
+
 	err := orm.RegisterDriver("postgres", orm.DRPostgres)
 	if err != nil {
 		log.Error("RegisterDriver failed")
 	}
 	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
 		util.GetAppConfig("db_user"),
-		util.GetAppConfig("db_passwd"),
+		dbPwdStr,
 		util.GetAppConfig("db_name"),
 		util.GetAppConfig("db_host"),
 		util.GetAppConfig("db_port"),
@@ -52,6 +63,14 @@ func initDb() {
 	if err != nil {
 		log.Error("RegisterDataBase failed")
 	}
+
+	// clear datasource and db pwd
+	bKey1 := *(*[]byte)(unsafe.Pointer(&dataSource))
+	util.ClearByteArray(bKey1)
+
+	bKey := *(*[]byte)(unsafe.Pointer(&dbPwdStr))
+	util.ClearByteArray(bKey)
+
 	err = orm.RunSyncdb("default", false, true)
 	if err != nil {
 		log.Error("RunSyncdb failed")

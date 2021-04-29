@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -550,4 +551,53 @@ func ClearByteArray(data []byte) {
 	for i := 0; i < len(data); i++ {
 		data[i] = 0
 	}
+}
+
+// Validate db parameters
+func ValidateDbParams(dbPwd string) (bool, error) {
+	dbPwdBytes := []byte(dbPwd)
+	dbPwdIsValid, validateDbPwdErr := validatePassword(&dbPwdBytes)
+	if validateDbPwdErr != nil || !dbPwdIsValid {
+		return dbPwdIsValid, validateDbPwdErr
+	}
+	return true, nil
+}
+
+// Validate password
+func validatePassword(password *[]byte) (bool, error) {
+	if len(*password) >= minPasswordSize && len(*password) <= maxPasswordSize {
+		// password must satisfy any two conditions
+		pwdValidCount := getPasswordValidCount(password)
+		if pwdValidCount < maxPasswordCount {
+			return false, errors.New("password must contain at least two types of the either one lowercase" +
+				" character, one uppercase character, one digit or one special character")
+		}
+	} else {
+		return false, errors.New("password must have minimum length of 8 and maximum of 16")
+	}
+	return true, nil
+}
+
+// To get password valid count
+func getPasswordValidCount(password *[]byte) int {
+	var pwdValidCount = 0
+	pwdIsValid, err := regexp.Match(singleDigitRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	pwdIsValid, err = regexp.Match(lowerCaseRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	pwdIsValid, err = regexp.Match(upperCaseRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	// space validation for password complexity is not added
+	// as jwt decrypt fails if space is included in password
+	pwdIsValid, err = regexp.Match(specialCharRegex, *password)
+	if pwdIsValid && err == nil {
+		pwdValidCount++
+	}
+	return pwdValidCount
 }
