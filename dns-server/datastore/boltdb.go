@@ -16,6 +16,7 @@
 package datastore
 
 import (
+	"dns-server/util"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -24,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/miekg/dns"
+	log "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -63,7 +64,7 @@ func (b *BoltDB) Open() error {
 	if os.IsNotExist(err) {
 		err = os.Mkdir(DBPath, 0700)
 		if err != nil {
-			log.Fatal("Data path does not exists and could not create a new one", err)
+			log.Fatalf("Data path does not exists and could not create a new one")
 		}
 	}
 
@@ -114,7 +115,8 @@ func (b *BoltDB) setOrCreateDBEntryGeneration(confValueBytes []byte, rr *Resourc
 			return nil, fmt.Errorf("parsing failed on data retrieval")
 		}
 	} else {
-		if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Class) == 0 || len(rr.RData) == 0 {
+		if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Type) >= util.MaxDnsFQDNLength ||
+			len(rr.Class) == 0 || len(rr.Class) >= util.MaxDnsFQDNLength || len(rr.RData) == 0 {
 			log.Error("DNS create input not complete.", nil)
 			return nil, fmt.Errorf("input data error for create dns entry")
 		}

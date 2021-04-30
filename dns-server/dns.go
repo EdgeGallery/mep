@@ -70,6 +70,7 @@ func (s *Server) Run() error {
 
 	err := s.dataStore.Open()
 	if err != nil {
+		log.Infof("Failed to open data store.")
 		return err
 	}
 

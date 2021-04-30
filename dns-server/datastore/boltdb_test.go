@@ -31,7 +31,7 @@ const (
 	exampleAbcDomain       = "abc.example.com."
 	errorDeleteMessage     = "Error in deleting the record"
 	errorSettingMessage    = "Error in setting record"
-	maxIPVal               = 255
+	maxIPVal               = 192
 	ipAddFormatter         = "%d.%d.%d.%d"
 	exampleRspFormatter    = "www.example.com.\t30\tIN\tA\t%s"
 	abcExampleRspFormatter = "abc.example.com.\t30\tIN\tA\t%s"
