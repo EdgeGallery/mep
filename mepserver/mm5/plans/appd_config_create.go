@@ -21,16 +21,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"io/ioutil"
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/task"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
+
+	"mepserver/common/arch/workspace"
+
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
-	"mepserver/common/arch/workspace"
 )
 
 type DecodeAppDRestReq struct {
@@ -62,6 +64,11 @@ func (t *DecodeAppDRestReq) WithBody(body interface{}) *DecodeAppDRestReq {
 func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
 	t.AppInstanceId = queryReq.Get(":appInstanceId")
+	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
+		log.Error("Validate X-AppInstanceId failed", err)
+		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
+		return nil	
+	}
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil
 }
@@ -163,7 +170,7 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	appDConfigInput, ok := t.RestBody.(*models.AppDConfig)
 	if !ok {
 		t.SetFirstErrorCode(1, "input body parse failed")
-		t.SetSerErrInfo(&workspace.SerErrInfo{ErrCode: http.StatusBadRequest, Message: "Parse body error!"})
+		t.SetSerErrInfo(&workspace.SerErrInfo{ErrCode: http.StatusBadRequest, Message: "Parse body error."})
 		return workspace.TaskFinish
 	}
 

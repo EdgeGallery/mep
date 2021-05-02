@@ -19,7 +19,6 @@ package task
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	"mepserver/common/extif/dns"
@@ -28,6 +27,8 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sync"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
 type Worker struct {
@@ -265,20 +266,17 @@ func (t *task) generateDnsRuleMap(funcType util.FuncType) (map[string]*dataplane
 		secondaryRuleList = t.appDJobDb.appDConfig.AppDNSRule
 	}
 
-	if primaryRuleList != nil {
-		for i, dnsRule := range primaryRuleList {
-			dnsNewRuleMap[dnsRule.DNSRuleID] = &primaryRuleList[i]
-		}
+	for i, dnsRule := range primaryRuleList {
+		dnsNewRuleMap[dnsRule.DNSRuleID] = &primaryRuleList[i]
 	}
+
 	// Below for is for delete case. Reading from the stored appDConfig and filling.
-	if secondaryRuleList != nil {
-		for i, dnsRule := range secondaryRuleList {
-			// Update only if not found
-			if _, found := dnsNewRuleMap[dnsRule.DNSRuleID]; !found {
-				dnsNewRuleMap[dnsRule.DNSRuleID] = &secondaryRuleList[i]
-			}
-			dnsOldRuleMap[dnsRule.DNSRuleID] = &secondaryRuleList[i]
+	for i, dnsRule := range secondaryRuleList {
+		// Update only if not found
+		if _, found := dnsNewRuleMap[dnsRule.DNSRuleID]; !found {
+			dnsNewRuleMap[dnsRule.DNSRuleID] = &secondaryRuleList[i]
 		}
+		dnsOldRuleMap[dnsRule.DNSRuleID] = &secondaryRuleList[i]
 	}
 
 	return dnsNewRuleMap, dnsOldRuleMap

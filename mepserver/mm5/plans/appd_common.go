@@ -18,7 +18,6 @@ package plans
 
 import (
 	"encoding/json"
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
@@ -26,6 +25,8 @@ import (
 	meputil "mepserver/common/util"
 	"net/http"
 	"reflect"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
 const DBFailure = "put app config rule to data-store failed"
@@ -44,11 +45,7 @@ func IsAppInstanceIdAlreadyExists(appInstanceId string) (isExists bool) {
 func IsAppNameAlreadyExists(appName string) (isExists bool) {
 
 	records, errCode := backend.GetRecords(meputil.AppDConfigKeyPath)
-	if errCode != 0 || records == nil {
-		return false
-	}
-
-	if len(records) == 0 {
+	if errCode != 0 || records == nil || len(records) == 0 {
 		return false
 	}
 
@@ -91,7 +88,7 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 	if appDConfigInput.Operation != http.MethodPost {
 		appDConfigEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + appInstanceId)
 		if errCode != 0 {
-			log.Errorf(nil, "app config (appId: %s) retrieval from data-store failed!", appInstanceId)
+			log.Errorf(nil, "app config (appId: %s) retrieval from data-store failed.", appInstanceId)
 			return workspace.ErrCode(errCode), "get app config rule from data-store failed"
 		}
 		err := json.Unmarshal(appDConfigEntry, appDInStore)
@@ -125,14 +122,14 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 	// Add to Jobs DB
 	errCode := backend.PutRecord(meputil.AppDLCMJobsPath+appInstanceId, appDConfigBytes)
 	if errCode != 0 {
-		log.Errorf(nil, "app config (appId: %s) insertion on data-store failed!", appInstanceId)
+		log.Errorf(nil, "app config (appId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
 	errCode = backend.PutRecord(meputil.AppDLCMTasksPath+taskId, []byte(appInstanceId))
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId}, true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed!", appInstanceId)
+		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
@@ -169,7 +166,7 @@ func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed!", appInstanceId)
+		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 

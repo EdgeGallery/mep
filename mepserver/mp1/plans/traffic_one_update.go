@@ -143,7 +143,7 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	resultErr := backend.PutRecord(meputil.AppDConfigKeyPath+t.AppInstanceId, updateJSON)
 	if resultErr != 0 {
 		log.Errorf(nil, "Traffic rule(appId: %s, ruleId: %s) update on etcd failed, "+
-			"this will lead to data inconsistency!", t.AppInstanceId,
+			"this will lead to data inconsistency.", t.AppInstanceId,
 			t.TrafficRuleId)
 		return meputil.OperateDataWithEtcdErr, "put traffic rule to etcd failed"
 	}
@@ -165,14 +165,14 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	}
 
 	if err != nil {
-		log.Errorf(err, "Traffic rule(appId: %s, dnsRuleId: %s) update fail on server: %s!",
+		log.Errorf(err, "Traffic rule(appId: %s, dnsRuleId: %s) update fail on server: %s.",
 			t.AppInstanceId, t.TrafficRuleId, err.Error())
 		t.SetFirstErrorCode(meputil.RemoteServerErr, "failed to apply configuration on data-plane")
 
 		resultErr := backend.PutRecord(meputil.AppDConfigKeyPath+t.AppInstanceId, appDConfigDB)
 		if resultErr != 0 {
 			log.Errorf(nil, "Traffic rule(appId: %s, ruleId: %s) update on etcd failed, "+
-				"this will lead to data inconsistency!", t.AppInstanceId,
+				"this will lead to data inconsistency.", t.AppInstanceId,
 				t.TrafficRuleId)
 		}
 		return 0, ""
