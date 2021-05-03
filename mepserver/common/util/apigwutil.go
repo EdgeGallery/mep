@@ -37,8 +37,8 @@ type RouteInfo struct {
 }
 
 type SerInfo struct {
-	SerName string   `json:"serName"`
-	Uris    []string `json:"uris"`
+	SerName string `json:"serName"`
+	Uri     string `json:"uri"`
 }
 
 var ApiGWInterface *ApiGwIf
@@ -77,7 +77,7 @@ func (a *ApiGwIf) getApiGwUrl() string {
 func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
 	kongServiceUrl := a.baseURL + "/services"
 	serName := routeInfo.SerInfo.SerName
-	serUrl := routeInfo.SerInfo.Uris[0]
+	serUrl := routeInfo.SerInfo.Uri
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
 	err := SendPostRequest(kongServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
