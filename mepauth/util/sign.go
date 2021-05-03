@@ -54,17 +54,17 @@ func (sig *Sign) GetSignature(req *http.Request) (string, error) {
 		return "", errors.New("request is nil")
 	}
 	// construct canonical request
-	canonicalRequest, errGetCanonicalRequest := getCanonicalRequest(req)
+	canonicalRequest, errGetCanonicalRequest := sig.getCanonicalRequest(req)
 	if errGetCanonicalRequest != nil {
 		return "", errGetCanonicalRequest
 	}
 	// create string to sign
-	stringToSign, errGetStringToSign := getStringToSign(canonicalRequest, req.Header.Get(DateHeader))
+	stringToSign, errGetStringToSign := sig.getStringToSign(canonicalRequest, req.Header.Get(DateHeader))
 	if errGetStringToSign != nil {
 		return "", errGetStringToSign
 	}
 	// calculate signature
-	signature, errCalculateSignature := calculateSignature(stringToSign, sig.SecretKey)
+	signature, errCalculateSignature := sig.calculateSignature(stringToSign, sig.SecretKey)
 	if errCalculateSignature != nil {
 		return "", errCalculateSignature
 	}
@@ -72,21 +72,21 @@ func (sig *Sign) GetSignature(req *http.Request) (string, error) {
 }
 
 // construct canonical request and return
-func getCanonicalRequest(req *http.Request) (string, error) {
+func (sig *Sign) getCanonicalRequest(req *http.Request) (string, error) {
 
 	// begin construct canonical request
 	// request method
 	method := req.Method
 	// request uri
-	uri := getCanonicalUri(req)
+	uri := sig.getCanonicalUri(req)
 	// query string
-	query := getCanonicalQueryString(req)
+	query := sig.getCanonicalQueryString(req)
 	// request headers
-	headersReq := getCanonicalHeaders(req)
+	headersReq := sig.getCanonicalHeaders(req)
 	// signed headers
-	headersSign := getSignedHeaders(req)
+	headersSign := sig.getSignedHeaders(req)
 	// request body
-	hexEncodeBody, errGetRequestBodyHash := getRequestBodyHash(req)
+	hexEncodeBody, errGetRequestBodyHash := sig.getRequestBodyHash(req)
 	if errGetRequestBodyHash != nil {
 		return "", errGetRequestBodyHash
 	}
@@ -95,7 +95,7 @@ func getCanonicalRequest(req *http.Request) (string, error) {
 }
 
 // construct canonical uri can return
-func getCanonicalUri(req *http.Request) string {
+func (sig *Sign) getCanonicalUri(req *http.Request) string {
 	// split uri to []string
 	paths := strings.Split(req.URL.Path, SEPARATOR)
 	var uris []string
@@ -117,7 +117,7 @@ func getCanonicalUri(req *http.Request) string {
 }
 
 // construct canonical query string and return
-func getCanonicalQueryString(req *http.Request) string {
+func (sig *Sign) getCanonicalQueryString(req *http.Request) string {
 
 	var params []string
 	for key, values := range req.URL.Query() {
@@ -131,7 +131,7 @@ func getCanonicalQueryString(req *http.Request) string {
 }
 
 // construct canonical request headers and return
-func getCanonicalHeaders(req *http.Request) string {
+func (sig *Sign) getCanonicalHeaders(req *http.Request) string {
 
 	var headers []string
 	for key, values := range req.Header {
@@ -149,7 +149,7 @@ func getCanonicalHeaders(req *http.Request) string {
 }
 
 // return signed headers list as string
-func getSignedHeaders(req *http.Request) string {
+func (sig *Sign) getSignedHeaders(req *http.Request) string {
 
 	var headers []string
 	for key := range req.Header {
@@ -160,13 +160,13 @@ func getSignedHeaders(req *http.Request) string {
 }
 
 // get request body, do sha256 encrypt and hex encode
-func getRequestBodyHash(req *http.Request) (string, error) {
+func (sig *Sign) getRequestBodyHash(req *http.Request) (string, error) {
 
-	reqBody, errGetRequestBody := getRequestBody(req)
+	reqBody, errGetRequestBody := sig.getRequestBody(req)
 	if errGetRequestBody != nil {
 		return "", errGetRequestBody
 	}
-	hexEncode, errHexEncode := hexEncodeSHA256Hash(reqBody)
+	hexEncode, errHexEncode := sig.hexEncodeSHA256Hash(reqBody)
 	if errHexEncode != nil {
 		return "", errHexEncode
 	}
@@ -174,7 +174,7 @@ func getRequestBodyHash(req *http.Request) (string, error) {
 }
 
 // get request body bytes
-func getRequestBody(req *http.Request) ([]byte, error) {
+func (sig *Sign) getRequestBody(req *http.Request) ([]byte, error) {
 
 	if req.Body == nil {
 		return []byte(""), nil
@@ -188,7 +188,7 @@ func getRequestBody(req *http.Request) ([]byte, error) {
 }
 
 // HexEncode(Hash(bytes)) with SHA256
-func hexEncodeSHA256Hash(bytes []byte) (string, error) {
+func (sig *Sign) hexEncodeSHA256Hash(bytes []byte) (string, error) {
 
 	hash := sha256.New()
 	_, errWrite := hash.Write(bytes)
@@ -199,11 +199,11 @@ func hexEncodeSHA256Hash(bytes []byte) (string, error) {
 }
 
 // construct string to sign and return
-func getStringToSign(canonicalRequest string, dateTime string) (string, error) {
+func (sig *Sign) getStringToSign(canonicalRequest string, dateTime string) (string, error) {
 
 	// begin construct string to sign, the string contains algorithm , date time and canonical request
 	// canonical request
-	hexEncodeReq, errHexEncode := hexEncodeSHA256Hash([]byte(canonicalRequest))
+	hexEncodeReq, errHexEncode := sig.hexEncodeSHA256Hash([]byte(canonicalRequest))
 	if errHexEncode != nil {
 		return "", errHexEncode
 	}
@@ -212,7 +212,7 @@ func getStringToSign(canonicalRequest string, dateTime string) (string, error) {
 }
 
 // calculate the signature with string to sign and secret key.
-func calculateSignature(stringToSign string, secretKey []byte) (encodeStr string, err error) {
+func (sig *Sign) calculateSignature(stringToSign string, secretKey []byte) (encodeStr string, err error) {
 	defer func() {
 		if err1 := recover(); err1 != nil {
 			log.Error("panic handled:", err1)
