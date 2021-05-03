@@ -32,6 +32,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -88,24 +89,26 @@ func JsonTextToObj(jsonText string) (interface{}, error) {
 	return jsonMap, nil
 }
 
-// get host port in uri
-func GetHostPort(uri string) (string, int) {
+// GetHostPort get host port in uri
+func GetHostPort(uri string) (string, int, error) {
 	const zeroPort int = 0
-	idx := strings.LastIndex(uri, ":")
-	domain := uri
-	port := zeroPort
-	var err error
-	if idx > 0 {
-		port, err = strconv.Atoi(uri[idx+1:])
-		if err != nil {
-			port = zeroPort
-		}
-		domain = uri[:idx]
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", zeroPort, err
 	}
-	return domain, port
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return "", zeroPort, err
+	}
+
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		portInt = zeroPort
+	}
+	return host, portInt, nil
 }
 
-// get tags in http request
+// GetHTTPTags get tags in http request
 func GetHTTPTags(r *http.Request) (url.Values, []string) {
 	var ids []string
 	query := r.URL.Query()
@@ -117,7 +120,7 @@ func GetHTTPTags(r *http.Request) (url.Values, []string) {
 	return query, ids
 }
 
-// write err response
+// HttpErrResponse write err response
 func HttpErrResponse(w http.ResponseWriter, statusCode int, obj interface{}) {
 	if obj == nil {
 		w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(statusCode))

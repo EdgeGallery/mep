@@ -266,7 +266,10 @@ func (s *ServiceInfo) fromEndpoints(uris []string, epType string) {
 
 		s.TransportInfo.Endpoint.Addresses = make([]EndPointInfoAddress, 0, 1)
 		for _, v := range uris {
-			host, port := meputil.GetHostPort(v)
+			host, port, err := meputil.GetHostPort(v)
+			if err != nil { // Exclude if uri is not correct
+				continue
+			}
 			tmp := EndPointInfoAddress{
 				Host: host,
 				Port: uint32(port),
