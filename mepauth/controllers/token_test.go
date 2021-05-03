@@ -46,10 +46,10 @@ func TestValidateDateTimeFormat(t *testing.T) {
 		if err != nil {
 			log.Error("prepare http request failed")
 		}
-		req.Header.Set(util.DATE_HEADER, util.DATE_FORMAT)
+		req.Header.Set(util.DateHeader, util.DateFormat)
 		ok := validateDateTimeFormat(req)
 		So(ok, ShouldBeTrue)
-		req.Header.Set(util.DATE_HEADER, "20200930")
+		req.Header.Set(util.DateHeader, "20200930")
 		ok = validateDateTimeFormat(req)
 		So(ok, ShouldBeFalse)
 	})
@@ -256,8 +256,8 @@ func TestAkSignatureIsValid(t *testing.T) {
 		log.Error("prepare http request failed")
 	}
 	r.Header.Set("content-type", "json")
-	r.Header.Set(util.HOST_HEADER, "127.0.0.1")
-	r.Header.Set(util.DATE_HEADER, util.DATE_FORMAT)
+	r.Header.Set(util.HostHeader, "127.0.0.1")
+	r.Header.Set(util.DateHeader, util.DateFormat)
 
 	Convey("ak signature is valid", t, func() {
 		Convey("for success", func() {

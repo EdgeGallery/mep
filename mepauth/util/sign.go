@@ -35,12 +35,12 @@ import (
 )
 
 const (
-	SEPARATOR      string = "/"
-	LINE_SEPARATOR string = "\n"
-	DATE_FORMAT    string = "20060102T150405Z"
-	ALGORITHM      string = "SDK-HMAC-SHA256"
-	DATE_HEADER    string = "x-sdk-date"
-	HOST_HEADER    string = "Host"
+	SEPARATOR     string = "/"
+	LineSeparator string = "\n"
+	DateFormat    string = "20060102T150405Z"
+	ALGORITHM     string = "SDK-HMAC-SHA256"
+	DateHeader    string = "x-sdk-date"
+	HostHeader    string = "Host"
 )
 
 type Sign struct {
@@ -59,7 +59,7 @@ func (sig *Sign) GetSignature(req *http.Request) (string, error) {
 		return "", errGetCanonicalRequest
 	}
 	// create string to sign
-	stringToSign, errGetStringToSign := getStringToSign(canonicalRequest, req.Header.Get(DATE_HEADER))
+	stringToSign, errGetStringToSign := getStringToSign(canonicalRequest, req.Header.Get(DateHeader))
 	if errGetStringToSign != nil {
 		return "", errGetStringToSign
 	}
@@ -91,7 +91,7 @@ func getCanonicalRequest(req *http.Request) (string, error) {
 		return "", errGetRequestBodyHash
 	}
 	// construct complete
-	return strings.Join([]string{method, uri, query, headersReq, headersSign, hexEncodeBody}, LINE_SEPARATOR), nil
+	return strings.Join([]string{method, uri, query, headersReq, headersSign, hexEncodeBody}, LineSeparator), nil
 }
 
 // construct canonical uri can return
@@ -145,7 +145,7 @@ func getCanonicalHeaders(req *http.Request) string {
 		headers = append(headers, strings.ToLower(key)+":"+strings.Join(val, ","))
 	}
 	sort.Strings(headers)
-	return strings.Join(headers, LINE_SEPARATOR) + LINE_SEPARATOR
+	return strings.Join(headers, LineSeparator) + LineSeparator
 }
 
 // return signed headers list as string
@@ -208,7 +208,7 @@ func getStringToSign(canonicalRequest string, dateTime string) (string, error) {
 		return "", errHexEncode
 	}
 	// construct complete
-	return strings.Join([]string{ALGORITHM, dateTime, hexEncodeReq}, LINE_SEPARATOR), nil
+	return strings.Join([]string{ALGORITHM, dateTime, hexEncodeReq}, LineSeparator), nil
 }
 
 // calculate the signature with string to sign and secret key.

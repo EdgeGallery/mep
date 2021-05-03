@@ -227,7 +227,7 @@ func akSignatureIsValid(r *http.Request, ak string, sk []byte, signHeader string
 	for _, h := range strings.Split(signHeader, ";") {
 		reqToBeSigned.Header.Set(h, r.Header.Get(h))
 	}
-	reqToBeSigned.Header.Set(util.HOST_HEADER, r.Host)
+	reqToBeSigned.Header.Set(util.HostHeader, r.Host)
 
 	signature, err := s.GetSignature(reqToBeSigned)
 	if err != nil {
@@ -254,11 +254,11 @@ func parseAuthHeader(header string) (ak string, signHeader string, sig string) {
 }
 
 func validateDateTimeFormat(req *http.Request) bool {
-	stringXSdkTime := req.Header.Get(util.DATE_HEADER)
+	stringXSdkTime := req.Header.Get(util.DateHeader)
 	if stringXSdkTime == "" {
 		return false
 	}
-	_, err := time.Parse(util.DATE_FORMAT, stringXSdkTime)
+	_, err := time.Parse(util.DateFormat, stringXSdkTime)
 	if err != nil {
 		log.Error("validate datetimeformat failed")
 		return false
