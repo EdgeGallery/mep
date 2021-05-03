@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"mepauth/dbAdapter"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -158,12 +159,16 @@ func TestGetAppInsIdSk(t *testing.T) {
 	authInfo.Sk = "sk"
 	authInfo.AppInsId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
 	authInfo.Nonce = "nonce"
+	dbAdapter.Db = &dbAdapter.PgDb{}
 
 	Convey("get app instance id and sk", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(ReadData, func(authInfoRecord interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})
@@ -178,7 +183,8 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for read fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return errors.New("read error")
 			})
 			defer patches.Reset()
@@ -186,9 +192,12 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for decode fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, errors.New("decode fail")
 			})
@@ -198,9 +207,11 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for get work key fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})
@@ -212,9 +223,12 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for decrypt fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})

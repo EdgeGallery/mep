@@ -21,9 +21,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-
 	"github.com/astaxie/beego"
 	log "github.com/sirupsen/logrus"
+	"mepauth/dbAdapter"
 
 	"mepauth/models"
 	"mepauth/util"
@@ -59,7 +59,7 @@ func (c *ConfController) Put() {
 			Sk:       string(cipherSkBytes),
 			Nonce:    string(nonceBytes),
 		}
-		err = InsertOrUpdateData(authInfoRecord, APP_INS_ID)
+		err = dbAdapter.Db.InsertOrUpdateData(authInfoRecord, APP_INS_ID)
 		if err != nil && err.Error() != util.PgOkMsg {
 			c.Data["json"] = err.Error()
 		}
@@ -77,7 +77,7 @@ func (c *ConfController) Delete() {
 		AppInsId: appInsId,
 	}
 
-	err := DeleteData(authInfoRecord, APP_INS_ID)
+	err := dbAdapter.Db.DeleteData(authInfoRecord, APP_INS_ID)
 	if err != nil {
 		c.writeErrorResponse("Delete fail.", util.BadRequest)
 		return
@@ -94,7 +94,7 @@ func (c *ConfController) Get() {
 		AppInsId: appInsId,
 	}
 
-	err := ReadData(authInfoRecord, APP_INS_ID)
+	err := dbAdapter.Db.ReadData(authInfoRecord, APP_INS_ID)
 	if err != nil && err.Error() != util.PgOkMsg {
 		c.Data["json"] = err.Error()
 	}
@@ -155,7 +155,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Nonce:    string(nonceBytes),
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
-	err = InsertOrUpdateData(authInfoRecord, APP_INS_ID)
+	err = dbAdapter.Db.InsertOrUpdateData(authInfoRecord, APP_INS_ID)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")

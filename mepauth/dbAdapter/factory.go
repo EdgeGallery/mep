@@ -18,10 +18,13 @@ package dbAdapter
 import (
 	"errors"
 	"mepauth/util"
+	"os"
 )
 
+var Db Database
+
 // Init Db adapter
-func GetDbAdapter() (Database, error) {
+func getDbAdapter() (Database, error) {
 	dbAdapter := util.GetAppConfig("dbAdapter")
 	switch dbAdapter {
 	case "pgDb":
@@ -34,4 +37,13 @@ func GetDbAdapter() (Database, error) {
 	default:
 		return nil, errors.New("no database is found")
 	}
+}
+
+// Init Db
+func InitDb() (pgDb Database) {
+	db, err := getDbAdapter()
+	if err != nil {
+		os.Exit(1)
+	}
+	return db
 }

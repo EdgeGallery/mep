@@ -18,15 +18,15 @@ package main
 
 import (
 	"errors"
+	"github.com/agiledragon/gomonkey"
+	"github.com/astaxie/beego/orm"
 	"io"
+	"mepauth/dbAdapter"
 	"mepauth/util"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/astaxie/beego/orm"
-
-	"github.com/agiledragon/gomonkey"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -46,26 +46,25 @@ func TestInitDb(t *testing.T) {
 				return nil
 			})
 			defer patch3.Reset()
-			patch4 := gomonkey.ApplyFunc(util.GetAppConfig, func(string) string {
-				return "success"
+			patch4 := gomonkey.ApplyFunc(util.GetAppConfig, func(confvar string) string {
+				switch confvar {
+				case "dbAdapter":
+					return "pgDb"
+				case "db_passwd":
+					return "Test_Password"
+				default:
+					return ""
+				}
 			})
 			defer patch4.Reset()
-			initDb()
-		})
-		Convey("for fail", func() {
-			patch1 := gomonkey.ApplyFunc(orm.RegisterDriver, func(string, orm.DriverType) error {
-				return errors.New("RegisterDriver error")
+
+			var pgdb *dbAdapter.PgDb
+			patch5 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "InitOrmer", func(*dbAdapter.PgDb) error {
+				return nil
 			})
-			defer patch1.Reset()
-			patch2 := gomonkey.ApplyFunc(orm.RegisterDataBase, func(string, string, string, ...int) error {
-				return errors.New("RegisterDataBase error")
-			})
-			defer patch2.Reset()
-			patch3 := gomonkey.ApplyFunc(orm.RunSyncdb, func(string, bool, bool) error {
-				return errors.New("RunSyncdb error")
-			})
-			defer patch3.Reset()
-			initDb()
+
+			defer patch5.Reset()
+			dbAdapter.Db = dbAdapter.InitDb()
 		})
 	})
 }

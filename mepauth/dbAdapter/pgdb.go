@@ -24,6 +24,7 @@ import (
 	"unsafe"
 
 	"github.com/astaxie/beego/orm"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,7 +37,7 @@ type PgDb struct {
 }
 
 // Constructor of ORM
-func (db *PgDb) initOrmer() (err1 error) {
+func (db *PgDb) InitOrmer() (err1 error) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error("panic handled:", err)
@@ -54,7 +55,7 @@ func (db *PgDb) initOrmer() (err1 error) {
 }
 
 // Insert data into pg database
-func (db *PgDb) InsertData(data interface{}, cols ...string) (err error) {
+func (db *PgDb) InsertData(data interface{}) (err error) {
 	_, err = db.ormer.Insert(data)
 	return err
 }
@@ -104,7 +105,6 @@ func (db *PgDb) InitDatabase() error {
 		util.GetAppConfig("db_port"),
 		util.GetAppConfig("db_sslmode"))
 
-
 	registerDataBaseErr := orm.RegisterDataBase(DEFAULT, DRIVER, dataSource)
 	//clear bStr
 	bKey1 := *(*[]byte)(unsafe.Pointer(&dataSource))
@@ -124,7 +124,7 @@ func (db *PgDb) InitDatabase() error {
 		return errRunSyncdb
 	}
 
-	err := db.initOrmer()
+	err := db.InitOrmer()
 	if err != nil {
 		log.Error("Failed to init ormer")
 		return err

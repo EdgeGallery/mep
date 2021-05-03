@@ -19,10 +19,10 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/httplib"
 	log "github.com/sirupsen/logrus"
+	"mepauth/dbAdapter"
 
 	"mepauth/models"
 	"mepauth/util"
@@ -40,7 +40,7 @@ func (c *OneRouteController) Get() {
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
 	}
-	err := ReadData(routeRecord, RouteId)
+	err := dbAdapter.Db.ReadData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}
@@ -60,7 +60,7 @@ func (c *OneRouteController) Put() {
 			AppId:   routeInfo.AppId,
 			SerName: routeInfo.SerInfo.SerName,
 		}
-		err := InsertData(routeRecord)
+		err := dbAdapter.Db.InsertData(routeRecord)
 		if err != nil {
 			c.Data["json"] = err.Error()
 		}
@@ -135,14 +135,14 @@ func (c *OneRouteController) Delete() {
 	routeRecord := &models.RouteRecord{
 		RouteId: routeId,
 	}
-	err := ReadData(routeRecord, RouteId)
+	err := dbAdapter.Db.ReadData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}
 
 	apigwDelRoute(routeRecord.SerName)
 
-	err = DeleteData(routeRecord, RouteId)
+	err = dbAdapter.Db.DeleteData(routeRecord, RouteId)
 	if err != nil {
 		c.Data["json"] = err.Error()
 	}

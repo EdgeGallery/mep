@@ -28,13 +28,12 @@ const AuthTokenPath = RootPath + "/token"
 const AppManagePath = RootPath + "/appMng/v1"
 
 func init() {
+
 	beego.Router(AppManagePath+"/routes/:routeId", &controllers.OneRouteController{})
 	beego.Router(AuthTokenPath, &controllers.TokenController{})
 	beego.Router(AppManagePath+"/applications/:applicationId/confs", &controllers.ConfController{})
 	beego.Get("/health", func(ctx *context.Context) {
 		ctx.Output.Context.ResponseWriter.ResponseWriter.WriteHeader(200)
 		ctx.Output.Context.ResponseWriter.ResponseWriter.Write([]byte("ok"))
-		//w.WriteHeader(200)
-		//w.Write([]byte("ok"))
 	})
 }

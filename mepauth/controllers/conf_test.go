@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mepauth/dbAdapter"
 	"reflect"
 	"testing"
 
@@ -36,6 +37,7 @@ import (
 func TestPut(t *testing.T) {
 	appInsId := "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
 	var input *context.BeegoInput
+
 	fmt.Println("111", reflect.TypeOf(input).NumMethod())
 	patch1 := ApplyMethod(reflect.TypeOf(input), "Param", func(*context.BeegoInput, string) string {
 		return appInsId
@@ -49,9 +51,11 @@ func TestPut(t *testing.T) {
 		return nil, nil, nil
 	})
 
-	patch4 := ApplyFunc(InsertOrUpdateData, func(interface{}, ...string) error {
+	var pgdb *dbAdapter.PgDb
+	patch4 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 		return nil
 	})
+
 
 	var ct *beego.Controller
 	patch5 := ApplyMethod(reflect.TypeOf(ct), "ServeJSON", func(*beego.Controller, ...bool) {
@@ -109,15 +113,19 @@ func TestSaveAkAndSk(t *testing.T) {
 	validAk := "oooooooooooooooooooo"
 	validSk := []byte("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
 	validKey := []byte("00000000000000000000000000000000")
+	dbAdapter.Db = &dbAdapter.PgDb{}
 
 	Convey("save ak and sk", t, func() {
 		Convey("for success", func() {
 			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
-			patch2 := ApplyFunc(InsertOrUpdateData, func(_ interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			defer patches.Reset()
 			defer patch2.Reset()
 			err := saveAkAndSk(validAppInsID, validAk, &validSk)
@@ -157,13 +165,17 @@ func TestSaveAkAndSk(t *testing.T) {
 			So(err.Error(), ShouldEqual, "encrypt fail")
 		})
 		Convey("insert fail", func() {
-			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
+			patch1 := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
-			patches.ApplyFunc(InsertOrUpdateData, func(_ interface{}, _ ...string) error {
+			var pgdb *dbAdapter.PgDb
+			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return errors.New("insert fail")
 			})
-			defer patches.Reset()
+
+			defer patch1.Reset()
+			defer patch2.Reset()
+
 			err := saveAkAndSk(validAppInsID, validAk, &validSk)
 
 			So(err.Error(), ShouldEqual, "insert fail")

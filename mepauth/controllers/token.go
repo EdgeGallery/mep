@@ -20,6 +20,8 @@ package controllers
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/astaxie/beego"
+	"mepauth/dbAdapter"
 	"net/http"
 	"regexp"
 	"strings"
@@ -27,8 +29,6 @@ import (
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/astaxie/beego"
 
 	"mepauth/models"
 	"mepauth/util"
@@ -170,7 +170,7 @@ func GetAppInsIdSk(ak string) (string, []byte, bool) {
 	authInfoRecord := &models.AuthInfoRecord{
 		Ak: ak,
 	}
-	readErr := ReadData(authInfoRecord, "ak")
+	readErr := dbAdapter.Db.ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != util.PgOkMsg {
 		log.Error("auth info record does not exist")
 		return "", nil, false
