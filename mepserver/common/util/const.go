@@ -230,3 +230,6 @@ const (
 	KongHttpLogIndex = "http-log"
 	WeekDay          = 7
 )
+
+const ApiGwCaCertName = "apigw_cacert"
+const ConfigFilePath = "/usr/mep/conf/app.conf"

@@ -55,6 +55,7 @@ func main() {
 
 	}
 	go plans.HeartbeatProcess()
+	util.ApiGWInterface = util.NewApiGwIf()
 	server.Run()
 }
 

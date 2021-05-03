@@ -16,7 +16,9 @@
 package event
 
 import (
+	"crypto/tls"
 	"mepserver/common/models"
+	"mepserver/common/util"
 	"testing"
 
 	"github.com/agiledragon/gomonkey"
@@ -29,7 +31,6 @@ import (
 )
 
 func TestNewInstanceEtsiEventHandler(t *testing.T) {
-	h := NewInstanceEtsiEventHandler()
 
 	cases := []discovery.KvEvent{
 		{
@@ -154,6 +155,13 @@ func TestNewInstanceEtsiEventHandler(t *testing.T) {
 		return notifyInfos
 	})
 	defer patch2.Reset()
+
+	patch3 := gomonkey.ApplyFunc(util.TLSConfig, func(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
+		return &tls.Config{}, nil
+	})
+	defer patch3.Reset()
+
+	h := NewInstanceEtsiEventHandler()
 
 	for _, v := range cases {
 		notify.NotifyCenter().Start()

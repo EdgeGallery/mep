@@ -245,10 +245,9 @@ func registerToApiGw(uris []string, serviceName, serviceId string) {
 		SerInfo: serInfo,
 	}
 	log.Infof("serInfo: %s, routeInfo: %s", serviceName, routeInfo)
-	meputil.AddApigwService(routeInfo)
-	meputil.AddApigwRoute(routeInfo)
-	meputil.EnableJwtPlugin(routeInfo)
-
+	meputil.ApiGWInterface.AddApiGwService(routeInfo)
+	meputil.ApiGWInterface.AddApiGwRoute(routeInfo)
+	meputil.ApiGWInterface.EnableJwtPlugin(routeInfo)
 }
 
 func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {
