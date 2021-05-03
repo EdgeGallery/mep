@@ -81,8 +81,7 @@ func main() {
 	// function handling the sensitive information will clear after the usage.
 	// clean of mepauth.properties file use kubectl apply -f empty-mepauth-prop.yaml
 	defer clearAppConfigOnExit(appConfig)
-	validation := util.ValidateInputArgs(appConfig)
-	if !validation {
+	if !util.ValidateInputArgs(appConfig) {
 		return
 	}
 	keyComponentUserStr := appConfig["KEY_COMPONENT"]
@@ -93,8 +92,7 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	initSuccess := doInitialization(appConfig["TRUSTED_LIST"])
-	if !initSuccess {
+	if !doInitialization(appConfig["TRUSTED_LIST"]) {
 		return
 	}
 
