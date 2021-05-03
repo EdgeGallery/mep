@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server utility functions and constants
+// Package util implements mep server utility functions and constants
 package util
 
 import (
@@ -135,11 +135,11 @@ const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUy
 
 const ErrorRequestBodyMessage = "request body invalid"
 
-// As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
+// MaxFQDNLength As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
 // one length and one null terminating character. Hence it is limited as 253.
 const MaxFQDNLength = 253
 
-// Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
+// MaxIPLength Considering IPV4(15), IPV6(39) and IPV4-mapped IPV6(45
 const MaxIPLength = 45
 
 const MaxDNSRuleIdLength = 36
@@ -167,7 +167,7 @@ const (
 
 const MepServerConfigPath = "/usr/mep/conf/mep/config.yaml"
 
-// Data plane options
+// DataPlaneNone Data plane options
 const (
 	DataPlaneNone = "none"
 )
@@ -186,7 +186,7 @@ const (
 	RuleTypeTraffic
 )
 
-// Operation list
+// OperType Operation list
 type OperType int
 
 const (
@@ -195,7 +195,7 @@ const (
 	OperDelete                 // Operation type delete
 )
 
-// AppD rule state machine
+// AppDRuleStatus AppD rule state machine
 type AppDRuleStatus int
 
 const (
@@ -204,7 +204,7 @@ const (
 	WaitConfigDBWrite                       // Wait for Config DB write
 )
 
-// Function table index
+// FuncType Function table index
 type FuncType int
 
 const (
@@ -216,20 +216,18 @@ const (
 const TaskProgressFailure = -1
 
 const (
-	TASK_STATE_SUCCESS    = "SUCCESS"
-	TASK_STATE_PROCESSING = "PROCESSING"
-	TASK_STATE_FAILURE    = "FAILURE"
+	TaskStateSuccess    = "SUCCESS"
+	TaskStateProcessing = "PROCESSING"
+	TaskStateFailure    = "FAILURE"
 )
 
 const (
-	IP_TYPE_IPV4 = "IP_V4"
-	IP_TYPE_IPV6 = "IP_V6"
+	IpTypeIpv4 = "IP_V4"
+	IpTypeIpv6 = "IP_V6"
 )
 
-const (
-	KongHttpLogIndex = "http-log"
-	WeekDay          = 7
-)
+const KongHttpLogIndex = "http-log"
+const WeekDay = 7
 
 const ApiGwCaCertName = "apigw_cacert"
 const ConfigFilePath = "/usr/mep/conf/app.conf"

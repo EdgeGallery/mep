@@ -707,9 +707,9 @@ func BufferHeartbeatInterval(Interval int) int {
 // Return IP address type, expects the ip is validated before
 func FindIPAddressType(ip string) string {
 	if strings.Count(ip, ":") >= 1 {
-		return IP_TYPE_IPV6
+		return IpTypeIpv6
 	} else {
-		return IP_TYPE_IPV4
+		return IpTypeIpv4
 	}
 }
 func StringInList(searchStr string, stringList []string) bool {
