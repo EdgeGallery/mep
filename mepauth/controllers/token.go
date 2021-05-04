@@ -44,7 +44,15 @@ type TokenController struct {
 	beego.Controller
 }
 
-// Process token request
+// @Title Process token information
+// @Description create token and return the same
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   Authorization  header  string  true   "Certification Information"
+// @Param   x-sdk-date     header  string  true   "Signature time, current timestamp, format: YYYYMMDDTHHMMSSZ"
+// @Param   Host           header  string  true   "Consistent with the host field used to generate the authentication information signature"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /token [post]
 func (c *TokenController) Post() {
 	header := c.Ctx.Input.Header(Authorization)
 	clientIp := c.Ctx.Request.Header.Get(XRealIp)

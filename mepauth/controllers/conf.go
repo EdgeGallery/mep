@@ -35,6 +35,14 @@ type ConfController struct {
 	beego.Controller
 }
 
+// @Title Adds AK/SK configuration
+// @Description addition of ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Param   body body models.AppAuthInfo true "User Info"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [put]
 func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
@@ -69,6 +77,13 @@ func (c *ConfController) Put() {
 	c.ServeJSON()
 }
 
+// @Title Deletes AK/SK configuration
+// @Description deletion of ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [delete]
 func (c *ConfController) Delete() {
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
@@ -87,6 +102,13 @@ func (c *ConfController) Delete() {
 	c.ServeJSON()
 }
 
+// @Title Gets AK/SK configuration
+// @Description get ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [get]
 func (c *ConfController) Get() {
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 
