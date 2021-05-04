@@ -728,19 +728,7 @@ func StringInList(searchStr string, stringList []string) bool {
 // ValidateDomainName validates domain name
 func ValidateDomainName(name string) error {
 	if len(name) > maxHostNameLen {
-		return errors.New("validate domain name failed")
+		return errors.New("validate domain name length failed")
 	}
-	return ValidateByPattern(DomainPattern, name)
-}
-
-// ValidateByPattern validates given string with pattern
-func ValidateByPattern(pattern string, param string) error {
-	res, errMatch := regexp.MatchString(pattern, param)
-	if errMatch != nil {
-		return errMatch
-	}
-	if !res {
-		return errors.New("validate failed")
-	}
-	return nil
+	return ValidateRegexp(name, DomainPattern, "validate domain name failed")
 }
