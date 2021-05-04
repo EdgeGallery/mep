@@ -40,8 +40,11 @@ func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
 	log.Debugf("query request arrived to fetch all dns rules for appId %s.", t.AppInstanceId)
 
 	appDConfigEntry, errCode := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
-	if errCode != 0 {
+	if errCode == util.SubscriptionNotFound {
 		t.HttpRsp = []dataplane.DNSRule{}
+		return workspace.TaskFinish
+	} else if errCode != 0 {
+		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rules not found")
 		return workspace.TaskFinish
 	}
 

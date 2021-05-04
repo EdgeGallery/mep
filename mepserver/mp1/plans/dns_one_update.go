@@ -226,14 +226,14 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	}
 
 	errCode, errString := t.updateDnsRecordToRemoteServer(appDInStore, ruleIndex, dnsOnStore, dataOnStoreBytes)
-	if errCode != 0 {
+	if errCode > 0 {
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), errString)
 		return workspace.TaskFinish
 	}
 
-	if errCode == -1 {
-		return workspace.TaskFinish
-	}
+	//if errCode == -1 {
+	//	return workspace.TaskFinish
+	//}
 	return workspace.TaskFinish
 }
 
