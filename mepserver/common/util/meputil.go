@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server utility functions and constants
+// Package util implements mep server utility functions and constants
 package util
 
 import (
@@ -70,14 +70,14 @@ const CertSecNonceFilePath string = "ssl/cert_pwd_nonce"
 
 var KeyComponentFromUserStr *[]byte
 
-// put k,v into map
+// InfoToProperties put k,v into map
 func InfoToProperties(properties map[string]string, key string, value string) {
 	if value != "" {
 		properties[key] = value
 	}
 }
 
-// trans json to obj
+// JsonTextToObj trans json to obj
 func JsonTextToObj(jsonText string) (interface{}, error) {
 	data := []byte(jsonText)
 	var jsonMap interface{}
@@ -122,28 +122,26 @@ func GetHTTPTags(r *http.Request) (url.Values, []string) {
 
 // HttpErrResponse write err response
 func HttpErrResponse(w http.ResponseWriter, statusCode int, obj interface{}) {
+	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(statusCode))
+	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_TEXT)
+	w.WriteHeader(statusCode)
 	if obj == nil {
-		w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(statusCode))
-		w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_TEXT)
-		w.WriteHeader(statusCode)
 		return
 	}
 
 	objJSON, err := json.Marshal(obj)
 	if err != nil {
-		log.Errorf(nil, "json masrshalling failed")
+		log.Errorf(nil, "json marshaling failed")
 		return
 	}
-	w.Header().Set(rest.HEADER_RESPONSE_STATUS, strconv.Itoa(statusCode))
 	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_JSON)
-	w.WriteHeader(statusCode)
 	_, err = fmt.Fprintln(w, string(objJSON))
 	if err != nil {
 		log.Errorf(nil, "send http response fail")
 	}
 }
 
-// heartbeat use put to update a service register info
+// Heartbeat use put to update a service register info
 func Heartbeat(ctx context.Context, mp1SvcId string) error {
 	serviceID := mp1SvcId[:len(mp1SvcId)/2]
 	instanceID := mp1SvcId[len(mp1SvcId)/2:]
@@ -155,7 +153,7 @@ func Heartbeat(ctx context.Context, mp1SvcId string) error {
 	return err
 }
 
-// get service instance by serviceId
+// GetServiceInstance get service instance by serviceId
 func GetServiceInstance(ctx context.Context, serviceId string) (*proto.MicroServiceInstance, error) {
 	domainProject := util.ParseDomainProject(ctx)
 	serviceID := serviceId[:len(serviceId)/2]
@@ -170,7 +168,7 @@ func GetServiceInstance(ctx context.Context, serviceId string) (*proto.MicroServ
 	return instance, err
 }
 
-// get instance by key
+// FindInstanceByKey get instance by key
 func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) {
 	serCategoryId := result.Get("ser_category_id")
 	scopeOfLocality := result.Get("scope_of_locality")
@@ -222,7 +220,7 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 	return ret, nil
 }
 
-// set map value
+// SetMapValue set map value
 func SetMapValue(theMap map[string]interface{}, key string, val interface{}) {
 	mapValue, ok := theMap[key]
 	if !ok || mapValue == nil {
@@ -230,7 +228,7 @@ func SetMapValue(theMap map[string]interface{}, key string, val interface{}) {
 	}
 }
 
-// get the index of the string in []string
+// StringContains get the index of the string in []string
 func StringContains(arr []string, val string) (index int) {
 	index = -1
 	for i := 0; i < len(arr); i++ {
@@ -242,7 +240,7 @@ func StringContains(arr []string, val string) (index int) {
 	return
 }
 
-// validate UUID
+// ValidateUUID validate UUID
 func ValidateUUID(id string) error {
 	if len(id) != 0 {
 		validate := validator.New()
@@ -251,13 +249,13 @@ func ValidateUUID(id string) error {
 	return nil
 }
 
-// validate serviceId
+// ValidateServiceID validate serviceId
 func ValidateServiceID(serID string) error {
 	return ValidateRegexp(serID, "[0-9a-f]{32}",
 		"service ID validation failed")
 }
 
-// validate by reg
+// ValidateRegexp validate by reg
 func ValidateRegexp(strToCheck string, regexStr string, errMsg string) error {
 	match, err := regexp.MatchString(regexStr, strToCheck)
 	if err != nil {
@@ -269,7 +267,7 @@ func ValidateRegexp(strToCheck string, regexStr string, errMsg string) error {
 	return nil
 }
 
-// get subscribe key path
+// GetSubscribeKeyPath get subscribe key path
 func GetSubscribeKeyPath(subscribeType string) string {
 	var subscribeKeyPath string
 	if subscribeType == SerAvailabilityNotificationSubscription {
@@ -280,7 +278,7 @@ func GetSubscribeKeyPath(subscribeType string) string {
 	return subscribeKeyPath
 }
 
-// validate appInstanceId in header
+// ValidateAppInstanceIdWithHeader validate appInstanceId in header
 func ValidateAppInstanceIdWithHeader(id string, r *http.Request) error {
 	if id == r.Header.Get("X-AppinstanceID") {
 		return nil
@@ -300,7 +298,7 @@ func validateUrl(r *http.Request) bool {
 
 }
 
-// get resource info
+// GetResourceInfo get resource info
 func GetResourceInfo(r *http.Request) string {
 	resource := r.URL.String()
 	if resource == "" {
@@ -309,7 +307,7 @@ func GetResourceInfo(r *http.Request) string {
 	return resource
 }
 
-// get method from request
+// GetMethod get method from request
 func GetMethod(r *http.Request) string {
 	method := r.Method
 	if method == "" {
@@ -318,13 +316,13 @@ func GetMethod(r *http.Request) string {
 	return method
 }
 
-// get appInstanceId from request
+// GetAppInstanceId get appInstanceId from request
 func GetAppInstanceId(r *http.Request) string {
 	query, _ := GetHTTPTags(r)
 	return query.Get(":appInstanceId")
 }
 
-// get clientIp from request
+// GetClientIp get clientIp from request
 func GetClientIp(r *http.Request) string {
 	clientIp := r.Header.Get("X-Real-Ip")
 	if clientIp == "" {
@@ -333,6 +331,7 @@ func GetClientIp(r *http.Request) string {
 	return clientIp
 }
 
+// ValidateKeyComponentUserInput validates the user component input for key generation
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < ComponentSize {
 		log.Errorf(nil, "key component user string length is not valid")
@@ -341,7 +340,7 @@ func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	return nil
 }
 
-// use aes 256 gcm algo to encrypt secret keys
+// EncryptByAES256GCM use aes 256 gcm algo to encrypt secret keys
 func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -359,7 +358,7 @@ func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, err
 	return ciphertext, nil
 }
 
-// use aes 256 gcm algo to decrypt secret keys
+// DecryptByAES256GCM use aes 256 gcm algo to decrypt secret keys
 func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -382,7 +381,7 @@ func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, er
 	return plaintext, nil
 }
 
-// Generate work key by using root key
+// GetWorkKey generates work key by using root key
 func GetWorkKey() ([]byte, error) {
 	// get root key by key components
 	rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
@@ -404,7 +403,7 @@ func GetWorkKey() ([]byte, error) {
 	return workKey, nil
 }
 
-// Init root key and work key
+// InitRootKeyAndWorkKey to initialize root key and work key
 func InitRootKeyAndWorkKey() error {
 	// generate and save random root key components if not exist
 	if !IsFileOrDirExist(ComponentFilePath) || !IsFileOrDirExist(SaltFilePath) {
@@ -558,7 +557,7 @@ func genRandRootKeyComponent(componentFilePath string, saltFilePath string) erro
 	return nil
 }
 
-// check file of dir exist
+// IsFileOrDirExist check file or dir exist
 func IsFileOrDirExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
@@ -567,7 +566,7 @@ func IsFileOrDirExist(path string) bool {
 	return true
 }
 
-// Clear byte array from memory
+// ClearByteArray clear byte array from memory
 func ClearByteArray(data []byte) {
 	if data == nil {
 		return
@@ -577,7 +576,7 @@ func ClearByteArray(data []byte) {
 	}
 }
 
-// Encrypt and save cert password
+// EncryptAndSaveCertPwd encrypt and save cert password
 func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	certPwdNonce := make([]byte, NonceSize, 20)
 	_, certPwdNonceErr := rand.Read(certPwdNonce)
@@ -619,7 +618,7 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	return nil
 }
 
-// get cert pwd
+// GetCertPwd get cert pwd
 func GetCertPwd() ([]byte, error) {
 	// get work key
 	workKey, getWorkKeyErr := GetWorkKey()
@@ -641,19 +640,19 @@ func GetCertPwd() ([]byte, error) {
 	return certPwd, nil
 }
 
-// Generate a strong ETag for the http message header. Using sha256
+// GenerateStrongETag Generate a strong ETag for the http message header. Using sha256
 // hashing for generating the code.
 // Example: etag -> "958028a29507104f180515b53eb29bdc15d1212679e6c2c8074782c3c1db1868"
 func GenerateStrongETag(body []byte) string {
 	return fmt.Sprintf("\"%x\"", sha256.Sum256(body))
 }
 
-// Checks whether the status code is in the success range from 200 to 299
+// IsHttpStatusOK Checks whether the status code is in the success range from 200 to 299
 func IsHttpStatusOK(statusCode int) bool {
 	return statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices
 }
 
-// Join url paths
+// JoinURL joins url paths
 func JoinURL(base string, paths ...string) string {
 	return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"),
 		strings.TrimLeft(path.Join(paths...), "/"))
@@ -700,14 +699,14 @@ func scanConfig(r io.Reader) (AppConfigProperties, error) {
 	return config, scanner.Err()
 }
 
-// Buffer for liveness Interval
+// BufferHeartbeatInterval find buffer for liveness Interval
 func BufferHeartbeatInterval(Interval int) int {
 	buffer := math.Ceil(float64(Interval) * 0.05)
 	buffer = math.Min(buffer, 5)
 	return Interval + int(buffer)
 }
 
-// Return IP address type, expects the ip is validated before
+// FindIPAddressType Return IP address type, expects the ip is validated before
 func FindIPAddressType(ip string) string {
 	if strings.Count(ip, ":") >= 1 {
 		return IpTypeIpv6
@@ -715,6 +714,8 @@ func FindIPAddressType(ip string) string {
 		return IpTypeIpv4
 	}
 }
+
+// StringInList search for a string in a list
 func StringInList(searchStr string, stringList []string) bool {
 	for _, oneStr := range stringList {
 		if oneStr == searchStr {
@@ -724,7 +725,7 @@ func StringInList(searchStr string, stringList []string) bool {
 	return false
 }
 
-// Validates domain name
+// ValidateDomainName validates domain name
 func ValidateDomainName(name string) error {
 	if len(name) > maxHostNameLen {
 		return errors.New("validate domain name failed")
@@ -732,7 +733,7 @@ func ValidateDomainName(name string) error {
 	return ValidateByPattern(DomainPattern, name)
 }
 
-// Validates given string with pattern
+// ValidateByPattern validates given string with pattern
 func ValidateByPattern(pattern string, param string) error {
 	res, errMatch := regexp.MatchString(pattern, param)
 	if errMatch != nil {
