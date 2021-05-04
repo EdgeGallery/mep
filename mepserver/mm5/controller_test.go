@@ -1899,7 +1899,7 @@ func TestAppInstanceTermination(t *testing.T) {
 		}
 
 		json1, _ := json.Marshal(ins1)
-		records[fmt.Sprintf("datacenterinfo")] = json1
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
 
 		return records, 0
 	})
@@ -1994,7 +1994,7 @@ func TestAppInstanceTermination1(t *testing.T) {
 		}
 
 		json1, _ := json.Marshal(ins1)
-		records[fmt.Sprintf("datacenterinfo")] = json1
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
 
 		return records, 0
 	})
@@ -2089,7 +2089,7 @@ func TestAppInstanceTermination2(t *testing.T) {
 		}
 
 		json1, _ := json.Marshal(ins1)
-		records[fmt.Sprintf("datacenterinfo")] = json1
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
 
 		return records, 0
 	})

@@ -102,7 +102,7 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 			return workspace.TaskFinish
 		}
 		dci := &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""}
-		instances["datacenterinfo"] = dci
+		instances[meputil.ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instances)
 		if err != nil {
 			log.Errorf(nil, "instance convert to string failed")

@@ -168,7 +168,7 @@ func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error) {
 			return nil, fmt.Errorf("string convert to instance get failed in heartbeat process")
 		}
 		dci := &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""}
-		instances["datacenterinfo"] = dci
+		instances[meputil.ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instances)
 		if err != nil {
 			log.Errorf(nil, "instance convert to string failed in heartbeat process")

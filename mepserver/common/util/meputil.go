@@ -190,7 +190,7 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 			return nil, fmt.Errorf("string convert to instance failed")
 		}
 		dci := &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""}
-		instance["datacenterinfo"] = dci
+		instance[ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instance)
 		if err != nil {
 			log.Errorf(nil, "instance convert to string failed")
