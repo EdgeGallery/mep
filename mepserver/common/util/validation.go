@@ -17,9 +17,7 @@
 package util
 
 import (
-	"bufio"
 	"errors"
-	"os"
 	"regexp"
 
 	"github.com/go-playground/validator/v10"
@@ -27,53 +25,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
-// validate crt pwd complexity
-func ValidateCertificatePasswordComplexity(filename string) error {
-	password, err := readCertificatePasswordFile(filename)
-	if err != nil {
-		log.Errorf(nil, "failed to read the certificate password")
-		return err
-	}
-	_, err = ValidatePassword(password)
-
-	// clear password
-	for i := 0; i < len(*password); i++ {
-		(*password)[i] = 0
-	}
-
-	if err != nil {
-		log.Errorf(err, "Password complexity validation failed")
-		return err
-	}
-	return nil
-}
-
-func readCertificatePasswordFile(filename string) (*[]byte, error) {
-	if len(filename) == 0 {
-		return nil, errors.New("invalid file name")
-	}
-	file, err := os.Open(filename)
-	if err != nil {
-		// err contains sensitive information so creating new err
-		return nil, errors.New("failed to open the file")
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) > 0 {
-			return &line, nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Errorf(nil, "read file error")
-		return nil, errors.New("read file error")
-	}
-	return nil, errors.New("failed to read password from file")
-}
-
-// validate pwd
+// ValidatePassword validates pwd
 func ValidatePassword(password *[]byte) (bool, error) {
 	if len(*password) >= pwdLengthMin && len(*password) <= pwdLengthMax {
 		// password must satisfy any two conditions
@@ -85,6 +37,7 @@ func ValidatePassword(password *[]byte) (bool, error) {
 
 }
 
+// ValidateValLenPswd validates password length
 func ValidateValLenPswd(password *[]byte) (bool, error) {
 	// password must satisfy any two conditions
 	var pwdValidCount = 0
@@ -137,7 +90,7 @@ func validateVersion(fl validator.FieldLevel) bool {
 	return err == nil
 }
 
-// validate rest body
+// ValidateRestBody validate rest body
 func ValidateRestBody(body interface{}) error {
 	validate := validator.New()
 	verrs := validate.RegisterValidation("validateName", validateName)
