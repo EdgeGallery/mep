@@ -18,9 +18,18 @@ package dbAdapter
 
 // Database API's
 type Database interface {
+	// Initialize database
 	InitDatabase() error
+
+	// Insert data into database
 	InsertData(data interface{}) (err error)
+
+	// Insert or update data into database
 	InsertOrUpdateData(data interface{}, cols ...string) (err error)
+
+	// Read data from database
 	ReadData(data interface{}, cols ...string) (err error)
+
+	// Delete data from database
 	DeleteData(data interface{}, cols ...string) (err error)
 }

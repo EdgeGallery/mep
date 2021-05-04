@@ -143,6 +143,7 @@ func ValidateIpAndCidr(trustedNetworkList []string) (bool, error) {
 	return true, nil
 }
 
+// Validates application configurations related arguments
 func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	args := []string{"KEY_COMPONENT", "JWT_PRIVATE_KEY", "APP_INST_ID", "ACCESS_KEY", "SECRET_KEY"}
 	for _, s := range args {
@@ -160,6 +161,7 @@ func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	return true
 }
 
+// Validates key component user string against minimum length
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < ComponentSize {
 		log.Error("key component user string length is not valid")
