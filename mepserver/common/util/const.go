@@ -235,3 +235,5 @@ const ConfigFilePath = "/usr/mep/conf/app.conf"
 const (
 	ServiceInfoDataCenter = "datacenterinfo"
 )
+
+const LivenessPath = "/mepserver/mec_service_mgmt/v1/applications/%s/services/%s/liveness"

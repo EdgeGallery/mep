@@ -19,6 +19,7 @@ package plans
 
 import (
 	"context"
+	"fmt"
 	"mepserver/common/models"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
@@ -67,8 +68,10 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	mp1Ser.ToRegisterInstance(&req)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	if mp1Ser.LivenessInterval != 0 {
-		mp1Ser.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + instance.ServiceId + instance.InstanceId + "/liveness"
-		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + instance.ServiceId + instance.InstanceId + "/liveness"
+		mp1Ser.Links.Self.Href = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,
+			instance.ServiceId+instance.InstanceId)
+		req.Instance.Properties["liveness"] = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,
+			instance.ServiceId+instance.InstanceId)
 	}
 	domainProject := util.ParseDomainProject(t.Ctx)
 	centerErr := svcutil.UpdateInstance(t.Ctx, domainProject, &copyInstanceRef)
