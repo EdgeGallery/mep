@@ -36,7 +36,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/httplib"
 	"github.com/dgrijalva/jwt-go/v4"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -269,26 +268,6 @@ func getCipherSuites(sslCiphers string) []uint16 {
 	return nil
 }
 
-// Send post request
-func SendPostRequest(consumerURL string, jsonStr []byte) error {
-
-	req := httplib.Post(consumerURL)
-	req.Header(ContentType, JsonUtf8)
-	config, err := TLSConfig("apigw_cacert")
-	if err != nil {
-		log.Error("unable to read certificate")
-		return err
-	}
-	req.SetTLSClientConfig(config)
-	req.Body(jsonStr)
-	_, err = req.String()
-	if err != nil {
-		log.Error("send Post Request Failed")
-		return err
-	}
-	return nil
-}
-
 // Generate work key by using root key
 func GetWorkKey() ([]byte, error) {
 	// get root key by key components
@@ -301,7 +280,7 @@ func GetWorkKey() ([]byte, error) {
 
 	// decrypt work key by root key.
 	workKey, decryptedWorkKeyErr := decryptKey(rootKey, EncryptedWorkKeyFilePath, WorkKeyNonceFilePath)
-	// clear root key
+	// clear root keyfv
 	ClearByteArray(rootKey)
 	if decryptedWorkKeyErr != nil {
 		log.Error(decryptedWorkKeyErr.Error())

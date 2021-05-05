@@ -117,7 +117,7 @@ func TestSaveAkAndSk(t *testing.T) {
 
 	Convey("save ak and sk", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
+			patch1 := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
 
@@ -126,7 +126,7 @@ func TestSaveAkAndSk(t *testing.T) {
 				return nil
 			})
 
-			defer patches.Reset()
+			defer patch1.Reset()
 			defer patch2.Reset()
 			err := saveAkAndSk(validAppInsID, validAk, &validSk)
 			So(err, ShouldBeNil)

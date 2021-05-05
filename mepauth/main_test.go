@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"github.com/agiledragon/gomonkey"
 	"github.com/astaxie/beego/orm"
@@ -129,7 +130,8 @@ func TestDoInitialization(t *testing.T) {
 	Convey("Do Initialization", t, func() {
 		Convey("for success", func() {
 			network := []byte("example.com")
-			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
+			var initializer *ApiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
 				return nil
 			})
 			defer patch1.Reset()
@@ -137,15 +139,24 @@ func TestDoInitialization(t *testing.T) {
 				return nil
 			})
 			defer patch2.Reset()
+			patch3 := gomonkey.ApplyFunc(util.TLSConfig, func(string) (*tls.Config, error) {
+				return nil, nil
+			})
+			defer patch3.Reset()
 			res := doInitialization(&network)
 			So(res, ShouldBeTrue)
 		})
 
-		Convey("for initAPIGateway fail", func() {
+		Convey("for InitAPIGateway fail", func() {
 			network := []byte("example.com")
-			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
-				return errors.New("initAPIGateway fail")
+			var initializer *ApiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
+				return errors.New("InitAPIGateway fail")
 			})
+			patch2 := gomonkey.ApplyFunc(util.TLSConfig, func(string) (*tls.Config, error) {
+				return nil, nil
+			})
+			defer patch2.Reset()
 			defer patch1.Reset()
 			res := doInitialization(&network)
 			So(res, ShouldBeFalse)
@@ -153,13 +164,18 @@ func TestDoInitialization(t *testing.T) {
 
 		Convey("for InitRootKeyAndWorkKey fail", func() {
 			network := []byte("example.com")
-			patch1 := gomonkey.ApplyFunc(initAPIGateway, func(*[]byte) error {
+			var initializer *ApiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
 				return nil
 			})
 			defer patch1.Reset()
 			patch2 := gomonkey.ApplyFunc(util.InitRootKeyAndWorkKey, func() error {
 				return errors.New("InitRootKeyAndWorkKey fail")
 			})
+			patch3 := gomonkey.ApplyFunc(util.TLSConfig, func(string) (*tls.Config, error) {
+				return nil, nil
+			})
+			defer patch3.Reset()
 			defer patch2.Reset()
 			res := doInitialization(&network)
 			So(res, ShouldBeFalse)

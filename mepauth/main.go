@@ -133,7 +133,16 @@ func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
 }
 
 func doInitialization(trustedNetworks *[]byte) bool {
-	err := initAPIGateway(trustedNetworks)
+
+	config, err := util.TLSConfig("apigw_cacert")
+	if err != nil {
+		log.Error("unable to read certificate")
+		return false
+	}
+
+	initializer := &ApiGwInitializer{tlsConfig:config}
+
+	err = initializer.InitAPIGateway(trustedNetworks)
 	if err != nil {
 		log.Error("Failed to init api gateway.")
 		return false

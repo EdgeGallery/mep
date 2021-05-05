@@ -18,37 +18,41 @@ package main
 
 import (
 	"errors"
-	"testing"
-
 	. "github.com/agiledragon/gomonkey"
 	"github.com/astaxie/beego"
 	log "github.com/sirupsen/logrus"
-	. "github.com/smartystreets/goconvey/convey"
-
 	"mepauth/util"
+	"reflect"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestInitAPIGateway(t *testing.T) {
 
 	Convey("init api gateway", t, func() {
 		Convey("for success", func() {
+			var initializer *ApiGwInitializer
 			patches := ApplyFunc(util.GetAPIGwURL, func() (string, error) {
 				return "https://127.0.0.1:8444", nil
 			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetApiGwConsumer", func(*ApiGwInitializer, string) error {
+				return nil
+			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupKongMepServer", func(*ApiGwInitializer, string) error {
+				return nil
+			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupKongMepAuth", func(*ApiGwInitializer, string, *[]byte) error {
+				return nil
+			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupHttpLogPlugin", func(*ApiGwInitializer, string) error {
+				return nil
+			})
 			defer patches.Reset()
-			patches.ApplyFunc(setApiGwConsumer, func(_ string) error {
-				return nil
-			})
-			patches.ApplyFunc(setupKongMepServer, func(_ string) error {
-				return nil
-			})
-			patches.ApplyFunc(setupKongMepAuth, func(_ string, _ *[]byte) error {
-				return nil
-			})
-			patches.ApplyFunc(setupHttpLogPlugin, func(_ string) error {
-				return nil
-			})
-			err := initAPIGateway(nil)
+
+			config, err := util.TLSConfig("apigw_cacert")
+			i := ApiGwInitializer{tlsConfig:config}
+			err = i.InitAPIGateway(nil)
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - get apigw url error", func() {
@@ -56,7 +60,8 @@ func TestInitAPIGateway(t *testing.T) {
 				return "", errors.New("get apigw url error")
 			})
 			defer patches.Reset()
-			err := initAPIGateway(nil)
+			i := &ApiGwInitializer{}
+			err := i.InitAPIGateway(nil)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - set apigw consumer error", func() {
@@ -64,10 +69,12 @@ func TestInitAPIGateway(t *testing.T) {
 				return "https://127.0.0.1:8444", nil
 			})
 			defer patches.Reset()
-			patches.ApplyFunc(setApiGwConsumer, func(_ string) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetApiGwConsumer", func(*ApiGwInitializer, string) error {
 				return errors.New("set apigw consumer error")
 			})
-			err := initAPIGateway(nil)
+			i := &ApiGwInitializer{}
+			err := i.InitAPIGateway(nil)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - setup kong mepserver error", func() {
@@ -75,13 +82,15 @@ func TestInitAPIGateway(t *testing.T) {
 				return "https://127.0.0.1:8444", nil
 			})
 			defer patches.Reset()
-			patches.ApplyFunc(setApiGwConsumer, func(_ string) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetApiGwConsumer", func(*ApiGwInitializer, string) error {
 				return nil
 			})
-			patches.ApplyFunc(setupKongMepServer, func(_ string) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupKongMepServer", func(*ApiGwInitializer, string) error {
 				return errors.New("setup kong mepserver error")
 			})
-			err := initAPIGateway(nil)
+			i := &ApiGwInitializer{}
+			err := i.InitAPIGateway(nil)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - setup kong mepauth error", func() {
@@ -89,16 +98,18 @@ func TestInitAPIGateway(t *testing.T) {
 				return "https://127.0.0.1:8444", nil
 			})
 			defer patches.Reset()
-			patches.ApplyFunc(setApiGwConsumer, func(_ string) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetApiGwConsumer", func(*ApiGwInitializer, string) error {
 				return nil
 			})
-			patches.ApplyFunc(setupKongMepServer, func(_ string) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupKongMepServer", func(*ApiGwInitializer, string) error {
 				return nil
 			})
-			patches.ApplyFunc(setupKongMepAuth, func(_ string, _ *[]byte) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SetupKongMepAuth", func(*ApiGwInitializer, string, *[]byte) error {
 				return errors.New("setup kong mepauth error")
 			})
-			err := initAPIGateway(nil)
+			i := &ApiGwInitializer{}
+			err := i.InitAPIGateway(nil)
 			So(err, ShouldNotBeNil)
 		})
 
@@ -108,19 +119,23 @@ func TestInitAPIGateway(t *testing.T) {
 func TestSetupHttpLogPlugin(t *testing.T) {
 	Convey("Setup HttpLog Plugin", t, func() {
 		Convey("for success", func() {
-			patch1 := ApplyFunc(util.SendPostRequest, func(string, []byte) error {
+			var initializer *ApiGwInitializer
+			patch1 := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
 			defer patch1.Reset()
-			err := setupHttpLogPlugin("")
+			i := &ApiGwInitializer{}
+			err := i.SetupHttpLogPlugin("")
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail", func() {
-			patch1 := ApplyFunc(util.SendPostRequest, func(string, []byte) error {
+			var initializer *ApiGwInitializer
+			patch1 := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return errors.New("error")
 			})
 			defer patch1.Reset()
-			err := setupHttpLogPlugin("")
+			i := &ApiGwInitializer{}
+			err := i.SetupHttpLogPlugin("")
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -133,29 +148,34 @@ func TestSetApiGwConsumer(t *testing.T) {
 	}
 	Convey("set api gateway consumer", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
 			patches.ApplyFunc(util.GetPublicKey, func() ([]byte, error) {
 				return []byte("public_key"), nil
 			})
 			defer patches.Reset()
-			err := setApiGwConsumer("https://127.0.0.1:8444")
+			i := &ApiGwInitializer{}
+			err := i.SetApiGwConsumer("https://127.0.0.1:8444")
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - send post request error", func() {
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return errors.New("send post request error")
 			})
 			patches.ApplyFunc(util.GetPublicKey, func() ([]byte, error) {
 				return []byte("public_key"), nil
 			})
 			defer patches.Reset()
-			err := setApiGwConsumer("https://127.0.0.1:8444")
+			i := &ApiGwInitializer{}
+			err := i.SetApiGwConsumer("https://127.0.0.1:8444")
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - mepauth_key empty", func() {
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
 			patches.ApplyFunc(util.GetPublicKey, func() ([]byte, error) {
@@ -164,7 +184,8 @@ func TestSetApiGwConsumer(t *testing.T) {
 			beego.AppConfig.Set("mepauth_key", "")
 			defer patches.Reset()
 			defer beego.AppConfig.Set("mepauth_key", "mepauth")
-			err := setApiGwConsumer("https://127.0.0.1:8444")
+			i := &ApiGwInitializer{}
+			err := i.SetApiGwConsumer("https://127.0.0.1:8444")
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -177,26 +198,30 @@ func TestSetupKongMepServer(t *testing.T) {
 	}
 	Convey("set kong mep server", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
-			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "AddServiceRoute", func(*ApiGwInitializer, string, []string, string, bool) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := setupKongMepServer("https://127.0.0.1:8444")
+			i := &ApiGwInitializer{}
+			err := i.SetupKongMepServer("https://127.0.0.1:8444")
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - send post request error", func() {
-
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return errors.New("send post request error")
 			})
-			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "AddServiceRoute", func(*ApiGwInitializer, string, []string, string, bool) error {
 				return nil
 			})
+
 			defer patches.Reset()
-			err := setupKongMepServer("https://127.0.0.1:8444")
+			i := &ApiGwInitializer{}
+			err := i.SetupKongMepServer("https://127.0.0.1:8444")
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -209,28 +234,31 @@ func TestSetupKongMepAuth(t *testing.T) {
 	}
 	Convey("set kong mep auth", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
-			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "AddServiceRoute", func(*ApiGwInitializer, string, []string, string, bool) error {
 				return nil
 			})
 			beego.AppConfig.Set("HTTPSAddr", "127.0.0.1")
 			defer patches.Reset()
 			defer beego.AppConfig.Set("HTTPSAddr", "")
-			err := setupKongMepAuth("https://127.0.0.1:8444", nil)
+			i := &ApiGwInitializer{}
+			err := i.SetupKongMepAuth("https://127.0.0.1:8444", nil)
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - send post request error", func() {
-
-			patches := ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches := ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return errors.New("send post request error")
 			})
-			patches.ApplyFunc(addServiceRoute, func(_ string, _ []string, _ string, _ bool) error {
+			patches.ApplyMethod(reflect.TypeOf(initializer), "AddServiceRoute", func(*ApiGwInitializer, string, []string, string, bool) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := setupKongMepAuth("https://127.0.0.1:8444", nil)
+			i := &ApiGwInitializer{}
+			err := i.SetupKongMepAuth("https://127.0.0.1:8444", nil)
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -239,7 +267,8 @@ func TestSetupKongMepAuth(t *testing.T) {
 func TestGetTrustedIpList(t *testing.T) {
 	Convey("Get TrustedIp List", t, func() {
 		list := []string{"abc.com"}
-		ipList := getTrustedIpList(list)
+		i := &ApiGwInitializer{}
+		ipList := i.getTrustedIpList(list)
 		So(ipList, ShouldNotBeNil)
 	})
 }
@@ -254,11 +283,13 @@ func TestAddServiceRoute(t *testing.T) {
 			patches := ApplyFunc(util.GetAPIGwURL, func() (string, error) {
 				return "https://127.0.0.1:8444", nil
 			})
-			patches.ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
+			i := &ApiGwInitializer{}
+			err := i.AddServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail - get api gateway url error", func() {
@@ -266,11 +297,13 @@ func TestAddServiceRoute(t *testing.T) {
 			patches := ApplyFunc(util.GetAPIGwURL, func() (string, error) {
 				return "https://127.0.0.1:8444", errors.New("get api gateway url error")
 			})
-			patches.ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
+			i := &ApiGwInitializer{}
+			err := i.AddServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("for fail - send post request error", func() {
@@ -278,11 +311,13 @@ func TestAddServiceRoute(t *testing.T) {
 			patches := ApplyFunc(util.GetAPIGwURL, func() (string, error) {
 				return "https://127.0.0.1:8444", nil
 			})
-			patches.ApplyFunc(util.SendPostRequest, func(_ string, _ []byte) error {
+			var initializer *ApiGwInitializer
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*ApiGwInitializer, string, []byte) error {
 				return errors.New("send post request error")
 			})
 			defer patches.Reset()
-			err := addServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
+			i := &ApiGwInitializer{}
+			err := i.AddServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
 			So(err, ShouldNotBeNil)
 		})
 	})
