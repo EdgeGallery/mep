@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/astaxie/beego"
 	log "github.com/sirupsen/logrus"
 	"mepauth/dbAdapter"
 
@@ -32,7 +31,7 @@ import (
 const AppInsId string = "app_ins_id"
 
 type ConfController struct {
-	beego.Controller
+	BaseController
 }
 
 // @Title Adds AK/SK configuration

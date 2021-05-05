@@ -20,7 +20,6 @@ package controllers
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/astaxie/beego"
 	"mepauth/dbAdapter"
 	"net/http"
 	"regexp"
@@ -41,7 +40,7 @@ const XRealIp string = "X-Real-Ip"
 const InternalError string = "Internal server error."
 
 type TokenController struct {
-	beego.Controller
+	BaseController
 }
 
 // @Title Process token information
