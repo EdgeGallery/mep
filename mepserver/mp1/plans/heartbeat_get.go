@@ -45,7 +45,6 @@ type GetOneDecodeHeartbeat struct {
 	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
-// OnRequest
 func (t *GetOneDecodeHeartbeat) OnRequest(data string) workspace.TaskCode {
 	var err error
 	log.Infof("Received message of get heartbeat from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
@@ -101,7 +100,6 @@ type GetOneInstanceHeartbeat struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
 func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {
@@ -132,12 +130,6 @@ func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	t.HttpRsp = mp1Rsp
-	_, err := json.Marshal(mp1Rsp)
-	if err != nil {
-		log.Error("heartbeat's marshal service info failed", nil)
-		t.SetFirstErrorCode(meputil.ParseInfoErr, "heartbeat's marshal service info failed")
-		return workspace.TaskFinish
-	}
 	log.Debugf("Response for service information in heartbeat with subscriptionId %s", req.ProviderServiceId)
 	return workspace.TaskFinish
 }
