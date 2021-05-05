@@ -70,12 +70,14 @@ const (
 	JwtPlugin                       = "jwt"
 )
 
-// Error code related constants
+// REST error response related constants
 const (
-	BadRequest   = 400
-	Unauthorized = 401
-	Forbidden    = 403
-	IntSerErr    = 500
+	Success                = 200
+	BadRequest             = 400
+	Unauthorized           = 401
+	Forbidden              = 403
+	IntSerErr              = 500
+	ClientIpaddressInvalid = "clientIp address is invalid"
 )
 
 // Other

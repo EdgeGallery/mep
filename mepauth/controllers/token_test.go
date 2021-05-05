@@ -47,10 +47,10 @@ func TestValidateDateTimeFormat(t *testing.T) {
 			log.Error("prepare http request failed")
 		}
 		req.Header.Set(util.DateHeader, util.DateFormat)
-		ok := validateDateTimeFormat(req)
+		ok := isDateTimeFormatValid(req)
 		So(ok, ShouldBeTrue)
 		req.Header.Set(util.DateHeader, "20200930")
-		ok = validateDateTimeFormat(req)
+		ok = isDateTimeFormatValid(req)
 		So(ok, ShouldBeFalse)
 	})
 }
@@ -94,7 +94,8 @@ func TestValidateSignature(t *testing.T) {
 				return true, nil
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for fail - sig invalid", func() {
@@ -102,7 +103,8 @@ func TestValidateSignature(t *testing.T) {
 				return true, errors.New("ak is invalid")
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for fail - sig invalid 2", func() {
@@ -113,7 +115,8 @@ func TestValidateSignature(t *testing.T) {
 				return
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
 	})
