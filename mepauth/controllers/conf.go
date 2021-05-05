@@ -46,29 +46,20 @@ type ConfController struct {
 func (c *ConfController) Put() {
 	var appAuthInfo *models.AppAuthInfo
 	var err error
+	// Get application instance ID from param
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
+		// Get AK
 		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
 		log.Infof("conf ak/sk ak=%s", ak)
+		// Get SK
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
-		cipherSkBytes, nonceBytes, err2 := getCipherAndNonce(&skByte)
-		if err2 != nil {
-			c.Data["json"] = err2.Error()
-			c.ServeJSON()
-			return
-		}
-		authInfoRecord := &models.AuthInfoRecord{
-			AppInsId: appInsId,
-			Ak:       ak,
-			Sk:       string(cipherSkBytes),
-			Nonce:    string(nonceBytes),
-		}
-		err = dbAdapter.Db.InsertOrUpdateData(authInfoRecord, AppInsId)
-		if err != nil && err.Error() != util.PgOkMsg {
+		err := ConfigureAkAndSk(appInsId, ak, &skByte)
+		if err != nil {
 			c.Data["json"] = err.Error()
 		}
 	} else {
