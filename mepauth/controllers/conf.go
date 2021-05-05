@@ -77,6 +77,11 @@ func (c *ConfController) Put() {
 // @router /appMng/v1/applications/:applicationId/confs [delete]
 func (c *ConfController) Delete() {
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
+	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
+		log.Error("AppInstanceId: " + appInsId + " is invalid.")
+		c.writeErrorResponse("Delete fail.", util.BadRequest)
+		return
+	}
 	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
 
 	authInfoRecord := &models.AuthInfoRecord{
@@ -102,6 +107,11 @@ func (c *ConfController) Delete() {
 // @router /appMng/v1/applications/:applicationId/confs [get]
 func (c *ConfController) Get() {
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
+	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
+		log.Error("AppInstanceId: " + appInsId + " is invalid.")
+		c.writeErrorResponse("Delete fail.", util.BadRequest)
+		return
+	}
 
 	authInfoRecord := &models.AuthInfoRecord{
 		AppInsId: appInsId,
