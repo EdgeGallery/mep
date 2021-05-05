@@ -43,28 +43,42 @@ type ConfController struct {
 // @Failure 400 bad request
 // @router /appMng/v1/applications/:applicationId/confs [put]
 func (c *ConfController) Put() {
+	log.Info("Put AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
+	c.displayReceivedMsg(clientIp)
 	var appAuthInfo *models.AppAuthInfo
-	var err error
 	// Get application instance ID from param
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
-	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
 		// Get AK
 		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
-		log.Infof("conf ak/sk ak=%s", ak)
 		// Get SK
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
 		err := ConfigureAkAndSk(appInsId, ak, &skByte)
-		if err != nil {
-			c.Data["json"] = err.Error()
+
+		switch err.Error() {
+		case util.AppIDFailMsg:
+			c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for application instance ID")
+			return
+		case util.AkFailMsg:
+		case util.SkFailMsg:
+			c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for ak or sk")
+			return
+		default:
+			c.handleLoggingForError(clientIp, util.IntSerErr, "Error while saving configuration")
 		}
 	} else {
-		c.Data["json"] = err.Error()
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
 	}
-	c.ServeJSON()
+	c.handleLoggingForSuccess(clientIp, "")
 }
 
 // @Title Deletes AK/SK configuration
@@ -75,26 +89,32 @@ func (c *ConfController) Put() {
 // @Failure 400 bad request
 // @router /appMng/v1/applications/:applicationId/confs [delete]
 func (c *ConfController) Delete() {
-	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
-	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
-		log.Error("AppInstanceId: " + appInsId + " is invalid.")
-		c.writeErrorResponse("Delete fail.", util.BadRequest)
+
+	log.Info("Delete AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
 		return
 	}
-	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
+	c.displayReceivedMsg(clientIp)
+
+	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
+	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
+		return
+	}
 
 	authInfoRecord := &models.AuthInfoRecord{
 		AppInsId: appInsId,
 	}
 
-	err := dbAdapter.Db.DeleteData(authInfoRecord, AppInsId)
+	err = dbAdapter.Db.DeleteData(authInfoRecord, AppInsId)
 	if err != nil {
-		c.writeErrorResponse("Delete fail.", util.BadRequest)
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
 		return
 	}
-
-	c.Data["json"] = "Delete success."
-	c.ServeJSON()
+	c.handleLoggingForSuccess(clientIp, "")
 }
 
 // @Title Gets AK/SK configuration
@@ -105,10 +125,19 @@ func (c *ConfController) Delete() {
 // @Failure 400 bad request
 // @router /appMng/v1/applications/:applicationId/confs [get]
 func (c *ConfController) Get() {
+
+	log.Info("Get AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
+	c.displayReceivedMsg(clientIp)
+
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
-		log.Error("AppInstanceId: " + appInsId + " is invalid.")
-		c.writeErrorResponse("Delete fail.", util.BadRequest)
+		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
 		return
 	}
 
@@ -116,12 +145,15 @@ func (c *ConfController) Get() {
 		AppInsId: appInsId,
 	}
 
-	err := dbAdapter.Db.ReadData(authInfoRecord, AppInsId)
+	err = dbAdapter.Db.ReadData(authInfoRecord, AppInsId)
 	if err != nil && err.Error() != util.PgOkMsg {
-		c.Data["json"] = err.Error()
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		return
 	}
 	c.Data["json"] = authInfoRecord
 	c.ServeJSON()
+	log.Info("Response message for ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
+		Resource + c.Ctx.Input.URL() + "] Result [Success]")
 }
 
 func (c *ConfController) writeErrorResponse(errMsg string, code int) {

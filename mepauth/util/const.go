@@ -85,3 +85,11 @@ const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUy
 const PgOkMsg string = "LastInsertId is not supported by this driver"
 const ContentType string = "Content-Type"
 const JsonUtf8 string = "application/json; charset=utf-8"
+
+// Failure messages
+const (
+	AppIDFailMsg = "Application Instance ID validation failed"
+	AkFailMsg    = "validate ak failed"
+	SkFailMsg    = "validate sk failed"
+)
+
