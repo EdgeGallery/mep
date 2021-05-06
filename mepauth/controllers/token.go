@@ -20,6 +20,7 @@ package controllers
 import (
 	"encoding/hex"
 	"errors"
+	"mepauth/dbAdapter"
 	"net/http"
 	"regexp"
 	"strings"
@@ -27,8 +28,6 @@ import (
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/astaxie/beego"
 
 	"mepauth/models"
 	"mepauth/util"
@@ -41,60 +40,59 @@ const XRealIp string = "X-Real-Ip"
 const InternalError string = "Internal server error."
 
 type TokenController struct {
-	beego.Controller
+	BaseController
 }
 
-// Process token request
+// @Title Process token information
+// @Description create token and return the same
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   Authorization  header  string  true   "Certification Information"
+// @Param   x-sdk-date     header  string  true   "Signature time, current timestamp, format: YYYYMMDDTHHMMSSZ"
+// @Param   Host           header  string  true   "Consistent with the host field used to generate the authentication information signature"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /token [post]
 func (c *TokenController) Post() {
-	header := c.Ctx.Input.Header(Authorization)
+	log.Info("Get token request received.")
 	clientIp := c.Ctx.Request.Header.Get(XRealIp)
-	log.Infof("Get token clientIp: %s", clientIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
 	// Below we first check the formats of the header is correct or not
+	header := c.Ctx.Input.Header(Authorization)
 	ak, signHeader, sig := parseAuthHeader(header)
 	if ak == "" || signHeader == "" || sig == "" {
-		log.Error("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
-			" Resource [" + c.Ctx.Input.URL() + "]")
-		c.writeErrorResponse("Bad request.", util.BadRequest)
-		log.Error("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
-			" Resource [" + c.Ctx.Input.URL() + "] Result [Failure: Bad auth header format.]")
+		c.logReceivedMsg(clientIp)
+		c.handleLoggingForError(clientIp, util.BadRequest, "Bad auth header format")
 		return
 	}
 
-	isTimeValid := validateDateTimeFormat(c.Ctx.Request)
-	if !isTimeValid {
-		log.Error("Received message from ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
-			" Resource [" + c.Ctx.Input.URL() + "]")
-		c.writeErrorResponse("Bad request.", util.BadRequest)
-		log.Error("Response message for ClientIP [" + clientIp + "] Operation [" + c.Ctx.Request.Method + "]" +
-			" Resource [" + c.Ctx.Input.URL() + "] Result [Failure: Bad x-sdk-time format.]")
+	if !isDateTimeFormatValid(c.Ctx.Request) {
+		c.logReceivedMsg(clientIp)
+		c.handleLoggingForError(clientIp, util.BadRequest, "Bad x-sdk-time format")
 		return
 	}
 
-	log.Info("Received message from ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-		" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]")
+	c.logReceivedMsgWithAk(clientIp, ak)
 
-	isAkBlockListed := IsAkInBlockList(ak)
-	if isAkBlockListed {
+	if IsAkInBlockList(ak) {
 		c.writeErrorResponse("Access is locked.", util.Forbidden)
-		log.Error("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
-			" Result [Failure: Ak is blockListed.]")
+		c.logErrResponseMsgWithAk(clientIp, "Ak is blockListed", ak)
 		return
 	}
 
 	appInsId, sk, akExist := GetAppInsIdSk(ak)
 	if appInsId == "" || sk == nil || len(sk) == 0 {
 		c.checkAkExistAndWriteErrorRes(akExist)
-		log.Error("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
-			" Result [Failure: Matching App instance id not found.]")
+		c.logErrResponseMsgWithAk(clientIp, "Matching App instance id not found", ak)
 		return
 	}
 
 	log.Info("Corresponding App Instance Id " + appInsId + " found for ClientAK " + ak)
 
-	ret := c.validateSignature(ak, sk, signHeader, sig)
-	if !ret {
+	if !c.isSignatureValid(ak, sk, signHeader, sig, clientIp) {
 		return
 	}
 	ClearAkFromBlockListing(ak)
@@ -103,19 +101,7 @@ func (c *TokenController) Post() {
 	if tokenInfo == nil {
 		return
 	}
-
-	c.sendResponseMsg(ak, tokenInfo)
-}
-
-func (c *TokenController) writeErrorResponse(errMsg string, code int) {
-	log.Error(errMsg)
-	c.writeResponse(errMsg, code)
-}
-
-func (c *TokenController) writeResponse(msg string, code int) {
-	c.Data["json"] = msg
-	c.Ctx.ResponseWriter.WriteHeader(code)
-	c.ServeJSON()
+	c.sendResponseMsg(ak, tokenInfo, clientIp)
 }
 
 type JwtClaims struct {
@@ -170,13 +156,13 @@ func GetAppInsIdSk(ak string) (string, []byte, bool) {
 	authInfoRecord := &models.AuthInfoRecord{
 		Ak: ak,
 	}
-	readErr := ReadData(authInfoRecord, "ak")
+	readErr := dbAdapter.Db.ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != util.PgOkMsg {
 		log.Error("auth info record does not exist")
 		return "", nil, false
 	}
 	encodedSk := []byte(authInfoRecord.Sk)
-	cipherSkBytes := make([]byte, hex.DecodedLen(len(encodedSk)), 200)
+	cipherSkBytes := make([]byte, hex.DecodedLen(len(encodedSk)), util.Success)
 	_, errDecodeSk := hex.Decode(cipherSkBytes, encodedSk)
 	if errDecodeSk != nil {
 		log.Error("decode secret key failed")
@@ -227,7 +213,7 @@ func akSignatureIsValid(r *http.Request, ak string, sk []byte, signHeader string
 	for _, h := range strings.Split(signHeader, ";") {
 		reqToBeSigned.Header.Set(h, r.Header.Get(h))
 	}
-	reqToBeSigned.Header.Set(util.HOST_HEADER, r.Host)
+	reqToBeSigned.Header.Set(util.HostHeader, r.Host)
 
 	signature, err := s.GetSignature(reqToBeSigned)
 	if err != nil {
@@ -253,43 +239,36 @@ func parseAuthHeader(header string) (ak string, signHeader string, sig string) {
 	return matchVars[1], matchVars[2], matchVars[3]
 }
 
-func validateDateTimeFormat(req *http.Request) bool {
-	stringXSdkTime := req.Header.Get(util.DATE_HEADER)
+func isDateTimeFormatValid(req *http.Request) bool {
+	stringXSdkTime := req.Header.Get(util.DateHeader)
 	if stringXSdkTime == "" {
 		return false
 	}
-	_, err := time.Parse(util.DATE_FORMAT, stringXSdkTime)
+	_, err := time.Parse(util.DateFormat, stringXSdkTime)
 	if err != nil {
 		log.Error("validate datetimeformat failed")
 		return false
 	}
 	return true
-
 }
 
-func (c *TokenController) validateSignature(ak string, sk []byte, signHeader string, sig string) bool {
+func (c *TokenController) isSignatureValid(ak string, sk []byte, signHeader string, sig string, clientIp string) bool {
 	signIsValid, err := akSignatureIsValid(c.Ctx.Request, ak, sk, signHeader, sig)
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
 
 	// clear sk
 	util.ClearByteArray(sk)
 	if err != nil {
-		c.writeResponse(InternalError, util.IntSerErr)
-		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
-			" Result[Failure: Generating signature failed.]")
+		c.writeErrorResponse(InternalError, util.IntSerErr)
+		c.logErrResponseMsgWithAk(clientIp, "Generating signature failed", ak)
 		return false
 	}
 
 	if !signIsValid {
 		ProcessAkForBlockListing(ak)
-		c.writeResponse("Invalid access or signature.", util.Unauthorized)
-		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
-			" Result [Failure: Signature is invalid.]")
+		c.writeErrorResponse("Invalid access or signature.", util.Unauthorized)
+		c.logErrResponseMsgWithAk(clientIp, "Signature is invalid", ak)
 		return false
 	}
-
 	return true
 }
 
@@ -301,10 +280,8 @@ func (c *TokenController) getTokenInfo(appInsId string, ak string) *models.Token
 
 	token, err := generateJwtToken(appInsId, clientIp)
 	if err != nil {
-		c.writeResponse(InternalError, util.IntSerErr)
-		log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-			" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "]" +
-			" Result [Failure: Generation of jwt token failed.]")
+		c.writeErrorResponse(InternalError, util.IntSerErr)
+		c.logErrResponseMsgWithAk(clientIp, "Generation of jwt token failed", ak)
 		return nil
 	}
 
@@ -324,8 +301,7 @@ func (c *TokenController) checkAkExistAndWriteErrorRes(akExist bool) {
 	}
 }
 
-func (c *TokenController) sendResponseMsg(ak string, tokenInfo *models.TokenInfo) {
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+func (c *TokenController) sendResponseMsg(ak string, tokenInfo *models.TokenInfo, clientIp string) {
 	c.Data["json"] = tokenInfo
 	c.ServeJSON()
 	bKey := *(*[]byte)(unsafe.Pointer(&tokenInfo.AccessToken))

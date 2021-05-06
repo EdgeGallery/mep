@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Huawei Technologies Co., Ltd.
+ * Copyright 2021 Huawei Technologies Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-// MEP Auth APIs
-// @APIVersion 1.0.0
-// @Title MEP Auth API
-// @Description APIs for MEP authentication
-// @TermsOfServiceUrl http://beego.me/
-package routers
+package dbAdapter
 
-import (
-	"github.com/astaxie/beego"
-	"mepauth/controllers"
-)
+// Database API's
+type Database interface {
+	// Initialize database
+	InitDatabase() error
 
-// Init mepauth APIs
-func init() {
+	// Insert data into database
+	InsertData(data interface{}) (err error)
 
-	ns := beego.NewNamespace("/mep/",
-		beego.NSInclude(
-			&controllers.ConfController{},
-			&controllers.OneRouteController{},
-			&controllers.TokenController{},
-		),
-	)
-	beego.AddNamespace(ns)
+	// Insert or update data into database
+	InsertOrUpdateData(data interface{}, cols ...string) (err error)
+
+	// Read data from database
+	ReadData(data interface{}, cols ...string) (err error)
+
+	// Delete data from database
+	DeleteData(data interface{}, cols ...string) (err error)
 }

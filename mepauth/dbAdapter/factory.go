@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Huawei Technologies Co., Ltd.
+ * Copyright 2021 Huawei Technologies Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,28 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// MEP Auth APIs
-// @APIVersion 1.0.0
-// @Title MEP Auth API
-// @Description APIs for MEP authentication
-// @TermsOfServiceUrl http://beego.me/
-package routers
+package dbAdapter
 
 import (
-	"github.com/astaxie/beego"
-	"mepauth/controllers"
+	"errors"
+	"mepauth/util"
+	"os"
 )
 
-// Init mepauth APIs
-func init() {
+var Db Database
 
-	ns := beego.NewNamespace("/mep/",
-		beego.NSInclude(
-			&controllers.ConfController{},
-			&controllers.OneRouteController{},
-			&controllers.TokenController{},
-		),
-	)
-	beego.AddNamespace(ns)
+// Init Db adapter
+func getDbAdapter() (Database, error) {
+	dbAdapter := util.GetAppConfig("dbAdapter")
+	switch dbAdapter {
+	case "pgDb":
+		db := &PgDb{}
+		err := db.InitDatabase()
+		if err != nil {
+			return nil, errors.New("failed to register database")
+		}
+		return db, nil
+	default:
+		return nil, errors.New("no database is found")
+	}
+}
+
+// Init Db
+func InitDb() (pgDb Database) {
+	db, err := getDbAdapter()
+	if err != nil {
+		os.Exit(1)
+	}
+	return db
 }

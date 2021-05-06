@@ -38,8 +38,8 @@ func TestGetSignature(t *testing.T) {
 			log.Error("prepare http request to generate signature is failed")
 		}
 		reqToBeSigned.Header.Set("content-type", "json")
-		reqToBeSigned.Header.Set(HOST_HEADER, host)
-		reqToBeSigned.Header.Set(DATE_HEADER, DATE_FORMAT)
+		reqToBeSigned.Header.Set(HostHeader, host)
+		reqToBeSigned.Header.Set(DateHeader, DateFormat)
 		signature, err := s.GetSignature(reqToBeSigned)
 		So(signature, ShouldNotBeNil)
 		So(err, ShouldBeNil)

@@ -17,7 +17,7 @@
 package controllers
 
 import (
-	"errors"
+	"mepauth/dbAdapter"
 	"mepauth/util"
 	"net/http/httptest"
 	"reflect"
@@ -34,12 +34,16 @@ import (
 )
 
 func TestRouteGet(t *testing.T) {
+	dbAdapter.Db = &dbAdapter.PgDb{}
 	convey.Convey("route get", t, func() {
 		convey.Convey("for success", func() {
 			c := getBeegoController()
-			patch1 := gomonkey.ApplyFunc(ReadData, func(data interface{}, cols ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			defer patch1.Reset()
 			var s *beego.Controller
 			patch2 := gomonkey.ApplyMethod(reflect.TypeOf(s), "ServeJSON", func(_ *beego.Controller, encoding ...bool) {
@@ -56,9 +60,12 @@ func TestRouteGet(t *testing.T) {
 
 		convey.Convey("for fail", func() {
 			c := getBeegoController()
-			patch1 := gomonkey.ApplyFunc(ReadData, func(data interface{}, cols ...string) error {
-				return errors.New("ReadData fail")
+
+			var pgdb *dbAdapter.PgDb
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+				return nil
 			})
+
 			defer patch1.Reset()
 			var s *beego.Controller
 			patch2 := gomonkey.ApplyMethod(reflect.TypeOf(s), "ServeJSON", func(_ *beego.Controller, encoding ...bool) {
@@ -76,12 +83,16 @@ func TestRouteGet(t *testing.T) {
 }
 
 func TestRoutePut(t *testing.T) {
+	dbAdapter.Db = &dbAdapter.PgDb{}
 	convey.Convey("route put", t, func() {
 		convey.Convey("for success", func() {
 			c := getBeegoController()
-			patch1 := gomonkey.ApplyFunc(InsertData, func(data interface{}) error {
+
+			var pgdb *dbAdapter.PgDb
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "InsertData", func(*dbAdapter.PgDb, interface{}) error {
 				return nil
 			})
+
 			defer patch1.Reset()
 			patch2 := gomonkey.ApplyFunc(httplib.Post, func(url string) *httplib.BeegoHTTPRequest {
 				return &httplib.BeegoHTTPRequest{}

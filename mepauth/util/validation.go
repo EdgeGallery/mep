@@ -34,7 +34,7 @@ func ValidateUUID(id string) error {
 		validate := validator.New()
 		res := validate.Var(id, "required,uuid")
 		if res != nil {
-			return errors.New("UUID validate failed")
+			return errors.New(AppIDFailMsg)
 		}
 	} else {
 		return errors.New("UUID validate failed")
@@ -46,7 +46,7 @@ func ValidateUUID(id string) error {
 func ValidateAk(ak string) error {
 	isMatch, errMatch := regexp.MatchString(AkRegex, ak)
 	if errMatch != nil || !isMatch {
-		return errors.New("validate ak failed")
+		return errors.New(AkFailMsg)
 	}
 	return nil
 }
@@ -55,7 +55,7 @@ func ValidateAk(ak string) error {
 func ValidateSk(sk *[]byte) error {
 	isMatch, errMatch := regexp.Match(SkRegex, *sk)
 	if errMatch != nil || !isMatch {
-		return errors.New("validate sk failed")
+		return errors.New(SkFailMsg)
 	}
 	return nil
 }
@@ -143,6 +143,7 @@ func ValidateIpAndCidr(trustedNetworkList []string) (bool, error) {
 	return true, nil
 }
 
+// Validates application configurations related arguments
 func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	args := []string{"KEY_COMPONENT", "JWT_PRIVATE_KEY", "APP_INST_ID", "ACCESS_KEY", "SECRET_KEY"}
 	for _, s := range args {
@@ -160,6 +161,7 @@ func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	return true
 }
 
+// Validates key component user string against minimum length
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < ComponentSize {
 		log.Error("key component user string length is not valid")

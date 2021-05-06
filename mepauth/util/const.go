@@ -17,52 +17,79 @@
 // util package
 package util
 
-const MepAppJwtName string = "mepauth.jwt"
-const PortRegex string = `^([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$`
-const ServerNameRegex string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
-const AkRegex string = `^\w{20}$`
-const SkRegex string = `^\w{64}$`
-const AuthHeaderRegex string = `^SDK-HMAC-SHA256 Access=([\w=+/]{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
-const MepserverName = "mepserver"
-const MepServerServiceMgmt = "/mep/mec_service_mgmt"
-const MepServerAppSupport = "/mep/mec_app_support"
-const MepauthName = "mepauth"
-const MepserverRateConf = `{ "minute": 1000, "policy": "local", "hide_client_headers": true }`
-const MepserverPreFunctionConf = `{ "functions": ["ngx.var.upstream_x_forwarded_for=UNKNOWN"] }`
-const MepauthRateConf = `{ "minute": 100, "policy": "local", "hide_client_headers": true }`
-const ResponseTransformerConf = `{ "name": "response-transformer", "config": { "remove": { "headers": ["server"] } } }`
-const JwtPlugin = "jwt"
-const AppidPlugin = "appid-header"
-const PreFunctionPlugin = "pre-function"
-const RateLimitPlugin = "rate-limiting"
-const IpRestrictPlugin = "ip-restriction"
+// Validation related constants
+const (
+	PortRegex              string = `^([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$`
+	ServerNameRegex        string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
+	AkRegex                string = `^\w{20}$`
+	SkRegex                string = `^\w{64}$`
+	AuthHeaderRegex        string = `^SDK-HMAC-SHA256 Access=([\w=+/]{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
+	ValidationCounter      int64  = 3
+	ValidateListClearTimer int64  = 300
+	BlockListClearTimer    int64  = 900
+	specialCharRegex       string = `^.*['~!@#$%^&*()\-_=+\|[{}\];:'",<.>/?].*$`
+	singleDigitRegex       string = `^.*\d.*$`
+	lowerCaseRegex         string = `^.*[a-z].*$`
+	upperCaseRegex         string = `^.*[A-Z].*$`
+	MaxSize                       = 20
+	MaxBackups                    = 50
+	MaxAge                        = 30
+	minPasswordSize               = 8
+	maxPasswordSize               = 16
+	maxPasswordCount              = 2
+	maxHostNameLen                = 253
+	BaseVal                       = 10
+	MaxMatchVarSize               = 3
+	ExpiresVal                    = 3600
+)
+
+// End point related constants
+const (
+	MepserverName               = "mepserver"
+	MepServerServiceMgmt        = "/mep/mec_service_mgmt"
+	MepServerAppSupport         = "/mep/mec_app_support"
+	MepauthName                 = "mepauth"
+	ApigwHost            string = "apigw_host"
+	ApigwPort            string = "apigw_port"
+	UrlApplicationId     string = ":applicationId"
+	UrlRouteId           string = ":routeId"
+)
+
+// Plugin related constants
+const (
+	MepserverRateConf               = `{ "minute": 1000, "policy": "local", "hide_client_headers": true }`
+	MepserverPreFunctionConf        = `{ "functions": ["ngx.var.upstream_x_forwarded_for=UNKNOWN"] }`
+	MepauthRateConf                 = `{ "minute": 100, "policy": "local", "hide_client_headers": true }`
+	ResponseTransformerConf         = `{ "name": "response-transformer", "config": { "remove": { "headers": ["server"] } } }`
+	AppidPlugin                     = "appid-header"
+	PreFunctionPlugin               = "pre-function"
+	RateLimitPlugin                 = "rate-limiting"
+	IpRestrictPlugin                = "ip-restriction"
+	PluginPath               string = "/plugins"
+	MepAppJwtName            string = "mepauth.jwt"
+	JwtPlugin                       = "jwt"
+)
+
+// REST error response related constants
+const (
+	Success                = 200
+	BadRequest             = 400
+	Unauthorized           = 401
+	Forbidden              = 403
+	IntSerErr              = 500
+	ClientIpaddressInvalid = "clientIp address is invalid"
+)
+
+// Other
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
-const ValidationCounter int64 = 3
-const ValidateListClearTimer int64 = 300
-const BlockListClearTimer int64 = 900
-const specialCharRegex string = `^.*['~!@#$%^&*()\-_=+\|[{}\];:'",<.>/?].*$`
-const singleDigitRegex string = `^.*\d.*$`
-const lowerCaseRegex string = `^.*[a-z].*$`
-const upperCaseRegex string = `^.*[A-Z].*$`
-const MaxSize = 20
-const MaxBackups = 50
-const MaxAge = 30
-const BaseVal = 10
-const BadRequest = 400
-const Unauthorized = 401
-const Forbidden = 403
-const IntSerErr = 500
-const MaxMatchVarSize = 3
-const ExpiresVal = 3600
-const minPasswordSize = 8
-const maxPasswordSize = 16
-const maxPasswordCount = 2
-const maxHostNameLen = 253
-const UrlApplicationId string = ":applicationId"
-const UrlRouteId string = ":routeId"
 const PgOkMsg string = "LastInsertId is not supported by this driver"
 const ContentType string = "Content-Type"
 const JsonUtf8 string = "application/json; charset=utf-8"
-const ApigwHost string = "apigw_host"
-const ApigwPort string = "apigw_port"
-const PluginPath string = "/plugins"
+const DevMode = "dev"
+
+// Failure messages
+const (
+	AppIDFailMsg = "Application Instance ID validation failed"
+	AkFailMsg    = "validate ak failed"
+	SkFailMsg    = "validate sk failed"
+)

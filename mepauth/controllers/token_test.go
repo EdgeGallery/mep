@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"mepauth/dbAdapter"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -45,11 +46,11 @@ func TestValidateDateTimeFormat(t *testing.T) {
 		if err != nil {
 			log.Error("prepare http request failed")
 		}
-		req.Header.Set(util.DATE_HEADER, util.DATE_FORMAT)
-		ok := validateDateTimeFormat(req)
+		req.Header.Set(util.DateHeader, util.DateFormat)
+		ok := isDateTimeFormatValid(req)
 		So(ok, ShouldBeTrue)
-		req.Header.Set(util.DATE_HEADER, "20200930")
-		ok = validateDateTimeFormat(req)
+		req.Header.Set(util.DateHeader, "20200930")
+		ok = isDateTimeFormatValid(req)
 		So(ok, ShouldBeFalse)
 	})
 }
@@ -93,7 +94,8 @@ func TestValidateSignature(t *testing.T) {
 				return true, nil
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for fail - sig invalid", func() {
@@ -101,7 +103,8 @@ func TestValidateSignature(t *testing.T) {
 				return true, errors.New("ak is invalid")
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for fail - sig invalid 2", func() {
@@ -112,7 +115,8 @@ func TestValidateSignature(t *testing.T) {
 				return
 			})
 			defer patches.Reset()
-			ok := c.validateSignature(ak, sk, signHeader, sig)
+			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
 	})
@@ -158,12 +162,16 @@ func TestGetAppInsIdSk(t *testing.T) {
 	authInfo.Sk = "sk"
 	authInfo.AppInsId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
 	authInfo.Nonce = "nonce"
+	dbAdapter.Db = &dbAdapter.PgDb{}
 
 	Convey("get app instance id and sk", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(ReadData, func(authInfoRecord interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})
@@ -178,7 +186,8 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for read fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return errors.New("read error")
 			})
 			defer patches.Reset()
@@ -186,9 +195,12 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for decode fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, errors.New("decode fail")
 			})
@@ -198,9 +210,11 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for get work key fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})
@@ -212,9 +226,12 @@ func TestGetAppInsIdSk(t *testing.T) {
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for decrypt fail", func() {
-			patches := ApplyFunc(ReadData, func(_ interface{}, _ ...string) error {
+
+			var pgdb *dbAdapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
+
 			patches.ApplyFunc(hex.Decode, func(_, _ []byte) (int, error) {
 				return 0, nil
 			})
@@ -242,8 +259,8 @@ func TestAkSignatureIsValid(t *testing.T) {
 		log.Error("prepare http request failed")
 	}
 	r.Header.Set("content-type", "json")
-	r.Header.Set(util.HOST_HEADER, "127.0.0.1")
-	r.Header.Set(util.DATE_HEADER, util.DATE_FORMAT)
+	r.Header.Set(util.HostHeader, "127.0.0.1")
+	r.Header.Set(util.DateHeader, util.DateFormat)
 
 	Convey("ak signature is valid", t, func() {
 		Convey("for success", func() {
