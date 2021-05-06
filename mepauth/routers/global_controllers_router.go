@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	ConfController     = "mepauth/controllers:ConfController"
-	OneRouteController = "mepauth/controllers:OneRouteController"
-	TokenController    = "mepauth/controllers:TokenController"
+	ConfController  = "mepauth/controllers:ConfController"
+	TokenController = "mepauth/controllers:TokenController"
 )
 
 const (
@@ -40,7 +39,6 @@ const (
 	AppManagePrefix     string = "/appMng/v1"
 	AuthTokenPath              = RootPath + AuthTokenPrefix
 	AppManagePath              = RootPath + AppManagePrefix
-	OneControllerRoute         = AppManagePrefix + "/routes/:routeId"
 	ConfControllerRoute        = AppManagePrefix + "/applications/:applicationId/confs"
 )
 
@@ -65,31 +63,6 @@ func init() {
 		beego.ControllerComments{
 			Method:           "Get",
 			Router:           ConfControllerRoute,
-			AllowHTTPMethods: []string{GET},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter[OneRouteController] = append(beego.GlobalControllerRouter[OneRouteController],
-		beego.ControllerComments{
-			Method:           "Put",
-			Router:           OneControllerRoute,
-			AllowHTTPMethods: []string{PUT},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-	beego.GlobalControllerRouter[OneRouteController] = append(beego.GlobalControllerRouter[OneRouteController],
-		beego.ControllerComments{
-			Method:           "Delete",
-			Router:           OneControllerRoute,
-			AllowHTTPMethods: []string{DELETE},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-	beego.GlobalControllerRouter[OneRouteController] = append(beego.GlobalControllerRouter[OneRouteController],
-		beego.ControllerComments{
-			Method:           "Get",
-			Router:           OneControllerRoute,
 			AllowHTTPMethods: []string{GET},
 			MethodParams:     param.Make(),
 			Filters:          nil,
