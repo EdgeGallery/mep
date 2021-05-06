@@ -81,11 +81,13 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 	// ]
 
 	zrs := new([]datastore.ZoneEntry)
-	if err := c.Bind(zrs); err != nil {
+	if nil != c.Bind(zrs) {
 		log.Error("Error in parsing the rr post request body.", nil)
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
-	if err := e.validateSetRecordInput(zrs); err != nil {
+
+	err := e.validateSetRecordInput(zrs)
+	if err != nil {
 		log.Error("Error in validating the rr post request body.", err)
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
@@ -143,15 +145,19 @@ func (e *Controller) validateSetRecordInput(zrs *[]datastore.ZoneEntry) error {
 
 func (e *Controller) validateResourceRecords(rr *datastore.ResourceRecord) error {
 	if rr.TTL == 0 ||
-		len(rr.Name) == 0 || len(rr.Name) > util.MaxDnsFQDNLength || len(rr.RData) == 0 {
+		len(rr.Name) == 0 || len(rr.Name) > util.MaxDnsFQDNLength || len(rr.RData) == 0 ||
+		len(rr.Type) == 0 || len(rr.Type) > util.MaxDnsFQDNLength ||
+		len(rr.Class) == 0 || len(rr.Class) > util.MaxDnsFQDNLength {
 		return fmt.Errorf("invalid resource record value")
 	}
 	for _, rData := range rr.RData {
+		mgmtIp := net.ParseIP(rData)
 		if len(rData) == 0 ||
 			len(rData) > util.MaxIPLength ||
-			nil == net.ParseIP(rData) {
+			nil == mgmtIp || mgmtIp.IsMulticast() || mgmtIp.Equal(net.IPv4bcast) {
 			return fmt.Errorf("invalid resource record value")
 		}
+
 	}
 	return nil
 }
@@ -164,7 +170,7 @@ func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
 	}
 	err := e.dataStore.DelResourceRecord(fqdn, rrtype)
 	if err != nil {
-		log.Error("Failed to get the zone entry.", nil)
+		log.Error("Failed to Delete Resource.", nil)
 		return c.String(http.StatusInternalServerError, "Error in retrieving the data.")
 	}
 	return c.String(http.StatusOK, "Success")

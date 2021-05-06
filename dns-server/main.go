@@ -101,9 +101,14 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 
 	// Validate IP address
 	ipAdd := net.ParseIP(*inParam.ipAddString)
-	if ipAdd == nil {
+	if ipAdd == nil  {
 		err := fmt.Errorf("error: parsing ip address failed, not in ipv4/ipv6 format")
 		log.Fatalf( "Failed to parse ip address(%s). %s", *inParam.ipAddString, err.Error())
+	}
+
+	if ipAdd.IsMulticast() || ipAdd.Equal(net.IPv4bcast) {
+		err := fmt.Errorf("error: multicast or broadcast ip address ")
+		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
 	// Validate Management IP address
@@ -113,11 +118,21 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 		log.Fatalf( "Failed to parse management ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
+	if ipMgmtAdd.IsMulticast() || ipMgmtAdd.Equal(net.IPv4bcast) {
+		err := fmt.Errorf("error: multicast or broadcast ip address ")
+		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.ipMgmtAddString, err.Error())
+	}
+
 	// Validate forwarder
 	forwarderAdd := net.ParseIP(*inParam.forwarder)
 	if forwarderAdd == nil {
 		err := fmt.Errorf("error: parsing forwarder failed, not in ipv4/ipv6 format")
 		log.Fatalf( "Failed to parse forwarder address(%s). %s", *inParam.forwarder, err.Error())
+	}
+
+	if forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast) {
+		err := fmt.Errorf("error: multicast or broadcast ip address ")
+		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.forwarder, err.Error())
 	}
 
 	return &Config{dbName: *inParam.dbName,
