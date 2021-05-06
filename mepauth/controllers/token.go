@@ -64,29 +64,29 @@ func (c *TokenController) Post() {
 	header := c.Ctx.Input.Header(Authorization)
 	ak, signHeader, sig := parseAuthHeader(header)
 	if ak == "" || signHeader == "" || sig == "" {
-		c.displayReceivedMsg(clientIp)
+		c.logReceivedMsg(clientIp)
 		c.handleLoggingForError(clientIp, util.BadRequest, "Bad auth header format")
 		return
 	}
 
 	if !isDateTimeFormatValid(c.Ctx.Request) {
-		c.displayReceivedMsg(clientIp)
+		c.logReceivedMsg(clientIp)
 		c.handleLoggingForError(clientIp, util.BadRequest, "Bad x-sdk-time format")
 		return
 	}
 
-	c.displayReceivedMsgWithAk(clientIp, ak)
+	c.logReceivedMsgWithAk(clientIp, ak)
 
 	if IsAkInBlockList(ak) {
 		c.writeErrorResponse("Access is locked.", util.Forbidden)
-		c.displayErrResponseMsgWithAk(clientIp, "Ak is blockListed", ak)
+		c.logErrResponseMsgWithAk(clientIp, "Ak is blockListed", ak)
 		return
 	}
 
 	appInsId, sk, akExist := GetAppInsIdSk(ak)
 	if appInsId == "" || sk == nil || len(sk) == 0 {
 		c.checkAkExistAndWriteErrorRes(akExist)
-		c.displayErrResponseMsgWithAk(clientIp, "Matching App instance id not found", ak)
+		c.logErrResponseMsgWithAk(clientIp, "Matching App instance id not found", ak)
 		return
 	}
 
@@ -259,14 +259,14 @@ func (c *TokenController) isSignatureValid(ak string, sk []byte, signHeader stri
 	util.ClearByteArray(sk)
 	if err != nil {
 		c.writeErrorResponse(InternalError, util.IntSerErr)
-		c.displayErrResponseMsgWithAk(clientIp, "Generating signature failed", ak)
+		c.logErrResponseMsgWithAk(clientIp, "Generating signature failed", ak)
 		return false
 	}
 
 	if !signIsValid {
 		ProcessAkForBlockListing(ak)
 		c.writeErrorResponse("Invalid access or signature.", util.Unauthorized)
-		c.displayErrResponseMsgWithAk(clientIp, "Signature is invalid", ak)
+		c.logErrResponseMsgWithAk(clientIp, "Signature is invalid", ak)
 		return false
 	}
 	return true
@@ -281,7 +281,7 @@ func (c *TokenController) getTokenInfo(appInsId string, ak string) *models.Token
 	token, err := generateJwtToken(appInsId, clientIp)
 	if err != nil {
 		c.writeErrorResponse(InternalError, util.IntSerErr)
-		c.displayErrResponseMsgWithAk(clientIp, "Generation of jwt token failed", ak)
+		c.logErrResponseMsgWithAk(clientIp, "Generation of jwt token failed", ak)
 		return nil
 	}
 

@@ -112,18 +112,18 @@ func main() {
 		log.Error("failed to config tls for beego")
 		return
 	}
-
 	controllers.InitAuthInfoList()
-
 	beego.BeeApp.Server.TLSConfig = tlsConf
+	setSwaggerConfig()
+	beego.ErrorController(&controllers.ErrorController{})
+	beego.Run()
+}
 
-	if beego.BConfig.RunMode == "dev" {
+func setSwaggerConfig() {
+	if beego.BConfig.RunMode == util.DevMode {
 		beego.BConfig.WebConfig.DirectoryIndex = true
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
-
-	beego.ErrorController(&controllers.ErrorController{})
-	beego.Run()
 }
 
 func clearAppConfigOnExit(appConfig util.AppConfigProperties) {

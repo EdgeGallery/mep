@@ -50,7 +50,7 @@ func (c *ConfController) Put() {
 		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
 		return
 	}
-	c.displayReceivedMsg(clientIp)
+	c.logReceivedMsg(clientIp)
 	var appAuthInfo *models.AppAuthInfo
 	// Get application instance ID from param
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
@@ -63,17 +63,18 @@ func (c *ConfController) Put() {
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
 		err := ConfigureAkAndSk(appInsId, ak, &skByte)
-
-		switch err.Error() {
-		case util.AppIDFailMsg:
-			c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for application instance ID")
-			return
-		case util.AkFailMsg:
-		case util.SkFailMsg:
-			c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for ak or sk")
-			return
-		default:
-			c.handleLoggingForError(clientIp, util.IntSerErr, "Error while saving configuration")
+		if err != nil {
+			switch err.Error() {
+			case util.AppIDFailMsg:
+				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for application instance ID")
+				return
+			case util.AkFailMsg:
+			case util.SkFailMsg:
+				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for ak or sk")
+				return
+			default:
+				c.handleLoggingForError(clientIp, util.IntSerErr, "Error while saving configuration")
+			}
 		}
 	} else {
 		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
@@ -97,7 +98,7 @@ func (c *ConfController) Delete() {
 		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
 		return
 	}
-	c.displayReceivedMsg(clientIp)
+	c.logReceivedMsg(clientIp)
 
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
@@ -133,7 +134,7 @@ func (c *ConfController) Get() {
 		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
 		return
 	}
-	c.displayReceivedMsg(clientIp)
+	c.logReceivedMsg(clientIp)
 
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {

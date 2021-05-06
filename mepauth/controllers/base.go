@@ -34,13 +34,13 @@ type BaseController struct {
 }
 
 // To display log for received message
-func (c *BaseController) displayReceivedMsg(clientIp string) {
+func (c *BaseController) logReceivedMsg(clientIp string) {
 	log.Info("Received message from ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
 		Resource + c.Ctx.Input.URL() + "]")
 }
 
 // To display log for received message
-func (c *BaseController) displayReceivedMsgWithAk(clientIp string, ak string) {
+func (c *BaseController) logReceivedMsgWithAk(clientIp string, ak string) {
 	log.Info("Received message from ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + Operation +
 		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "]")
 }
@@ -48,15 +48,15 @@ func (c *BaseController) displayReceivedMsgWithAk(clientIp string, ak string) {
 // Handled logging for error case
 func (c *BaseController) handleLoggingForError(clientIp string, code int, errMsg string) {
 	c.writeErrorResponse(errMsg, code)
-	c.displayErrResponseMsg(clientIp, errMsg)
+	c.logErrResponseMsg(clientIp, errMsg)
 }
 
-func (c *BaseController) displayErrResponseMsg(clientIp string, errMsg string) {
+func (c *BaseController) logErrResponseMsg(clientIp string, errMsg string) {
 	log.Info("Response message for ClientIP [" + clientIp + Operation +
 		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
 }
 
-func (c *BaseController) displayErrResponseMsgWithAk(clientIp string, errMsg string, ak string) {
+func (c *BaseController) logErrResponseMsgWithAk(clientIp string, errMsg string, ak string) {
 	log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + Operation +
 		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
 }
