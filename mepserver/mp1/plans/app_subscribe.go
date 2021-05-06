@@ -144,7 +144,7 @@ func (t *SubscribeIst) marshalError(appInstanceId string) workspace.TaskCode {
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
 		log.Errorf(errors.New("delete opertaion failed"), "deleting app subscription from etcd failed on error. "+
-			"This might lead to data inconsistency!")
+			"This might lead to data inconsistency.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etcd failed on marshal error")
 		return workspace.TaskFinish
 	}

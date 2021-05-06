@@ -49,6 +49,12 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
 
 	t.TaskId = queryReq.Get(":taskId")
+	err := meputil.ValidateUUID(t.TaskId)
+	if err != nil {
+		log.Error("taskId validation failed", err)
+		t.SetFirstErrorCode(meputil.RequestParamErr, "taskId validation failed, invalid uuid")
+		return err
+	}
 
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil

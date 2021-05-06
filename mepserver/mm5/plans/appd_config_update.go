@@ -23,8 +23,9 @@ import (
 	"mepserver/mm5/task"
 	"net/http"
 
-	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/arch/workspace"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
 type UpdateAppDConfig struct {
@@ -47,7 +48,7 @@ func (t *UpdateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	appDConfigInput, ok := t.RestBody.(*models.AppDConfig)
 	if !ok {
 		t.SetFirstErrorCode(1, "input body parse failed")
-		t.SetSerErrInfo(&workspace.SerErrInfo{ErrCode: http.StatusBadRequest, Message: "Parse body error!"})
+		t.SetSerErrInfo(&workspace.SerErrInfo{ErrCode: http.StatusBadRequest, Message: "Parse body error."})
 		return workspace.TaskFinish
 	}
 
@@ -73,7 +74,7 @@ func (t *UpdateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	taskId := meputil.GenerateUniqueId()
 
 	// Change the IP Address type to type common for MP2 and MP1
-	for i, _ := range appDConfigInput.AppDNSRule {
+	for i := range appDConfigInput.AppDNSRule {
 		if appDConfigInput.AppDNSRule[i].IPAddressType == "IPv4" {
 			appDConfigInput.AppDNSRule[i].IPAddressType = "IP_V4"
 		} else if appDConfigInput.AppDNSRule[i].IPAddressType == "IPv6" {
