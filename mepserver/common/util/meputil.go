@@ -199,7 +199,7 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed!")
+			log.Errorf(nil, "String convert to MicroServiceInstance failed.")
 			return nil, err
 		}
 		property := ins.Properties

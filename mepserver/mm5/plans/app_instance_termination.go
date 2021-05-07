@@ -29,8 +29,10 @@ import (
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/task"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
@@ -112,7 +114,7 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed!")
+			log.Errorf(nil, "String convert to MicroServiceInstance failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
@@ -166,15 +168,21 @@ type DeleteFromMepauth struct {
 func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	log.Info("Deleting the mepauth")
 	mepauthPort := os.Getenv("MEPAUTH_SERVICE_PORT")
-	if mepauthPort == "" {
-		log.Error("mepauth port env is not set", nil)
+	if len(mepauthPort) <= 0 || len(mepauthPort) > meputil.MaxPortLength {
+		log.Error("invalid mepauth port.", nil)
 		return workspace.TaskFinish
+	} else if num, err := strconv.Atoi(mepauthPort); err == nil {
+		if num <= 0 || num > meputil.MaxPortNumber {
+			log.Error("invalid mepauth port.", nil)
+			return workspace.TaskFinish
+		}
 	}
 	mepauthIp := os.Getenv("MEPAUTH_PORT_10443_TCP_ADDR")
-	if mepauthIp == "" {
+	if net.ParseIP(mepauthIp) == nil {
 		log.Error("mepauth ip env is not set", nil)
 		return workspace.TaskFinish
 	}
+
 	deleteUrl := fmt.Sprintf("https://%s:%s/mepauth/v1/applications/%s/confs", mepauthIp, mepauthPort, t.AppInstanceId)
 
 	// Create request
@@ -223,7 +231,7 @@ func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 
 	domainName := os.Getenv("MEPSERVER_CERT_DOMAIN_NAME")
 	if meputil.ValidateDomainName(domainName) != nil {
-		return nil, errors.New("Domain name validation failed")
+		return nil, errors.New("domain name validation failed")
 	}
 	return &tls.Config{
 		RootCAs:            rootCAs,

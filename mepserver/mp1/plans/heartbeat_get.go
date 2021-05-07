@@ -169,7 +169,7 @@ func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error) {
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed in heartbeat process!")
+			log.Errorf(nil, "String convert to MicroServiceInstance failed in heartbeat process.")
 			return nil, err
 		}
 		property := ins.Properties

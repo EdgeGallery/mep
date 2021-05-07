@@ -17,8 +17,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/astaxie/beego/httplib"
 	"mepauth/models"
 	"mepauth/routers"
 	"strings"
@@ -31,27 +33,32 @@ import (
 const ServicesPath string = "/services"
 const ConfigFormat string = `{ "name": "%s", "config": %s }`
 
-func initAPIGateway(trustedNetworks *[]byte) error {
+// API gateway initializer
+type ApiGwInitializer struct {
+	tlsConfig *tls.Config
+}
+
+func (i *ApiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
 		log.Error("Failed to get api gateway url")
 		return getApiGwUrlErr
 	}
-	err := setApiGwConsumer(apiGwUrl)
+	err := i.SetApiGwConsumer(apiGwUrl)
 	if err != nil {
 		return err
 	}
-	err = setupKongMepServer(apiGwUrl)
-	if err != nil {
-		return err
-	}
-
-	err = setupKongMepAuth(apiGwUrl, trustedNetworks)
+	err = i.SetupKongMepServer(apiGwUrl)
 	if err != nil {
 		return err
 	}
 
-	err = setupHttpLogPlugin(apiGwUrl)
+	err = i.SetupKongMepAuth(apiGwUrl, trustedNetworks)
+	if err != nil {
+		return err
+	}
+
+	err = i.SetupHttpLogPlugin(apiGwUrl)
 	if err != nil {
 		return err
 	}
@@ -60,10 +67,10 @@ func initAPIGateway(trustedNetworks *[]byte) error {
 	return nil
 }
 
-func setupHttpLogPlugin(apiGwUrl string) error {
+func (i *ApiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 	// enable global http log plugin
 	pluginUrl := apiGwUrl + util.PluginPath
-	err := util.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
+	err := i.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
 	if err != nil {
 		log.Error("Enable http log plugin failed")
 		return err
@@ -71,11 +78,11 @@ func setupHttpLogPlugin(apiGwUrl string) error {
 	return nil
 }
 
-func setApiGwConsumer(apiGwUrl string) error {
+func (i *ApiGwInitializer) SetApiGwConsumer(apiGwUrl string) error {
 	// add mepauth consumer to kong
 	consumerUrl := apiGwUrl + "/consumers"
 	jsonConsumerByte := []byte(fmt.Sprintf(`{ "username": "%s" }`, util.MepAppJwtName))
-	err := util.SendPostRequest(consumerUrl, jsonConsumerByte)
+	err := i.SendPostRequest(consumerUrl, jsonConsumerByte)
 	if err != nil {
 		log.Error("Consumer initialization failed")
 		return err
@@ -95,7 +102,7 @@ func setApiGwConsumer(apiGwUrl string) error {
 	}
 	kongJwtByte := []byte(fmt.Sprintf(`{ "algorithm": "RS512", "key": "%s", "rsa_public_key": "%s" }`,
 		mepAuthKey, string(jwtPublicKey)))
-	err = util.SendPostRequest(kongJwtUrl, kongJwtByte)
+	err = i.SendPostRequest(kongJwtUrl, kongJwtByte)
 	if err != nil {
 		log.Error("Failed while adding consumer token.")
 		return err
@@ -103,7 +110,7 @@ func setApiGwConsumer(apiGwUrl string) error {
 	return nil
 }
 
-func setupKongMepServer(apiGwUrl string) error {
+func (i *ApiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
 	// add mep server service and route to kong.
 	// since mep is also in the same pos, same ip address will work
 	mepServerHost := util.GetAppConfig("mepserver_host")
@@ -118,7 +125,7 @@ func setupKongMepServer(apiGwUrl string) error {
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	err := addServiceRoute(util.MepserverName, []string{util.MepServerServiceMgmt, util.MepServerAppSupport},
+	err := i.AddServiceRoute(util.MepserverName, []string{util.MepServerServiceMgmt, util.MepServerAppSupport},
 		"https://"+mepServerHost+":"+mepServerPort, false)
 	if err != nil {
 		log.Error("Add mep server route to kong failed")
@@ -127,19 +134,19 @@ func setupKongMepServer(apiGwUrl string) error {
 	// enable mep server jwt plugin
 	mepServerPluginUrl := apiGwUrl + ServicesPath + "/" + util.MepserverName + util.PluginPath
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, util.JwtPlugin)
-	err = util.SendPostRequest(mepServerPluginUrl, []byte(jwtConfig))
+	err = i.SendPostRequest(mepServerPluginUrl, []byte(jwtConfig))
 	if err != nil {
 		log.Error("Enable mep server jwt plugin failed")
 		return err
 	}
 	// enable mep server appid-header plugin
-	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s" }`, util.AppidPlugin)))
+	err = i.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(`{ "name": "%s" }`, util.AppidPlugin)))
 	if err != nil {
 		log.Error("Enable mep server appid-header plugin failed.")
 		return err
 	}
 	// enable mep server pre-function plugin
-	err = util.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(ConfigFormat,
+	err = i.SendPostRequest(mepServerPluginUrl, []byte(fmt.Sprintf(ConfigFormat,
 		util.PreFunctionPlugin, util.MepserverPreFunctionConf)))
 	if err != nil {
 		log.Error("Enable mep server pre-function plugin failed.")
@@ -148,14 +155,14 @@ func setupKongMepServer(apiGwUrl string) error {
 	// enable mep server rate-limiting plugin
 	ratePluginReq := []byte(fmt.Sprintf(ConfigFormat,
 		util.RateLimitPlugin, util.MepserverRateConf))
-	err = util.SendPostRequest(mepServerPluginUrl, ratePluginReq)
+	err = i.SendPostRequest(mepServerPluginUrl, ratePluginReq)
 	if err != nil {
 		log.Error("Enable mep server appid-header plugin failed")
 		return err
 	}
 	// enable mep server response-transformer plugin
 	respPluginReq := []byte(util.ResponseTransformerConf)
-	err = util.SendPostRequest(mepServerPluginUrl, respPluginReq)
+	err = i.SendPostRequest(mepServerPluginUrl, respPluginReq)
 	if err != nil {
 		log.Error("Enable mep server response-transformer plugin failed")
 		return err
@@ -163,7 +170,7 @@ func setupKongMepServer(apiGwUrl string) error {
 	return nil
 }
 
-func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
+func (i *ApiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 	// add mep auth service and route to kong
 	httpsPort := util.GetAppConfig("HttpsPort")
 	if len(httpsPort) == 0 {
@@ -179,7 +186,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		return errors.New(msg)
 	}
 	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
-	err := addServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
+	err := i.AddServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
 	if err != nil {
 		log.Error("Add mep server route to kong failed.")
 		return err
@@ -188,14 +195,14 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 	mepAuthPluginURL := apiGwURL + ServicesPath + "/" + util.MepauthName + util.PluginPath
 	mepAuthRatePluReq := []byte(fmt.Sprintf(ConfigFormat,
 		util.RateLimitPlugin, util.MepauthRateConf))
-	err = util.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
+	err = i.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
 	if err != nil {
 		log.Error("Enable mep auth appid-header plugin failed.")
 		return err
 	}
 	// enable mep auth response-transformer plugin
 	respPluginReq := []byte(util.ResponseTransformerConf)
-	err = util.SendPostRequest(mepAuthPluginURL, respPluginReq)
+	err = i.SendPostRequest(mepAuthPluginURL, respPluginReq)
 	if err != nil {
 		log.Error("Enable mep auth response-transformer plugin failed")
 		return err
@@ -206,8 +213,8 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 		allIpValid, err := util.ValidateIpAndCidr(trustedNetworksList)
 		if (err == nil) && allIpValid {
 			mepIpRestrict := []byte(fmt.Sprintf(ConfigFormat,
-				util.IpRestrictPlugin, getTrustedIpList(trustedNetworksList)))
-			err = util.SendPostRequest(mepAuthPluginURL, mepIpRestrict)
+				util.IpRestrictPlugin, i.getTrustedIpList(trustedNetworksList)))
+			err = i.SendPostRequest(mepAuthPluginURL, mepIpRestrict)
 			if err != nil {
 				log.Error("Ip restriction failed")
 				return err
@@ -219,7 +226,7 @@ func setupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 	return nil
 }
 
-func getTrustedIpList(trustedNetworksList []string) string {
+func (i *ApiGwInitializer) getTrustedIpList(trustedNetworksList []string) string {
 	var ipcidrList string
 	ipList := `{ "whitelist": [`
 	for _, ipcidr := range trustedNetworksList {
@@ -232,7 +239,7 @@ func getTrustedIpList(trustedNetworksList []string) string {
 	return ipList
 }
 
-func addServiceRoute(serviceName string, servicePaths []string, targetURL string, needStripPath bool) error {
+func (i *ApiGwInitializer) AddServiceRoute(serviceName string, servicePaths []string, targetURL string, needStripPath bool) error {
 	apiGwURL, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
 		log.Error("Failed to get api gateway url.")
@@ -244,7 +251,7 @@ func addServiceRoute(serviceName string, servicePaths []string, targetURL string
 	kongServiceURL := apiGwURL + ServicesPath
 	serviceReq := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`,
 		targetURL, serviceName))
-	errMepService := util.SendPostRequest(kongServiceURL, serviceReq)
+	errMepService := i.SendPostRequest(kongServiceURL, serviceReq)
 	if errMepService != nil {
 		log.Error("Add " + serviceName + " service to kong failed.")
 		return errMepService
@@ -264,9 +271,24 @@ func addServiceRoute(serviceName string, servicePaths []string, targetURL string
 	reqStr := `{ "paths": ["%s"], "name": "%s"` + preserveHost + stripPath + `}`
 	routeReq := []byte(fmt.Sprintf(reqStr, paths, serviceName))
 
-	err := util.SendPostRequest(kongRouteURL, routeReq)
+	err := i.SendPostRequest(kongRouteURL, routeReq)
 	if err != nil {
 		log.Error("Add " + serviceName + " route to kong failed.")
+		return err
+	}
+	return nil
+}
+
+// Send post request
+func (i *ApiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) error {
+
+	req := httplib.Post(consumerURL)
+	req.Header(util.ContentType, util.JsonUtf8)
+	req.SetTLSClientConfig(i.tlsConfig)
+	req.Body(jsonStr)
+	_, err := req.String()
+	if err != nil {
+		log.Error("send Post Request Failed")
 		return err
 	}
 	return nil

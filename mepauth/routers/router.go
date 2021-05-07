@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-// routers in this package
+// MEP Auth APIs
+// @APIVersion 1.0.0
+// @Title MEP Auth API
+// @Description APIs for MEP authentication
+// @TermsOfServiceUrl http://beego.me/
 package routers
 
 import (
@@ -23,18 +27,18 @@ import (
 	"mepauth/controllers"
 )
 
-const RootPath string = "/mep"
-const AuthTokenPath = RootPath + "/token"
-const AppManagePath = RootPath + "/appMng/v1"
-
+// Init mepauth APIs
 func init() {
-	beego.Router(AppManagePath+"/routes/:routeId", &controllers.OneRouteController{})
-	beego.Router(AuthTokenPath, &controllers.TokenController{})
-	beego.Router(AppManagePath+"/applications/:applicationId/confs", &controllers.ConfController{})
+
 	beego.Get("/health", func(ctx *context.Context) {
 		ctx.Output.Context.ResponseWriter.ResponseWriter.WriteHeader(200)
 		ctx.Output.Context.ResponseWriter.ResponseWriter.Write([]byte("ok"))
-		//w.WriteHeader(200)
-		//w.Write([]byte("ok"))
 	})
+	ns := beego.NewNamespace("/mep/",
+		beego.NSInclude(
+			&controllers.ConfController{},
+			&controllers.TokenController{},
+		),
+	)
+	beego.AddNamespace(ns)
 }

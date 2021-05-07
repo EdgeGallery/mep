@@ -117,7 +117,7 @@ func DeletePaths(paths []string, continueOnFailure bool) int {
 		errCode := DeleteRecord(pathEntry)
 		if errCode != 0 {
 			log.Errorf(nil, "cache(path: %s) delete from etcd failed, "+
-				"this might lead to data inconsistency!", strings.TrimPrefix(pathEntry, meputil.DBRootPath))
+				"this might lead to data inconsistency.", strings.TrimPrefix(pathEntry, meputil.DBRootPath))
 			if continueOnFailure {
 				continue
 			}

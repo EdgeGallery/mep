@@ -185,8 +185,8 @@ func (t *CapabilitiesGet) fillConsumerData(serInstanceId string, appInstanceId s
 
 // Get service id mapping based on filtering condition
 func getServiceMapping() (map[string]string, map[models.CategoryRef]string) {
-	serviceNameIdMapping := make(map[string]string, 0)
-	serviceCategoryMapping := make(map[models.CategoryRef]string, 0)
+	serviceNameIdMapping := make(map[string]string)
+	serviceCategoryMapping := make(map[models.CategoryRef]string)
 
 	resp, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {

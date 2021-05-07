@@ -303,7 +303,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 		err = t.dnsAgent.DeleteResourceRecordTypeA(dnsOnStore.DomainName, rrType)
 	}
 	if err != nil {
-		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server!",
+		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server.",
 			t.AppInstanceId, t.DNSRuleId)
 
 		// Revert the update in the data store in failure case
@@ -321,7 +321,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	err = t.updateDNSToDataPlane(dnsConfigInPut, dnsOnStore, appInfo, rrType)
 
 	if err != nil {
-		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane!",
+		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane.",
 			t.AppInstanceId, t.DNSRuleId)
 		// Revert the entry in dns server
 		t.revertEntryFromDNSServer(dnsConfigInPut.State, dnsOnStore.DomainName, rrType, dnsOnStore.IPAddress,
@@ -348,7 +348,7 @@ func (t *DNSRuleUpdate) revertEntryFromDB(appDConfig *models.AppDConfig) {
 	errCode, _ := t.updateDnsRecordOnDataStore(*appDConfig)
 	if errCode != 0 {
 		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
-			"this might lead to inconsistency!", t.AppInstanceId, t.DNSRuleId)
+			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
 	}
 }
 
@@ -362,7 +362,7 @@ func (t *DNSRuleUpdate) revertEntryFromDNSServer(state, domainName, rrType, ipAd
 	}
 	if err != nil {
 		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on dns-server, "+
-			"this might lead to inconsistency!", t.AppInstanceId, t.DNSRuleId)
+			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
 	}
 }
 
@@ -389,7 +389,7 @@ func (t *DNSRuleUpdate) updateDNSToDataPlane(dnsConfigInput *dataplane.DNSRule, 
 		if err != nil {
 			if err1 := t.dnsAgent.DeleteResourceRecordTypeA(dnsOnStore.DomainName, rrType); err1 != nil {
 				log.Errorf(err1, "Failed to revert the configuration(oper: delete, app-id: %s, "+
-					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency!",
+					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency.",
 					t.AppInstanceId, t.DNSRuleId)
 			}
 		}
@@ -399,7 +399,7 @@ func (t *DNSRuleUpdate) updateDNSToDataPlane(dnsConfigInput *dataplane.DNSRule, 
 			if err1 := t.dnsAgent.SetResourceRecordTypeA(dnsOnStore.DomainName, rrType, meputil.RRClassIN,
 				[]string{dnsOnStore.IPAddress}, dnsOnStore.TTL); err1 != nil {
 				log.Errorf(err1, "Failed to revert the configuration(oper: create, app-id: %s, "+
-					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency!",
+					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency.",
 					t.AppInstanceId, t.DNSRuleId)
 			}
 		}

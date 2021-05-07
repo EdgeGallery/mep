@@ -19,44 +19,19 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
-
+	"io"
 	_ "mepauth/config"
 	"mepauth/controllers"
+	"mepauth/dbAdapter"
 	_ "mepauth/models"
 	_ "mepauth/routers"
 	"mepauth/util"
+	"os"
+	"path/filepath"
 )
-
-func initDb() {
-	err := orm.RegisterDriver("postgres", orm.DRPostgres)
-	if err != nil {
-		log.Error("RegisterDriver failed")
-	}
-	dataSource := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s",
-		util.GetAppConfig("db_user"),
-		util.GetAppConfig("db_passwd"),
-		util.GetAppConfig("db_name"),
-		util.GetAppConfig("db_host"),
-		util.GetAppConfig("db_port"),
-		util.GetAppConfig("db_sslmode"))
-	err = orm.RegisterDataBase("default", "postgres", dataSource)
-	if err != nil {
-		log.Error("RegisterDataBase failed")
-	}
-	err = orm.RunSyncdb("default", false, true)
-	if err != nil {
-		log.Error("RunSyncdb failed")
-	}
-}
 
 func scanConfig(r io.Reader) (util.AppConfigProperties, error) {
 	config := util.AppConfigProperties{}
@@ -94,9 +69,8 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 }
 
 func main() {
-	// Initialize database
-	initDb()
 
+	dbAdapter.Db = dbAdapter.InitDb()
 	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
@@ -107,8 +81,7 @@ func main() {
 	// function handling the sensitive information will clear after the usage.
 	// clean of mepauth.properties file use kubectl apply -f empty-mepauth-prop.yaml
 	defer clearAppConfigOnExit(appConfig)
-	validation := util.ValidateInputArgs(appConfig)
-	if !validation {
+	if !util.ValidateInputArgs(appConfig) {
 		return
 	}
 	keyComponentUserStr := appConfig["KEY_COMPONENT"]
@@ -119,8 +92,7 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	initSuccess := doInitialization(appConfig["TRUSTED_LIST"])
-	if !initSuccess {
+	if !doInitialization(appConfig["TRUSTED_LIST"]) {
 		return
 	}
 
@@ -140,12 +112,18 @@ func main() {
 		log.Error("failed to config tls for beego")
 		return
 	}
-
 	controllers.InitAuthInfoList()
-
 	beego.BeeApp.Server.TLSConfig = tlsConf
+	setSwaggerConfig()
 	beego.ErrorController(&controllers.ErrorController{})
 	beego.Run()
+}
+
+func setSwaggerConfig() {
+	if beego.BConfig.RunMode == util.DevMode {
+		beego.BConfig.WebConfig.DirectoryIndex = true
+		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
+	}
 }
 
 func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
@@ -155,7 +133,16 @@ func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
 }
 
 func doInitialization(trustedNetworks *[]byte) bool {
-	err := initAPIGateway(trustedNetworks)
+
+	config, err := util.TLSConfig("apigw_cacert")
+	if err != nil {
+		log.Error("unable to read certificate")
+		return false
+	}
+
+	initializer := &ApiGwInitializer{tlsConfig:config}
+
+	err = initializer.InitAPIGateway(trustedNetworks)
 	if err != nil {
 		log.Error("Failed to init api gateway.")
 		return false

@@ -21,85 +21,140 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-
-	"github.com/astaxie/beego"
 	log "github.com/sirupsen/logrus"
+	"mepauth/dbAdapter"
 
 	"mepauth/models"
 	"mepauth/util"
 )
 
-const APP_INS_ID string = "app_ins_id"
+const AppInsId string = "app_ins_id"
 
 type ConfController struct {
-	beego.Controller
+	BaseController
 }
 
+// @Title Adds AK/SK configuration
+// @Description addition of ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Param   body body models.AppAuthInfo true "User Info"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [put]
 func (c *ConfController) Put() {
+	log.Info("Put AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
+	c.logReceivedMsg(clientIp)
 	var appAuthInfo *models.AppAuthInfo
-	var err error
+	// Get application instance ID from param
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
-	log.Infof("conf ak/sk appInstanceId=%s", appInsId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
 		c.Data["json"] = appAuthInfo
+		// Get AK
 		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
-		log.Infof("conf ak/sk ak=%s", ak)
+		// Get SK
 		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
-		cipherSkBytes, nonceBytes, err2 := getCipherAndNonce(&skByte)
-		if err2 != nil {
-			c.Data["json"] = err2.Error()
-			c.ServeJSON()
-			return
-		}
-		authInfoRecord := &models.AuthInfoRecord{
-			AppInsId: appInsId,
-			Ak:       ak,
-			Sk:       string(cipherSkBytes),
-			Nonce:    string(nonceBytes),
-		}
-		err = InsertOrUpdateData(authInfoRecord, APP_INS_ID)
-		if err != nil && err.Error() != util.PgOkMsg {
-			c.Data["json"] = err.Error()
+		err := ConfigureAkAndSk(appInsId, ak, &skByte)
+		if err != nil {
+			switch err.Error() {
+			case util.AppIDFailMsg:
+				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for application instance ID")
+				return
+			case util.AkFailMsg:
+			case util.SkFailMsg:
+				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for ak or sk")
+				return
+			default:
+				c.handleLoggingForError(clientIp, util.IntSerErr, "Error while saving configuration")
+			}
 		}
 	} else {
-		c.Data["json"] = err.Error()
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
 	}
-	c.ServeJSON()
+	c.handleLoggingForSuccess(clientIp, "")
 }
 
+// @Title Deletes AK/SK configuration
+// @Description deletion of ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [delete]
 func (c *ConfController) Delete() {
-	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
-	log.Infof("delete ak/sk appInstanceId=%s", appInsId)
 
-	authInfoRecord := &models.AuthInfoRecord{
-		AppInsId: appInsId,
-	}
-
-	err := DeleteData(authInfoRecord, APP_INS_ID)
+	log.Info("Delete AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
 	if err != nil {
-		c.writeErrorResponse("Delete fail.", util.BadRequest)
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
+	c.logReceivedMsg(clientIp)
+
+	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
+	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
 		return
 	}
 
-	c.Data["json"] = "Delete success."
-	c.ServeJSON()
+	authInfoRecord := &models.AuthInfoRecord{
+		AppInsId: appInsId,
+	}
+
+	err = dbAdapter.Db.DeleteData(authInfoRecord, AppInsId)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		return
+	}
+	c.handleLoggingForSuccess(clientIp, "")
 }
 
+// @Title Gets AK/SK configuration
+// @Description get ak & sk configuration
+// @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
+// @Param   applicationId  path  string  true   "APP instance ID"
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /appMng/v1/applications/:applicationId/confs [get]
 func (c *ConfController) Get() {
+
+	log.Info("Get AK/SK configuration request received.")
+	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	err := c.validateSrcAddress(clientIp)
+	if err != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		return
+	}
+	c.logReceivedMsg(clientIp)
+
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
+	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
+		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
+		return
+	}
 
 	authInfoRecord := &models.AuthInfoRecord{
 		AppInsId: appInsId,
 	}
 
-	err := ReadData(authInfoRecord, APP_INS_ID)
+	err = dbAdapter.Db.ReadData(authInfoRecord, AppInsId)
 	if err != nil && err.Error() != util.PgOkMsg {
-		c.Data["json"] = err.Error()
+		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		return
 	}
 	c.Data["json"] = authInfoRecord
 	c.ServeJSON()
+	log.Info("Response message for ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
+		Resource + c.Ctx.Input.URL() + "] Result [Success]")
 }
 
 func (c *ConfController) writeErrorResponse(errMsg string, code int) {
@@ -155,7 +210,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Nonce:    string(nonceBytes),
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
-	err = InsertOrUpdateData(authInfoRecord, APP_INS_ID)
+	err = dbAdapter.Db.InsertOrUpdateData(authInfoRecord, AppInsId)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")
