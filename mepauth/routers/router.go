@@ -37,7 +37,6 @@ func init() {
 	ns := beego.NewNamespace("/mep/",
 		beego.NSInclude(
 			&controllers.ConfController{},
-			&controllers.OneRouteController{},
 			&controllers.TokenController{},
 		),
 	)
