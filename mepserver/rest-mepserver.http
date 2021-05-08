@@ -1,0 +1,15 @@
+### get token api
+POST https://{{MEP_HOST}}:{{MEP_PORT}}/mep/token
+Content-Type: application/json
+Authorization: SDK-HMAC-SHA256 Access=QVUJMSUMgS0VZLS0tLS0, SignedHeaders=content-type;host;x-sdk-date, Signature=b726e5f20b4a1520efb455a60127bfe076c2917b51cecb8fddd49ba1d37019b8
+x-sdk-date: 20210302T195133Z
+Host: 119.8.47.5:30443
+
+> {%
+ client.global.set("AUTH_TOKEN",response.body.access_token)
+ %}
+
+### get service by instance id
+GET https://{{MEP_HOST}}:{{MEP_PORT}}/mep/mec_service_mgmt/v1/applications/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/services
+X-AppinstanceID: 5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f
+Authorization: Bearer {{AUTH_TOKEN}}
