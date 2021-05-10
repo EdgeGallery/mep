@@ -236,4 +236,4 @@ const (
 	ServiceInfoDataCenter = "datacenterinfo"
 )
 
-const LivenessPath = "/mepserver/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+const LivenessPath = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
