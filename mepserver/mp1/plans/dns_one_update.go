@@ -226,14 +226,14 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	}
 
 	errCode, errString := t.updateDnsRecordToRemoteServer(appDInStore, ruleIndex, dnsOnStore, dataOnStoreBytes)
-	if errCode != 0 {
+	if errCode > 0 {
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), errString)
 		return workspace.TaskFinish
 	}
 
-	if errCode == -1 {
-		return workspace.TaskFinish
-	}
+	//if errCode == -1 {
+	//	return workspace.TaskFinish
+	//}
 	return workspace.TaskFinish
 }
 
@@ -308,11 +308,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 
 		// Revert the update in the data store in failure case
 		appDConfig.AppDNSRule[ruleIndex].State = oldState
-		errCode, _ := t.updateDnsRecordOnDataStore(appDConfig)
-		if errCode != 0 {
-			log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
-				"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
-		}
+		t.revertEntryFromDB(&appDConfig)
 
 		return meputil.RemoteServerErr, "failed to apply the dns modification"
 	}
@@ -327,13 +323,12 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	if err != nil {
 		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane.",
 			t.AppInstanceId, t.DNSRuleId)
+		// Revert the entry in dns server
+		t.revertEntryFromDNSServer(dnsConfigInPut.State, dnsOnStore.DomainName, rrType, dnsOnStore.IPAddress,
+			dnsOnStore.TTL)
 		// Revert the update in the data store in failure case
 		appDConfig.AppDNSRule[ruleIndex].State = oldState
-		errCode, _ := t.updateDnsRecordOnDataStore(appDConfig)
-		if errCode != 0 {
-			log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
-				"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
-		}
+		t.revertEntryFromDB(&appDConfig)
 
 		return meputil.RemoteServerErr, "failed to apply the dns modification"
 	}
@@ -347,6 +342,28 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	t.HttpRsp = dnsOnStore
 
 	return 0, ""
+}
+
+func (t *DNSRuleUpdate) revertEntryFromDB(appDConfig *models.AppDConfig) {
+	errCode, _ := t.updateDnsRecordOnDataStore(*appDConfig)
+	if errCode != 0 {
+		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
+			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
+	}
+}
+
+func (t *DNSRuleUpdate) revertEntryFromDNSServer(state, domainName, rrType, ipAddress string, ttl uint32) {
+	var err error
+	if state == meputil.ActiveState {
+		err = t.dnsAgent.DeleteResourceRecordTypeA(domainName, rrType)
+	} else {
+		err = t.dnsAgent.SetResourceRecordTypeA(domainName, rrType, meputil.RRClassIN,
+			[]string{ipAddress}, ttl)
+	}
+	if err != nil {
+		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on dns-server, "+
+			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
+	}
 }
 
 // Update the dns record to the data-store

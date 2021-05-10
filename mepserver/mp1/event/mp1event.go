@@ -26,8 +26,13 @@ import (
 )
 
 func init() {
+	handler := NewInstanceEtsiEventHandler()
+	if handler == nil {
+		log.Errorf(nil, "Failed to create the event handler for notification.")
+		return
+	}
 	mgr.RegisterPlugin(mgr.Plugin{PName: mgr.QUOTA, Name: "buildin", New: New})
-	discovery.AddEventHandler(NewInstanceEtsiEventHandler())
+	discovery.AddEventHandler(handler)
 }
 
 // service center plugin

@@ -111,10 +111,6 @@ func (t *DecodeTrafficRestReq) checkParam(msg []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	meputil.SetMapValue(temp, "consumedLocalOnly", true)
-	meputil.SetMapValue(temp, "isLocal", true)
-	meputil.SetMapValue(temp, "scopeOfLocality", "MEC_HOST")
-
 	msg, err = json.Marshal(&temp)
 	if err != nil {
 		log.Errorf(err, "invalid map to json")
