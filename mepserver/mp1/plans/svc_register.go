@@ -248,8 +248,8 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	}
 
 	if serviceInfo.LivenessInterval != 0 {
-		req.Instance.Properties["liveness"] = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
-		serviceInfo.Links.Self.Href = "/mepserver/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
+		req.Instance.Properties["liveness"] = "/mep/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
+		serviceInfo.Links.Self.Href = "/mep/mec_service_mgmt/v1/applications/" + t.AppInstanceId + "/services/" + t.ServiceId + t.InstanceId + "/liveness"
 	}
 	reqs := &proto.UpdateInstancePropsRequest{
 		ServiceId:  t.ServiceId,
