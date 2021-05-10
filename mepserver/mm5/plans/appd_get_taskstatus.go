@@ -99,11 +99,11 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 
 	var state string
 	if taskStatusInStore.Progress == (len(taskStatusInStore.TrafficRuleStatusLst) + len(taskStatusInStore.DNSRuleStatusLst)) {
-		state = meputil.TASK_STATE_SUCCESS
+		state = meputil.TaskStateSuccess
 	} else if taskStatusInStore.Progress >= 0 {
-		state = meputil.TASK_STATE_PROCESSING
+		state = meputil.TaskStateProcessing
 	} else {
-		state = meputil.TASK_STATE_FAILURE
+		state = meputil.TaskStateFailure
 		progress = 0
 	}
 

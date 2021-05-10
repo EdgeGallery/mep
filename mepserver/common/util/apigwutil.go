@@ -18,16 +18,8 @@ package util
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
-	"regexp"
-	"strings"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
-
 	"github.com/astaxie/beego/httplib"
 )
 
@@ -45,11 +37,33 @@ type RouteInfo struct {
 }
 
 type SerInfo struct {
-	SerName string   `json:"serName"`
-	Uris    []string `json:"uris"`
+	SerName string `json:"serName"`
+	Uri     string `json:"uri"`
 }
 
-func GetApigwUrl() string {
+var ApiGWInterface *ApiGwIf
+
+type ApiGwIf struct {
+	baseURL string
+	tlsCfg  *tls.Config
+}
+
+func NewApiGwIf() *ApiGwIf {
+	a := &ApiGwIf{}
+	baseUrl := a.getApiGwUrl()
+	if len(baseUrl) == 0 {
+		return nil
+	}
+	tlsCfg, err := TLSConfig(ApiGwCaCertName, false)
+	if err != nil {
+		return nil
+	}
+	a.baseURL = baseUrl
+	a.tlsCfg = tlsCfg
+	return a
+}
+
+func (a *ApiGwIf) getApiGwUrl() string {
 	appConfig, err := GetAppConfig()
 	if err != nil {
 		log.Error("Get App Config failed.", err)
@@ -60,169 +74,44 @@ func GetApigwUrl() string {
 
 }
 
-func AddApigwService(routeInfo RouteInfo) {
-	kongServiceUrl := GetApigwUrl() + "/services"
+func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
+	kongServiceUrl := a.baseURL + "/services"
 	serName := routeInfo.SerInfo.SerName
-	serUrl := routeInfo.SerInfo.Uris[0]
+	serUrl := routeInfo.SerInfo.Uri
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	err := SendPostRequest(kongServiceUrl, jsonStr, false)
+	err := SendPostRequest(kongServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("failed to add API gateway service", err)
 	}
 }
 
-func AddApigwRoute(routeInfo RouteInfo) {
+func (a *ApiGwIf) AddApiGwRoute(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
-	kongRouteUrl := GetApigwUrl() + serviceUrl + serName + "/routes"
+	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes"
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	err := SendPostRequest(kongRouteUrl, jsonStr, false)
+	err := SendPostRequest(kongRouteUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("failed to add API gateway route", err)
 	}
 }
 
 // enable kong jwt plugin
-func EnableJwtPlugin(routeInfo RouteInfo) {
+func (a *ApiGwIf) EnableJwtPlugin(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
-	kongPluginUrl := GetApigwUrl() + serviceUrl + serName + "/plugins"
+	kongPluginUrl := a.baseURL + serviceUrl + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), false)
+	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
 		log.Error("Enable kong jwt plugin failed", err)
 	}
 }
 
-func ApigwDelRoute(serName string) {
-	kongRouteUrl := GetApigwUrl() + serviceUrl + serName + "/routes/" + serName
+func (a *ApiGwIf) ApiGwDelRoute(serName string) {
+	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
 		log.Error("failed to delete API gateway route", err)
 	}
 	log.Infof("res=%s", str)
-}
-
-func GetAppConfig() (AppConfigProperties, error) {
-	// read app.conf file to AppConfigProperties object
-	configFilePath := filepath.FromSlash("/usr/mep/conf/app.conf")
-	appConfig, err := readPropertiesFile(configFilePath)
-	return appConfig, err
-}
-
-// Send post request
-func SendPostRequest(url string, jsonStr []byte, skipInsecureVerify bool) error {
-	return SendRequest(url, PostMethod, jsonStr, skipInsecureVerify)
-}
-
-// Send delete request
-func SendDelRequest(url string, skipInsecureVerify bool) error {
-	return SendRequest(url, DeleteMethod, nil, skipInsecureVerify)
-}
-
-func SendRequest(url string, method string, jsonStr []byte, skipInsecureVerify bool) error {
-	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
-	var req *httplib.BeegoHTTPRequest
-	switch method {
-	case PostMethod:
-		req = httplib.Post(url)
-		req.Header("Content-Type", "application/json; charset=utf-8")
-		req.Body(jsonStr)
-	case DeleteMethod:
-		req = httplib.Delete(url)
-	default:
-		req = httplib.Get(url)
-	}
-
-	config, err := TLSConfig("apigw_cacert", skipInsecureVerify)
-	if err != nil {
-		log.Error("unable to read certificate", nil)
-		return err
-	}
-	req.SetTLSClientConfig(config)
-
-	res, err := req.String()
-	if err != nil {
-		log.Error("send request failed", nil)
-		return err
-	}
-	log.Infof("res=%s", res)
-	return nil
-}
-
-// Update tls configuration
-func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
-	appConfig, err := GetAppConfig()
-	if err != nil {
-		log.Error("get app config error", nil)
-		return nil, err
-	}
-	certNameConfig := string(appConfig[crtName])
-	if len(certNameConfig) == 0 {
-		log.Error(crtName+" configuration is not set", nil)
-		return nil, errors.New("cert name configuration is not set")
-	}
-
-	crt, err := ioutil.ReadFile(certNameConfig)
-	if err != nil {
-		log.Error("unable to read certificate", nil)
-		return nil, err
-	}
-
-	rootCAs := x509.NewCertPool()
-	ok := rootCAs.AppendCertsFromPEM(crt)
-	if !ok {
-		log.Error("failed to decode cert file", nil)
-		return nil, errors.New("failed to decode cert file")
-	}
-
-	serverName := string(appConfig["server_name"])
-	serverNameIsValid, validateServerNameErr := ValidateServerName(serverName)
-	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error", nil)
-		return nil, validateServerNameErr
-	}
-	sslCiphers := string(appConfig["ssl_ciphers"])
-	if len(sslCiphers) == 0 {
-		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
-	}
-	cipherSuites := getCipherSuites(sslCiphers)
-	if cipherSuites == nil {
-		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
-	}
-	return &tls.Config{
-		RootCAs:            rootCAs,
-		ServerName:         serverName,
-		MinVersion:         tls.VersionTLS12,
-		CipherSuites:       cipherSuites,
-		InsecureSkipVerify: skipInsecureVerify,
-	}, nil
-}
-
-// Validate Server Name
-func ValidateServerName(serverName string) (bool, error) {
-	if len(serverName) > maxHostNameLen {
-		return false, errors.New("server or host name validation failed")
-	}
-	return regexp.MatchString(ServerNameRegex, serverName)
-}
-
-func getCipherSuites(sslCiphers string) []uint16 {
-	cipherSuiteArr := make([]uint16, 0, 5)
-	cipherSuiteNameList := strings.Split(sslCiphers, ",")
-	for _, cipherName := range cipherSuiteNameList {
-		cipherName = strings.TrimSpace(cipherName)
-		if len(cipherName) == 0 {
-			continue
-		}
-		mapValue, ok := cipherSuiteMap[cipherName]
-		if !ok {
-			log.Error("not recommended cipher suite", nil)
-			return nil
-		}
-		cipherSuiteArr = append(cipherSuiteArr, mapValue)
-	}
-	if len(cipherSuiteArr) > 0 {
-		return cipherSuiteArr
-	}
-	return nil
 }

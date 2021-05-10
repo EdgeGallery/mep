@@ -45,8 +45,11 @@ func (t *TrafficRulesGet) OnRequest(data string) workspace.TaskCode {
 	}
 
 	trafficRuleDB, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + t.AppInstanceId)
-	if errCode != 0 {
+	if errCode == meputil.SubscriptionNotFound {
 		t.HttpRsp = []dataplane.TrafficRule{}
+		return workspace.TaskFinish
+	} else if errCode != 0 {
+		t.SetFirstErrorCode(workspace.ErrCode(errCode), "traffic rules not found")
 		return workspace.TaskFinish
 	}
 

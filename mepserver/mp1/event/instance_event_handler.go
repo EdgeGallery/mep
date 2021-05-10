@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package event handling function
 package event
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,6 +46,7 @@ const ConsumeIDLength = 16
 
 //InstanceEtsiEventHandler notification handler
 type InstanceEtsiEventHandler struct {
+	tlsCfg *tls.Config
 }
 
 //Type event handler type
@@ -109,11 +113,11 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 		action, providerID, ms.Environment, ms.AppId, ms.ServiceName, ms.Version, providerInstanceID,
 		instance.Endpoints, domainProject)
 
-	SendRestMessageToApp(instance, string(action))
+	h.sendRestMessageToApp(instance, string(action))
 }
 
 // SendRestMessageToApp sendRestMessageToApp
-func SendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
+func (h *InstanceEtsiEventHandler) sendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
 	instanceID := instance.ServiceId + instance.InstanceId
 	serName := instance.Properties["serName"]
 	isLocal := instance.Properties["isLocal"]
@@ -130,10 +134,10 @@ func SendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
 		return
 	}
 
-	doSend(action, instance, callBackUris)
+	h.doSend(action, instance, callBackUris)
 }
 
-func doSend(action string, instance *proto.MicroServiceInstance, callbackUris map[string]string) {
+func (h *InstanceEtsiEventHandler) doSend(action string, instance *proto.MicroServiceInstance, callbackUris map[string]string) {
 	var notificationInfo models.ServiceAvailabilityNotification
 	notificationInfo.ServiceReferences = make([]models.ServiceReferences, 1, 1)
 	notificationInfo.NotificationType = "SerAvailabilityNotification"
@@ -153,12 +157,13 @@ func doSend(action string, instance *proto.MicroServiceInstance, callbackUris ma
 		notificationInfo.ServiceReferences[0].Link.Href = href
 	}
 	for subscription, callBackURI := range callbackUris {
-		SendMsg(notificationInfo, callBackURI, subscription)
+		h.sendMsg(notificationInfo, callBackURI, subscription)
 	}
 }
 
 //SendMsg send message
-func SendMsg(notificationInfo models.ServiceAvailabilityNotification, callBackURI string, susbcription string) {
+func (h *InstanceEtsiEventHandler) sendMsg(notificationInfo models.ServiceAvailabilityNotification,
+	callBackURI string, susbcription string) {
 	log.Infof("subscription key %s uri %s", susbcription, callBackURI)
 	app := strings.Split(susbcription, "/")
 	subscriptionID := app[len(app)-1]
@@ -171,7 +176,7 @@ func SendMsg(notificationInfo models.ServiceAvailabilityNotification, callBackUR
 		return
 	}
 
-	err = util2.SendPostRequest(callBackURI, notificationInfoJSON, true)
+	err = util2.SendPostRequest(callBackURI, notificationInfoJSON, h.tlsCfg)
 	if err != nil {
 		log.Error("failed to send notification", nil)
 	}
@@ -269,5 +274,9 @@ func GetAllSubscriberInfoFromDB() map[string]*models.SerAvailabilityNotification
 
 //NewInstanceEtsiEventHandler new instance event handler
 func NewInstanceEtsiEventHandler() *InstanceEtsiEventHandler {
-	return &InstanceEtsiEventHandler{}
+	config, err := util2.TLSConfig(util2.ApiGwCaCertName, true)
+	if err != nil {
+		return nil
+	}
+	return &InstanceEtsiEventHandler{config}
 }
