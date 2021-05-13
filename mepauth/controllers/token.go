@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-// token controller
+// Package controllers implements mep auth controller
 package controllers
 
 import (
 	"encoding/hex"
 	"errors"
-	"mepauth/dbAdapter"
+	"mepauth/adapter"
 	"net/http"
 	"regexp"
 	"strings"
@@ -35,10 +35,11 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
-const Authorization string = "Authorization"
-const XRealIp string = "X-Real-Ip"
-const InternalError string = "Internal server error."
+const authorization string = "authorization"
+const xRealIp string = "X-Real-Ip"
+const internalError string = "Internal server error."
 
+// TokenController token controller
 type TokenController struct {
 	BaseController
 }
@@ -46,7 +47,7 @@ type TokenController struct {
 // @Title Process token information
 // @Description create token and return the same
 // @Param   Content-Type   header  string  true   "MIME type, fill in application/json"
-// @Param   Authorization  header  string  true   "Certification Information"
+// @Param   authorization  header  string  true   "Certification Information"
 // @Param   x-sdk-date     header  string  true   "Signature time, current timestamp, format: YYYYMMDDTHHMMSSZ"
 // @Param   Host           header  string  true   "Consistent with the host field used to generate the authentication information signature"
 // @Success 200 ok
@@ -54,36 +55,36 @@ type TokenController struct {
 // @router /token [post]
 func (c *TokenController) Post() {
 	log.Info("Get token request received.")
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	clientIp := c.Ctx.Request.Header.Get(xRealIp)
 	err := c.validateSrcAddress(clientIp)
 	if err != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.ClientIpaddressInvalid)
 		return
 	}
 	// Below we first check the formats of the header is correct or not
-	header := c.Ctx.Input.Header(Authorization)
+	header := c.Ctx.Input.Header(authorization)
 	ak, signHeader, sig := parseAuthHeader(header)
 	if ak == "" || signHeader == "" || sig == "" {
 		c.logReceivedMsg(clientIp)
-		c.handleLoggingForError(clientIp, util.BadRequest, "Bad auth header format")
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, "Bad auth header format")
 		return
 	}
 
 	if !isDateTimeFormatValid(c.Ctx.Request) {
 		c.logReceivedMsg(clientIp)
-		c.handleLoggingForError(clientIp, util.BadRequest, "Bad x-sdk-time format")
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, "Bad x-sdk-time format")
 		return
 	}
 
 	c.logReceivedMsgWithAk(clientIp, ak)
 
-	if IsAkInBlockList(ak) {
-		c.writeErrorResponse("Access is locked.", util.Forbidden)
+	if isAkInBlockList(ak) {
+		c.writeErrorResponse("Access is locked.", http.StatusForbidden)
 		c.logErrResponseMsgWithAk(clientIp, "Ak is blockListed", ak)
 		return
 	}
 
-	appInsId, sk, akExist := GetAppInsIdSk(ak)
+	appInsId, sk, akExist := getAppInsIdSk(ak)
 	if appInsId == "" || sk == nil || len(sk) == 0 {
 		c.checkAkExistAndWriteErrorRes(akExist)
 		c.logErrResponseMsgWithAk(clientIp, "Matching App instance id not found", ak)
@@ -95,7 +96,7 @@ func (c *TokenController) Post() {
 	if !c.isSignatureValid(ak, sk, signHeader, sig, clientIp) {
 		return
 	}
-	ClearAkFromBlockListing(ak)
+	clearAkFromBlockListing(ak)
 
 	tokenInfo := c.getTokenInfo(appInsId, ak)
 	if tokenInfo == nil {
@@ -104,7 +105,7 @@ func (c *TokenController) Post() {
 	c.sendResponseMsg(ak, tokenInfo, clientIp)
 }
 
-type JwtClaims struct {
+type jwtClaims struct {
 	jwt.StandardClaims
 	ClientIp string `json:"clientip"`
 }
@@ -126,7 +127,7 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 		}
 		return nil, errors.New(msg)
 	}
-	claims := JwtClaims{
+	claims := jwtClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: jwt.At(time.Now().Add(time.Hour * 1)),
 			Issuer:    mepAuthKey,
@@ -151,18 +152,18 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 }
 
 // Get app instance Id and Sk
-func GetAppInsIdSk(ak string) (string, []byte, bool) {
+func getAppInsIdSk(ak string) (string, []byte, bool) {
 	//authInfoRecord, readErr := ReadDataFromFile(ak)
 	authInfoRecord := &models.AuthInfoRecord{
 		Ak: ak,
 	}
-	readErr := dbAdapter.Db.ReadData(authInfoRecord, "ak")
+	readErr := adapter.Db.ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != util.PgOkMsg {
 		log.Error("auth info record does not exist")
 		return "", nil, false
 	}
 	encodedSk := []byte(authInfoRecord.Sk)
-	cipherSkBytes := make([]byte, hex.DecodedLen(len(encodedSk)), util.Success)
+	cipherSkBytes := make([]byte, hex.DecodedLen(len(encodedSk)), http.StatusOK)
 	_, errDecodeSk := hex.Decode(cipherSkBytes, encodedSk)
 	if errDecodeSk != nil {
 		log.Error("decode secret key failed")
@@ -196,10 +197,9 @@ func GetAppInsIdSk(ak string) (string, []byte, bool) {
 	return authInfoRecord.AppInsId, sk, true
 }
 
-func akSignatureIsValid(r *http.Request, ak string, sk []byte, signHeader string, sig string) (bool, error) {
+func isAkSignatureValid(r *http.Request, sk []byte, signHeader string, sig string) (bool, error) {
 
 	s := util.Sign{
-		AccessKey: ak,
 		SecretKey: sk,
 	}
 	// since we put mepauth behind kong, mepagent would use /route_path/mepauth_url to sign
@@ -253,19 +253,19 @@ func isDateTimeFormatValid(req *http.Request) bool {
 }
 
 func (c *TokenController) isSignatureValid(ak string, sk []byte, signHeader string, sig string, clientIp string) bool {
-	signIsValid, err := akSignatureIsValid(c.Ctx.Request, ak, sk, signHeader, sig)
+	signIsValid, err := isAkSignatureValid(c.Ctx.Request, sk, signHeader, sig)
 
 	// clear sk
 	util.ClearByteArray(sk)
 	if err != nil {
-		c.writeErrorResponse(InternalError, util.IntSerErr)
+		c.writeErrorResponse(internalError, http.StatusInternalServerError)
 		c.logErrResponseMsgWithAk(clientIp, "Generating signature failed", ak)
 		return false
 	}
 
 	if !signIsValid {
-		ProcessAkForBlockListing(ak)
-		c.writeErrorResponse("Invalid access or signature.", util.Unauthorized)
+		processAkForBlockListing(ak)
+		c.writeErrorResponse("Invalid access or signature.", http.StatusUnauthorized)
 		c.logErrResponseMsgWithAk(clientIp, "Signature is invalid", ak)
 		return false
 	}
@@ -273,14 +273,14 @@ func (c *TokenController) isSignatureValid(ak string, sk []byte, signHeader stri
 }
 
 func (c *TokenController) getTokenInfo(appInsId string, ak string) *models.TokenInfo {
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	clientIp := c.Ctx.Request.Header.Get(xRealIp)
 	if clientIp == "" {
 		clientIp = "UNKNOWN_IP"
 	}
 
 	token, err := generateJwtToken(appInsId, clientIp)
 	if err != nil {
-		c.writeErrorResponse(InternalError, util.IntSerErr)
+		c.writeErrorResponse(internalError, http.StatusInternalServerError)
 		c.logErrResponseMsgWithAk(clientIp, "Generation of jwt token failed", ak)
 		return nil
 	}
@@ -295,9 +295,9 @@ func (c *TokenController) getTokenInfo(appInsId string, ak string) *models.Token
 
 func (c *TokenController) checkAkExistAndWriteErrorRes(akExist bool) {
 	if !akExist {
-		c.writeErrorResponse("Invalid access or signature.", util.Unauthorized)
+		c.writeErrorResponse("Invalid access or signature.", http.StatusUnauthorized)
 	} else {
-		c.writeErrorResponse(InternalError, util.IntSerErr)
+		c.writeErrorResponse(internalError, http.StatusInternalServerError)
 	}
 }
 
@@ -307,5 +307,5 @@ func (c *TokenController) sendResponseMsg(ak string, tokenInfo *models.TokenInfo
 	bKey := *(*[]byte)(unsafe.Pointer(&tokenInfo.AccessToken))
 	util.ClearByteArray(bKey)
 	log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" +
-		" Operation [" + c.Ctx.Request.Method + "] Resource [" + c.Ctx.Input.URL() + "] Result [Success]")
+		" operation [" + c.Ctx.Request.Method + "] resource [" + c.Ctx.Input.URL() + "] Result [Success]")
 }

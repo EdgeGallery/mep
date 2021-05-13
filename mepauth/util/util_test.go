@@ -54,7 +54,7 @@ func TestGenRandRootKeyComponent(t *testing.T) {
 		_, err2 := genRootKey("tmpComponentFile", "tmpSaltFile")
 		So(err2, ShouldNotBeNil)
 
-		keyComponentFromUserStrByte = []byte(ComponentContent)
+		keyComponentFromUserStrByte = []byte(componentContent)
 		rootKey, err3 := genRootKey("tmpComponentFile", "tmpSaltFile")
 		So(err3, ShouldBeNil)
 		So(rootKey, ShouldNotBeNil)

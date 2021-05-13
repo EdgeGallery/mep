@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// signature service
+// Package util implements mep auth utility funtions and contain constants
 package util
 
 import (
@@ -35,20 +35,20 @@ import (
 )
 
 const (
-	SEPARATOR     string = "/"
-	LineSeparator string = "\n"
+	separator     string = "/"
+	lineSeparator string = "\n"
 	DateFormat    string = "20060102T150405Z"
-	ALGORITHM     string = "SDK-HMAC-SHA256"
+	algorithm     string = "SDK-HMAC-SHA256"
 	DateHeader    string = "x-sdk-date"
 	HostHeader    string = "Host"
 )
 
+// Sign data structure
 type Sign struct {
-	AccessKey string
 	SecretKey []byte
 }
 
-// get signature from request
+// GetSignature to obtain signature for a given request
 func (sig *Sign) GetSignature(req *http.Request) (string, error) {
 	if req == nil {
 		return "", errors.New("request is nil")
@@ -64,7 +64,7 @@ func (sig *Sign) GetSignature(req *http.Request) (string, error) {
 		return "", errGetStringToSign
 	}
 	// calculate signature
-	signature, errCalculateSignature := sig.calculateSignature(stringToSign, sig.SecretKey)
+	signature, errCalculateSignature := sig.calculateSignature(stringToSign)
 	if errCalculateSignature != nil {
 		return "", errCalculateSignature
 	}
@@ -91,13 +91,13 @@ func (sig *Sign) getCanonicalRequest(req *http.Request) (string, error) {
 		return "", errGetRequestBodyHash
 	}
 	// construct complete
-	return strings.Join([]string{method, uri, query, headersReq, headersSign, hexEncodeBody}, LineSeparator), nil
+	return strings.Join([]string{method, uri, query, headersReq, headersSign, hexEncodeBody}, lineSeparator), nil
 }
 
 // construct canonical uri can return
 func (sig *Sign) getCanonicalUri(req *http.Request) string {
 	// split uri to []string
-	paths := strings.Split(req.URL.Path, SEPARATOR)
+	paths := strings.Split(req.URL.Path, separator)
 	var uris []string
 	for _, path := range paths {
 		// ignore the empty string and relative path string
@@ -107,12 +107,12 @@ func (sig *Sign) getCanonicalUri(req *http.Request) string {
 		uris = append(uris, url.QueryEscape(path))
 	}
 	// create canonical uri
-	canonicalUri := SEPARATOR + strings.Join(uris, SEPARATOR)
+	canonicalUri := separator + strings.Join(uris, separator)
 	// check the uri suffix
-	if strings.HasSuffix(canonicalUri, SEPARATOR) {
+	if strings.HasSuffix(canonicalUri, separator) {
 		return canonicalUri
 	} else {
-		return canonicalUri + SEPARATOR
+		return canonicalUri + separator
 	}
 }
 
@@ -145,7 +145,7 @@ func (sig *Sign) getCanonicalHeaders(req *http.Request) string {
 		headers = append(headers, strings.ToLower(key)+":"+strings.Join(val, ","))
 	}
 	sort.Strings(headers)
-	return strings.Join(headers, LineSeparator) + LineSeparator
+	return strings.Join(headers, lineSeparator) + lineSeparator
 }
 
 // return signed headers list as string
@@ -208,11 +208,11 @@ func (sig *Sign) getStringToSign(canonicalRequest string, dateTime string) (stri
 		return "", errHexEncode
 	}
 	// construct complete
-	return strings.Join([]string{ALGORITHM, dateTime, hexEncodeReq}, LineSeparator), nil
+	return strings.Join([]string{algorithm, dateTime, hexEncodeReq}, lineSeparator), nil
 }
 
 // calculate the signature with string to sign and secret key.
-func (sig *Sign) calculateSignature(stringToSign string, secretKey []byte) (encodeStr string, err error) {
+func (sig *Sign) calculateSignature(stringToSign string) (encodeStr string, err error) {
 	defer func() {
 		if err1 := recover(); err1 != nil {
 			log.Error("panic handled:", err1)
@@ -220,7 +220,7 @@ func (sig *Sign) calculateSignature(stringToSign string, secretKey []byte) (enco
 		}
 	}()
 
-	h := hmac.New(sha256.New, secretKey)
+	h := hmac.New(sha256.New, sig.SecretKey)
 	_, errWrite := h.Write([]byte(stringToSign))
 	if errWrite != nil {
 		return "", errWrite

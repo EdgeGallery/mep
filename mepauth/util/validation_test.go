@@ -50,18 +50,18 @@ func TestValidateSk(t *testing.T) {
 
 func TestValidateServerName(t *testing.T) {
 	Convey("validate server name", t, func() {
-		ok, err := ValidateServerName("edgegallery.org")
+		ok, err := validateServerName("edgegallery.org")
 		So(ok, ShouldBeTrue)
 		So(err, ShouldBeNil)
 		tooLongServerName := "edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org."
-		ok, err = ValidateServerName(tooLongServerName)
+		ok, err = validateServerName(tooLongServerName)
 		So(ok, ShouldBeFalse)
 		So(err.Error(), ShouldEqual, "server or host name validation failed")
 		notMatchServerName := "abc*def.org"
-		ok, err = ValidateServerName(notMatchServerName)
+		ok, err = validateServerName(notMatchServerName)
 		So(ok, ShouldBeFalse)
 		So(err, ShouldBeNil)
 	})
@@ -69,17 +69,17 @@ func TestValidateServerName(t *testing.T) {
 
 func TestValidateApiGwParams(t *testing.T) {
 	Convey("validate apigw params", t, func() {
-		ok, err := ValidateApiGwParams("apigw.edgegallery.org", "30443")
+		ok, err := validateApiGwParams("apigw.edgegallery.org", "30443")
 		So(ok, ShouldBeTrue)
 		So(err, ShouldBeNil)
-		ok, err = ValidateApiGwParams("apigw.edgegallery.org", "304433")
+		ok, err = validateApiGwParams("apigw.edgegallery.org", "304433")
 		So(ok, ShouldBeFalse)
 		So(err, ShouldBeNil)
 		tooLongHost := "edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org." +
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org."
-		ok, err = ValidateApiGwParams(tooLongHost, "304433")
+		ok, err = validateApiGwParams(tooLongHost, "304433")
 		So(ok, ShouldBeFalse)
 		So(err, ShouldNotBeNil)
 	})
@@ -88,22 +88,22 @@ func TestValidateApiGwParams(t *testing.T) {
 func TestValidatePassword(t *testing.T) {
 	Convey("validate password", t, func() {
 		invalidPwd := []byte("1234567")
-		_, err := ValidatePassword(&invalidPwd)
+		_, err := validateJwtPassword(&invalidPwd)
 		So(err.Error(), ShouldEqual, "password must have minimum length of 8 and maximum of 16")
 		lowcasePwd := []byte("lowcasepassword")
-		ok, err := ValidatePassword(&lowcasePwd)
+		ok, err := validateJwtPassword(&lowcasePwd)
 		So(ok, ShouldBeFalse)
 		So(err, ShouldNotBeNil)
 		validPwd := []byte("Validpassword")
-		ok, err = ValidatePassword(&validPwd)
+		ok, err = validateJwtPassword(&validPwd)
 		So(ok, ShouldBeTrue)
 		So(err, ShouldBeNil)
 		allDigitPwd := []byte("0000000000")
-		ok, err = ValidatePassword(&allDigitPwd)
+		ok, err = validateJwtPassword(&allDigitPwd)
 		So(ok, ShouldBeFalse)
 		So(err, ShouldNotBeNil)
 		withSpecialCharPwd := []byte("00000-00000")
-		ok, err = ValidatePassword(&withSpecialCharPwd)
+		ok, err = validateJwtPassword(&withSpecialCharPwd)
 		So(ok, ShouldBeTrue)
 		So(err, ShouldBeNil)
 	})
@@ -134,7 +134,7 @@ func TestValidateInputArgs(t *testing.T) {
 		config["KEY_COMPONENT"] = &spaceKeyCom
 		So(ValidateInputArgs(config), ShouldBeFalse)
 
-		validKeyCom := []byte(ComponentContent)
+		validKeyCom := []byte(componentContent)
 		validJwtKey := []byte("te9Fmv%qaq")
 		validAk := []byte("QVUJMSUMgS0VZLS0tLS0")
 		validSk := []byte("DXPb4sqElKhcHe07Kw5uorayETwId1JOjjOIRomRs5wyszoCR5R7AtVa28KT3lSc")
@@ -150,9 +150,9 @@ func TestValidateInputArgs(t *testing.T) {
 
 func TestValidateKeyComponentUserInput(t *testing.T) {
 	Convey("validate key component user input", t, func() {
-		validKeyComUserInput := []byte(ComponentContent)
+		validKeyComUserInput := []byte(componentContent)
 		err := ValidateKeyComponentUserInput(&validKeyComUserInput)
-		inValidKeyComUserInput := []byte(ComponentContent[0:255])
+		inValidKeyComUserInput := []byte(componentContent[0:255])
 		err = ValidateKeyComponentUserInput(&inValidKeyComUserInput)
 		So(err, ShouldNotBeNil)
 	})

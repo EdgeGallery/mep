@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package controllers implements mep auth controller
 package controllers
 
 import (
@@ -26,13 +27,13 @@ import (
 
 var authInfoList map[string]*models.AkSessionInfo
 
-// Initialize auth info list
+// InitAuthInfoList initializes auth info list
 func InitAuthInfoList() {
 	authInfoList = make(map[string]*models.AkSessionInfo)
 }
 
 // Verify that Ak is in block list or not
-func IsAkInBlockList(ak string) bool {
+func isAkInBlockList(ak string) bool {
 	akInfo, ok := authInfoList[ak]
 	if ok && akInfo.State == "UnderBlockList" {
 		return true
@@ -41,7 +42,7 @@ func IsAkInBlockList(ak string) bool {
 }
 
 // Verify that Ak is in validation list or not
-func IsAkInValidationList(ak string) bool {
+func isAkInValidationList(ak string) bool {
 	akInfo, ok := authInfoList[ak]
 	if ok && akInfo.State == "ValidationInProgress" {
 		return true
@@ -50,7 +51,7 @@ func IsAkInValidationList(ak string) bool {
 }
 
 // Start Ak validation
-func StartValidatingAk(ak string) {
+func startValidatingAk(ak string) {
 	akInfo := new(models.AkSessionInfo)
 	akInfo.Ak = ak
 	akInfo.State = "ValidationInProgress"
@@ -67,7 +68,7 @@ func StartValidatingAk(ak string) {
 }
 
 // Stop Ak validation
-func StopValidatingAk(ak string) {
+func stopValidatingAk(ak string) {
 	defer func() {
 		if err1 := recover(); err1 != nil {
 			log.Error("panic handled:", err1)
@@ -86,7 +87,7 @@ func StopValidatingAk(ak string) {
 }
 
 // Start AK block listing
-func StartBlockListingAk(ak string) {
+func startBlockListingAk(ak string) {
 	akInfo, ok := authInfoList[ak]
 	if ok {
 		akInfo.State = "UnderBlockList"
@@ -104,8 +105,8 @@ func StartBlockListingAk(ak string) {
 }
 
 // Process Ak for block listing
-func ProcessAkForBlockListing(ak string) {
-	if IsAkInValidationList(ak) {
+func processAkForBlockListing(ak string) {
+	if isAkInValidationList(ak) {
 		akInfo, ok := authInfoList[ak]
 		if ok {
 			akInfo.ValidateCounter++
@@ -113,20 +114,20 @@ func ProcessAkForBlockListing(ak string) {
 			if akInfo.ValidateCounter >= util.ValidationCounter {
 				log.Info("Received invalid signature " + strconv.FormatInt(akInfo.ValidateCounter, util.BaseVal) +
 					" times, Ak " + ak + " is now under blockList")
-				StopValidatingAk(ak)
-				StartBlockListingAk(ak)
+				stopValidatingAk(ak)
+				startBlockListingAk(ak)
 				return
 			}
 		}
 	} else {
-		StartValidatingAk(ak)
+		startValidatingAk(ak)
 	}
 }
 
 // Clear Ak from block listing
-func ClearAkFromBlockListing(ak string) {
-	if IsAkInValidationList(ak) {
-		StopValidatingAk(ak)
+func clearAkFromBlockListing(ak string) {
+	if isAkInValidationList(ak) {
+		stopValidatingAk(ak)
 		delete(authInfoList, ak)
 	}
 }

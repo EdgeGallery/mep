@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"mepauth/dbAdapter"
+	"mepauth/adapter"
 	"reflect"
 	"testing"
 
@@ -51,8 +51,8 @@ func TestPut(t *testing.T) {
 		return nil, nil, nil
 	})
 
-	var pgdb *dbAdapter.PgDb
-	patch4 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+	var pgdb *adapter.PgDb
+	patch4 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*adapter.PgDb, interface{}, ...string) error {
 		return nil
 	})
 
@@ -113,7 +113,7 @@ func TestSaveAkAndSk(t *testing.T) {
 	validAk := "oooooooooooooooooooo"
 	validSk := []byte("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
 	validKey := []byte("00000000000000000000000000000000")
-	dbAdapter.Db = &dbAdapter.PgDb{}
+	adapter.Db = &adapter.PgDb{}
 
 	Convey("save ak and sk", t, func() {
 		Convey("for success", func() {
@@ -121,8 +121,8 @@ func TestSaveAkAndSk(t *testing.T) {
 				return validKey, nil
 			})
 
-			var pgdb *dbAdapter.PgDb
-			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*adapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
 
@@ -168,8 +168,8 @@ func TestSaveAkAndSk(t *testing.T) {
 			patch1 := ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return validKey, nil
 			})
-			var pgdb *dbAdapter.PgDb
-			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patch2 := ApplyMethod(reflect.TypeOf(pgdb), "InsertOrUpdateData", func(*adapter.PgDb, interface{}, ...string) error {
 				return errors.New("insert fail")
 			})
 

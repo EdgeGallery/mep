@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package routers registers routes of mepauth
 package routers
 
 import (
@@ -22,57 +23,57 @@ import (
 )
 
 const (
-	ConfController  = "mepauth/controllers:ConfController"
-	TokenController = "mepauth/controllers:TokenController"
+	confController  = "mepauth/controllers:confController"
+	tokenController = "mepauth/controllers:tokenController"
 )
 
 const (
-	DELETE = "delete"
-	GET    = "get"
-	PUT    = "put"
-	POST   = "post"
+	deleteOp = "deleteOp"
+	get      = "get"
+	put      = "put"
+	post     = "post"
 )
 
 const (
-	RootPath            string = "/mep"
-	AuthTokenPrefix     string = "/token"
-	AppManagePrefix     string = "/appMng/v1"
-	AuthTokenPath              = RootPath + AuthTokenPrefix
-	AppManagePath              = RootPath + AppManagePrefix
-	ConfControllerRoute        = AppManagePrefix + "/applications/:applicationId/confs"
+	rootPath            string = "/mep"
+	authTokenPrefix     string = "/token"
+	appManagePrefix     string = "/appMng/v1"
+	AuthTokenPath              = rootPath + authTokenPrefix
+	AppManagePath              = rootPath + appManagePrefix
+	confControllerRoute        = appManagePrefix + "/applications/:applicationId/confs"
 )
 
 func init() {
-	beego.GlobalControllerRouter[ConfController] = append(beego.GlobalControllerRouter[ConfController],
+	beego.GlobalControllerRouter[confController] = append(beego.GlobalControllerRouter[confController],
 		beego.ControllerComments{
 			Method:           "Put",
-			Router:           ConfControllerRoute,
-			AllowHTTPMethods: []string{PUT},
+			Router:           confControllerRoute,
+			AllowHTTPMethods: []string{put},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
-	beego.GlobalControllerRouter[ConfController] = append(beego.GlobalControllerRouter[ConfController],
+	beego.GlobalControllerRouter[confController] = append(beego.GlobalControllerRouter[confController],
 		beego.ControllerComments{
-			Method:           "Delete",
-			Router:           ConfControllerRoute,
-			AllowHTTPMethods: []string{DELETE},
+			Method:           "deleteOp",
+			Router:           confControllerRoute,
+			AllowHTTPMethods: []string{deleteOp},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
-	beego.GlobalControllerRouter[ConfController] = append(beego.GlobalControllerRouter[ConfController],
+	beego.GlobalControllerRouter[confController] = append(beego.GlobalControllerRouter[confController],
 		beego.ControllerComments{
 			Method:           "Get",
-			Router:           ConfControllerRoute,
-			AllowHTTPMethods: []string{GET},
+			Router:           confControllerRoute,
+			AllowHTTPMethods: []string{get},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
 
-	beego.GlobalControllerRouter[TokenController] = append(beego.GlobalControllerRouter[TokenController],
+	beego.GlobalControllerRouter[tokenController] = append(beego.GlobalControllerRouter[tokenController],
 		beego.ControllerComments{
 			Method:           "Post",
-			Router:           AuthTokenPrefix,
-			AllowHTTPMethods: []string{POST},
+			Router:           authTokenPrefix,
+			AllowHTTPMethods: []string{post},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})

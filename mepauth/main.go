@@ -23,9 +23,9 @@ import (
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"mepauth/adapter"
 	_ "mepauth/config"
 	"mepauth/controllers"
-	"mepauth/dbAdapter"
 	_ "mepauth/models"
 	_ "mepauth/routers"
 	"mepauth/util"
@@ -70,7 +70,7 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 
 func main() {
 
-	dbAdapter.Db = dbAdapter.InitDb()
+	adapter.InitDb()
 	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
@@ -140,7 +140,7 @@ func doInitialization(trustedNetworks *[]byte) bool {
 		return false
 	}
 
-	initializer := &ApiGwInitializer{tlsConfig:config}
+	initializer := &apiGwInitializer{tlsConfig: config}
 
 	err = initializer.InitAPIGateway(trustedNetworks)
 	if err != nil {
