@@ -78,7 +78,7 @@ func (m *Mm5Service) Init() error {
 		return err
 	}
 
-	log.Infof("Data plane initialized to %s", m.config.DataPlane.Type)
+	log.Infof("Data-plane initialized to %s.", m.config.DataPlane.Type)
 
 	m.mp2Worker.InitializeWorker(dataPlane, dnsAgent, m.config.DNSAgent.Type)
 

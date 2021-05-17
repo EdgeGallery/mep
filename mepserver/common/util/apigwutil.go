@@ -111,7 +111,7 @@ func (a *ApiGwIf) ApiGwDelRoute(serName string) {
 	req := httplib.Delete(kongRouteUrl)
 	str, err := req.String()
 	if err != nil {
-		log.Error("failed to delete API gateway route", err)
+		log.Error("Failed to delete API gateway route.", err)
 	}
-	log.Infof("res=%s", str)
+	log.Infof("Deleted service route from API Gateway(result=%s).", str)
 }

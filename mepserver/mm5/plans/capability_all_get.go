@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -74,19 +74,19 @@ type CapabilitiesGet struct {
 }
 
 func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
-	log.Debug("query request arrived to fetch all capabilities.")
+	log.Debug("Query request arrived to fetch all capabilities.")
 
 	capabilities := make([]models.PlatformCapability, 0)
 
 	resp, err := meputil.FindInstanceByKey(t.QueryParam)
 	if err != nil {
 		if err.Error() == "null" {
-			log.Info("the service is empty")
+			log.Info("Couldn't find any services to list the capabilities.")
 			t.HttpRsp = capabilities
 			return workspace.TaskFinish
 		}
-		log.Error("failed to find instance request", nil)
-		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find instance request")
+		log.Error("Failed to find service instances.", nil)
+		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find service instance")
 		return workspace.TaskFinish
 	}
 

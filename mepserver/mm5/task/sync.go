@@ -49,7 +49,7 @@ func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DN
 }
 
 func (w *Worker) StartNewTask(appName, appInstanceId, taskId string) {
-	log.Infof("New task created(app-name: %s, app-id: %s, task-id: %s)", appName, appInstanceId, taskId)
+	log.Infof("New appd sync task created(app-name: %s, app-id: %s, task-id: %s).", appName, appInstanceId, taskId)
 	w.waitWorkerFinish.Add(1)
 	go w.ProcessDataPlane(appName, appInstanceId, taskId)
 	return
@@ -65,7 +65,7 @@ func (w *Worker) ProcessDataPlane(appName, appInstanceId, taskId string) {
 	w.ProcessDataPlaneSync(appName, appInstanceId, taskId)
 }
 
-// Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
+// ProcessDataPlaneSync Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
 func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 
 	syncJob := newTask(appName, appInstanceId, taskId, w.dataPlane, w.dnsAgent, w.dnsTypeConfig)

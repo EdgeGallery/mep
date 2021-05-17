@@ -20,7 +20,6 @@ import (
 	"mepserver/common/arch/workspace"
 	"mepserver/mp1/event"
 	"net/http"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -37,11 +36,11 @@ type SubRelation struct {
 	ServiceList    []string `json:"serviceList"`
 }
 
-// This interface is query numbers of app subscribe other services and services subscribed by other app.
+// OnRequest This interface is query numbers of app subscribe other services and services subscribed by other app.
 func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	// query subscription info from DB, all the subscription info stored in DB
 	subscriptionInfos := event.GetAllSubscriberInfoFromDB()
-	log.Info("subscriptionInfos: ", subscriptionInfos)
+	log.Info("New request to query subscription infos.")
 
 	// appInstance set for all the app who subscribe services
 	appSubscribeSet := make(map[string]bool)
@@ -51,7 +50,7 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	relations := make(map[string][]string)
 
 	for key, value := range subscriptionInfos {
-		log.Info("key: ", key)
+		log.Debugf("Subscription path: %s.", key)
 		//pos := strings.LastIndex(key, "/")
 		str := strings.Split(key, "/")
 		appInstanceId := str[len(str)-2]
@@ -74,7 +73,9 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	appSubscribeNum := len(appSubscribeSet)
 	// service numbers who subscribed by app
 	serviceSubscribedNum := len(serviceSubscribedSet)
-	log.Info("appSubscribeNum: " + strconv.Itoa(appSubscribeNum) + "; serviceSubscribedNum: " + strconv.Itoa(serviceSubscribedNum))
+	log.Debugf(
+		"Subscription query response generated(app subscription count: %d, service subscription count: %d)",
+		appSubscribeNum, serviceSubscribedNum)
 
 	result := make(map[string]int)
 	result["appSubscribeNum"] = appSubscribeNum

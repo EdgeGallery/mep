@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -46,9 +46,9 @@ type DecodeRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
-// OnRequest
+// OnRequest decodes the service request messages
 func (t *DecodeRestReq) OnRequest(data string) workspace.TaskCode {
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 
 	err := t.GetParam(t.R)
@@ -64,7 +64,7 @@ func (t *DecodeRestReq) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-// Parse request body
+// ParseBody Parse request body
 func (t *DecodeRestReq) ParseBody(r *http.Request) error {
 	if t.RestBody == nil {
 		return nil
@@ -122,13 +122,13 @@ func (t *DecodeRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
-// set body and return DecodeRestReq
+// WithBody set body and return DecodeRestReq
 func (t *DecodeRestReq) WithBody(body interface{}) *DecodeRestReq {
 	t.RestBody = body
 	return t
 }
 
-// get param
+// GetParam get url param and validates
 func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	query, _ := meputil.GetHTTPTags(r)
 	var err error
@@ -294,21 +294,19 @@ type RegisterLimit struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handles the max limit checking for the service registration
 func (t *RegisterLimit) OnRequest(data string) workspace.TaskCode {
 	var query url.Values
 	instances, err := meputil.FindInstanceByKey(query)
 	if err != nil {
 		if err.Error() == "null" {
-			log.Info("the service is empty")
 			return workspace.TaskFinish
 		}
-		log.Error("find instance error", nil)
+		log.Error("Find service instance failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "find instance error")
 		return workspace.TaskFinish
 	}
 	if instances == nil {
-		log.Info("the service is empty")
 		return workspace.TaskFinish
 	}
 	var count int
@@ -318,7 +316,7 @@ func (t *RegisterLimit) OnRequest(data string) workspace.TaskCode {
 		}
 	}
 	if count >= meputil.ServicesMaxCount {
-		log.Error("registered services have achieve the limit", nil)
+		log.Error("Registered services have reached the limit.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "registered services have achieve the limit")
 	}
 	return workspace.TaskFinish

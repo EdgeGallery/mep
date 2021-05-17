@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util methods
+// Package util implements utility methods
 package util
 
 import (
@@ -37,7 +37,7 @@ func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
 		log.Error("get app config error", nil)
 		return nil, err
 	}
-	certNameConfig := string(appConfig[crtName])
+	certNameConfig := appConfig[crtName]
 	if len(certNameConfig) == 0 {
 		log.Error(crtName+" configuration is not set", nil)
 		return nil, errors.New("cert name configuration is not set")
@@ -56,13 +56,13 @@ func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
 		return nil, errors.New("failed to decode cert file")
 	}
 
-	serverName := string(appConfig["server_name"])
+	serverName := appConfig["server_name"]
 	serverNameIsValid, validateServerNameErr := validateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
 		log.Error("validate server name error", nil)
 		return nil, validateServerNameErr
 	}
-	sslCiphers := string(appConfig["ssl_ciphers"])
+	sslCiphers := appConfig["ssl_ciphers"]
 	if len(sslCiphers) == 0 {
 		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
 	}
@@ -128,7 +128,8 @@ func SendDelRequest(url string, tlsCfg *tls.Config) error {
 
 //SendRequest rest request
 func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) error {
-	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
+	log.Infof("New rest request url: %s, method: %s.", url, method)
+	log.Debugf("Rest body: %s.", string(jsonStr))
 	var req *httplib.BeegoHTTPRequest
 	switch method {
 	case PostMethod:
@@ -145,9 +146,9 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 
 	res, err := req.String()
 	if err != nil {
-		log.Error("send request failed", nil)
+		log.Errorf(nil, "Rest request failed on server(result: %s).", res)
 		return err
 	}
-	log.Infof("res=%s", res)
+	log.Infof("Rest request completed(result: %s).", res)
 	return nil
 }

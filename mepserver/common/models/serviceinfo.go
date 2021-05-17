@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
 import (
@@ -60,7 +60,7 @@ type Selves struct {
 	Href string `json:"liveness,omitempty"`
 }
 
-// transform ServiceInfo to CreateServiceRequest
+// ToServiceRequest transform ServiceInfo to CreateServiceRequest
 func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 	if req != nil {
 		if req.Service == nil {
@@ -78,7 +78,7 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 	}
 }
 
-// transform ServiceInfo to RegisterInstanceRequest
+// ToRegisterInstance transform ServiceInfo to RegisterInstanceRequest
 func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 	if req != nil {
 		if req.Instance == nil {
@@ -192,7 +192,7 @@ func (s *ServiceInfo) serCategoryToProperties(properties map[string]string) {
 	meputil.InfoToProperties(properties, "serCategory/version", s.SerCategory.Version)
 }
 
-// transform MicroServiceInstance to ServiceInfo
+// FromServiceInstance transform MicroServiceInstance to ServiceInfo
 func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	if inst == nil || inst.Properties == nil {
 		return
@@ -231,7 +231,7 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 }
 
 func registerToApiGw(uri string, serviceName, serviceId string) {
-	log.Infof("SerName: %s, uri: %v", serviceName, uri)
+	log.Infof("API gateway registration for new service(name: %s, id: %s, uri: %s).", serviceName, serviceId, uri)
 	serInfo := meputil.SerInfo{
 		SerName: serviceName,
 		Uri:     uri,
@@ -241,7 +241,6 @@ func registerToApiGw(uri string, serviceName, serviceId string) {
 		AppId:   serviceId,
 		SerInfo: serInfo,
 	}
-	log.Infof("serInfo: %s, routeInfo: %s", serviceName, routeInfo)
 	meputil.ApiGWInterface.AddApiGwService(routeInfo)
 	meputil.ApiGWInterface.AddApiGwRoute(routeInfo)
 	meputil.ApiGWInterface.EnableJwtPlugin(routeInfo)

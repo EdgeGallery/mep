@@ -48,10 +48,10 @@ type DecodeAppTerminationReq struct {
 	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
-// discover decode request
+// OnRequest discover decode request
 func (t *DecodeAppTerminationReq) OnRequest(data string) workspace.TaskCode {
 	var err error
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 	t.Ctx, err = t.GetFindParam(t.R)
 	if err != nil {
@@ -62,7 +62,7 @@ func (t *DecodeAppTerminationReq) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-// get find param by request
+// GetFindParam get find param by request
 func (t *DecodeAppTerminationReq) GetFindParam(r *http.Request) (context.Context, error) {
 
 	query, _ := meputil.GetHTTPTags(r)
@@ -85,9 +85,9 @@ type DeleteService struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handles the service deletion
 func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
-	log.Info("Deleting service")
+	log.Info("Application termination request.")
 	resp, errInt := backend.GetRecords("/cse-sr/inst/files///")
 	if errInt != 0 {
 		log.Errorf(nil, "query error from etcd")
@@ -138,11 +138,11 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		}
 	}
 	if len(findResp) == 0 {
-		log.Infof("no instances is available")
+		log.Infof("Requested application instances not found.")
 		t.HttpRsp = ""
 		return workspace.TaskFinish
 	}
-	log.Info("Sucessfully application's services are terminated")
+	log.Info("Successfully terminated application services.")
 	t.HttpRsp = ""
 	return workspace.TaskFinish
 }
@@ -164,16 +164,16 @@ type DeleteFromMepauth struct {
 	AppInstanceId string `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handles
 func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
-	log.Info("Deleting the mepauth")
+	log.Info("Deleting authentication key entry.")
 	mepauthPort := os.Getenv("MEPAUTH_SERVICE_PORT")
 	if len(mepauthPort) <= 0 || len(mepauthPort) > meputil.MaxPortLength {
-		log.Error("invalid mepauth port.", nil)
+		log.Error("Invalid mepauth port.", nil)
 		return workspace.TaskFinish
 	} else if num, err := strconv.Atoi(mepauthPort); err == nil {
 		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Error("invalid mepauth port.", nil)
+			log.Error("Invalid mepauth port.", nil)
 			return workspace.TaskFinish
 		}
 	}
@@ -221,11 +221,11 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 		log.Error("Body is not readable", nil)
 		return workspace.TaskFinish
 	}
-	log.Info("Sucessfully deleted the mepauth key")
+	log.Info("Successfully deleted the mepauth key.")
 	return workspace.TaskFinish
 }
 
-// Constructs tls configuration
+// TlsConfig Constructs tls configuration
 func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 	rootCAs := x509.NewCertPool()
 
@@ -256,7 +256,7 @@ func (t *DeleteAppDConfigWithSync) WithWorker(w *task.Worker) *DeleteAppDConfigW
 
 func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 
-	log.Info("Deleting the DNS and traffic rule")
+	log.Info("Deleting the DNS and traffic rule.")
 	/*
 			1. Check if AppInstanceId already exists and return an error if not exist. (query from DB)
 		    2. Check if any other ongoing operation for this AppInstance Id in the system.
@@ -293,7 +293,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Info("Successfully deleted DNS and traffic rule")
+	log.Info("Successfully deleted DNS and traffic rule.")
 
 	return workspace.TaskFinish
 }

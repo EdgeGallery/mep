@@ -176,7 +176,7 @@ func (c *safeDB) Put(key string, value []byte) {
 func (c *safeDB) String() {
 	c.mu.Lock()
 	for k, v := range c.db {
-		log.Infof("DB: Key-> %v; Value-> %v", k, string(v))
+		log.Infof("DB: Key-> %v; Value-> %v.", k, string(v))
 	}
 	c.mu.Unlock()
 }
@@ -1034,10 +1034,10 @@ dataplane:
 
 	db := safeDB{}
 	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		log.Infof("Get path: %v", path)
+		log.Infof("Get path: %v.", path)
 		db.String()
 		if db.Get(path) != nil {
-			log.Infof("Found the path in db: %s", string(db.Get(path)))
+			log.Infof("Found the path in db: %s.", string(db.Get(path)))
 			return db.Get(path), 0
 		}
 
@@ -1046,8 +1046,8 @@ dataplane:
 	defer patch1.Reset()
 
 	patch2 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
-		log.Infof("Put path: %v", path)
-		log.Infof("Put value: %v", string(value))
+		log.Infof("Put path: %v.", path)
+		log.Infof("Put value: %v.", string(value))
 		db.String()
 		db.Put(path, value)
 		// Return Success.

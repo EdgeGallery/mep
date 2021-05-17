@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -52,7 +52,7 @@ type SubscribeIst struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return SubscribeIst
+// WithType set type and return SubscribeIst
 func (t *SubscribeIst) WithType(subType string) *SubscribeIst {
 	t.SubscribeType = subType
 	return t
@@ -95,7 +95,7 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-// Validate Callback Uri
+// ValidateCallbackUri Validate Callback Uri
 func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 	var callBack string
 	if t.SubscribeType == util.SerAvailabilityNotificationSubscription {
@@ -130,7 +130,7 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 func isValidCallbackURI(reference string) bool {
 	_, err := url.ParseRequestURI(reference)
 	if err != nil {
-		log.Info("not a valid url " + reference)
+		log.Infof("Callback URI(%s) parse failed.", reference)
 		return false
 	}
 	return true
@@ -143,7 +143,7 @@ func (t *SubscribeIst) marshalError(appInstanceId string) workspace.TaskCode {
 	}
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(errors.New("delete operation failed"), "deleting app subscription from etcd failed on error. "+
+		log.Errorf(errors.New("delete operation failed"), "Deleting app subscription from etcd failed on error. "+
 			"This might lead to data inconsistency.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etcd failed on marshal error")
 		return workspace.TaskFinish
@@ -171,7 +171,7 @@ func (t *SubscribeIst) buildResponse(sub interface{}) {
 		t.W.Header().Set("Location", location)
 		t.HttpRsp = sub
 	default:
-		log.Warn("sub type not match")
+		log.Warn("Subscription type doesn't match.")
 	}
 
 }

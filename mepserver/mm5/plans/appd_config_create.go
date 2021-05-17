@@ -67,7 +67,7 @@ func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
 		log.Error("Validate X-AppInstanceId failed", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
-		return nil	
+		return nil
 	}
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil
@@ -122,7 +122,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 		t.SetFirstErrorCode(meputil.SerErrFailBase, errorString)
 		return verrs
 	}
-	log.Infof("AppD config received(Method: %s, Body:%s)", r.Method, string(msg))
+	log.Infof("AppD config received(method: %s, body:%s).", r.Method, string(msg))
 	return nil
 }
 

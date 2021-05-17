@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -44,7 +44,7 @@ type GetOneDecode struct {
 // OnRequest
 func (t *GetOneDecode) OnRequest(data string) workspace.TaskCode {
 	var err error
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
 	if err != nil {
@@ -73,11 +73,11 @@ func (t *GetOneDecode) getFindParam(r *http.Request) (context.Context, *proto.Ge
 	}
 
 	mp1SrvId := query.Get(":serviceId")
-	log.Info("service id " + mp1SrvId)
+	log.Infof("New service request(service id: %s).", mp1SrvId)
 	var err = meputil.ValidateServiceID(mp1SrvId)
 	if err != nil {
-		log.Error("Invalid service ID", err)
-		t.SetFirstErrorCode(meputil.SerErrFailBase, "Invalid service ID")
+		log.Error("Invalid service id.", err)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "invalid service id")
 		return nil, nil, err
 	}
 

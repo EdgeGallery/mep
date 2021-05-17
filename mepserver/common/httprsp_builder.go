@@ -51,9 +51,9 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 	t.W.Header().Del(util.ServerHeader)
 
 	failureEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
-		"[%s] Result [Failure : %s]"
+		"[%s] Result [Failure : %s]."
 	successEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
-		"[%s] Result [Success]"
+		"[%s] Result [Success]."
 
 	errInfo := t.GetSerErrInfo()
 	if errInfo == nil {

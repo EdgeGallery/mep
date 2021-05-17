@@ -92,7 +92,7 @@ func (m *Mp1Service) Init() error {
 		return err
 	}
 	m.dataPlane = dataPlane
-	log.Infof("Data plane initialized to %s", m.config.DataPlane.Type)
+	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
 	return nil
 }

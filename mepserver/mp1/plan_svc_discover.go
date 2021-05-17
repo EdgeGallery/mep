@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements rest api route controller
+// Package mp1 implements rest api route controller
 package mp1
 
 import (
@@ -42,9 +42,9 @@ type DiscoverDecode struct {
 	CoreRequest interface{}     `json:"coreRequest,out"`
 }
 
-// discover decode request
+// OnRequest discover decode request
 func (t *DiscoverDecode) OnRequest(data string) workspace.TaskCode {
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 	err := t.GetFindParam(t.R)
 	if err != nil {
@@ -53,7 +53,7 @@ func (t *DiscoverDecode) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-// get find param by request
+// GetFindParam get find param by request
 func (t *DiscoverDecode) GetFindParam(r *http.Request) error {
 
 	query, ids := meputil.GetHTTPTags(r)
@@ -133,7 +133,7 @@ func (t *DiscoverService) filterAppInstanceId() {
 	value.Instances = result
 }
 
-// service discover request
+// OnRequest service discover request
 func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.FindInstancesRequest)
 	if !ok {
@@ -182,7 +182,7 @@ type ToStrDiscover struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-// to string discover request
+// OnRequest to string discover request
 func (t *ToStrDiscover) OnRequest(data string) workspace.TaskCode {
 	value, ok := t.CoreRsp.(*proto.FindInstancesResponse)
 	if !ok {
@@ -202,7 +202,7 @@ type RspHook struct {
 	HookRsp interface{}     `json:"hookRsp,out"`
 }
 
-// resp hook request
+// OnRequest resp hook request
 func (t *RspHook) OnRequest(data string) workspace.TaskCode {
 	t.HookRsp = instanceHook(t.R, t.HttpRsp)
 	_, err := json.Marshal(t.HttpRsp)
@@ -239,7 +239,7 @@ func instanceHook(r *http.Request, rspData interface{}) interface{} {
 	return rspBody
 }
 
-// mp1 cvt service discover
+// Mp1CvtSrvDiscover mp1 cvt service discover
 func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse) (*proto.Response, []*models.ServiceInfo) {
 	resp := findInsResp.Response
 	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {

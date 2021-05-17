@@ -44,33 +44,34 @@ type DecodeHeartbeatRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
-// OnRequest
+// OnRequest handles heartbeat request decode
 func (t *DecodeHeartbeatRestReq) OnRequest(data string) workspace.TaskCode {
 	var err error
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] in heartbeat",
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] in heartbeat.",
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
 	if err != nil {
-		log.Error("parameters validation for heartbeat failed", err)
+		log.Error("Parameters validation for heartbeat failed.", err)
 		return workspace.TaskFinish
 	}
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {
-		log.Error("get one instance request in heartbeat patch error", nil)
+		log.Error("Error in casting the heartbeat patch.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance request for heartbeat patch error")
 		return workspace.TaskFinish
 	}
 	err = t.ParseBody(t.R)
 	if err != nil {
-		log.Error("Body error of heartbeat", err)
+		log.Error("Parse heartbeat body error.", err)
 		return workspace.TaskFinish
 	}
-	log.Debugf("Query request arrived to fetch the service information to heartbeat patch with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Query request arrived to fetch the service information to heartbeat patch with subscriptionId %s.",
+		req.ProviderServiceId)
 	return workspace.TaskFinish
 
 }
 
-// Parse request body
+// ParseBody Parse request body
 func (t *DecodeHeartbeatRestReq) ParseBody(r *http.Request) error {
 	var err error
 	msg, err := ioutil.ReadAll(r.Body)
