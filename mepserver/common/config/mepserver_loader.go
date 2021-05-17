@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package config parses and generate the mep server configurations
 package config
 
 import (
@@ -25,41 +26,49 @@ import (
 	"path/filepath"
 )
 
+// MepServerConfig holds mep server configurations
 type MepServerConfig struct {
 	DNSAgent  DNSAgent  `yaml:"dnsAgent"`
 	DataPlane DataPlane `yaml:"dataplane"`
 }
+
+// Address endpoint in config
 type Address struct {
 	Host string `yaml:"host" validate:"omitempty,min=1,max=253"`
 	Port int    `yaml:"port" validate:"omitempty,min=1,max=65535"`
 }
+
+// EndPoint config field
 type EndPoint struct {
 	Address Address `yaml:"address"`
 }
+
+// DNSAgent related configurations
 type DNSAgent struct {
 	Type     string   `yaml:"type" validate:"oneof=local dataplane all"`
 	Endpoint EndPoint `yaml:"endPoint" validate:"required_unless=type dataplane"`
 }
 
+// DataPlane related configurations
 type DataPlane struct {
 	Type string `yaml:"type" validate:"oneof=none"`
 }
 
-// Read and load the mep server configurations
+// LoadMepServerConfig read and load the mep server configurations
 func LoadMepServerConfig() (*MepServerConfig, error) {
 	configFilePath := filepath.FromSlash(util.MepServerConfigPath)
 	configData, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		log.Error("Reading configuration file error", nil)
+		log.Error("Reading configuration file error.", nil)
 		return nil, err
 	}
 	var mepConfig MepServerConfig
 	err = yaml.Unmarshal(configData, &mepConfig)
 	if err != nil {
-		log.Error("Parsing configuration file error", nil)
+		log.Error("Parsing configuration file error.", nil)
 		return nil, err
 	}
-	err = validateConfig(&mepConfig)
+	err = mepConfig.validateConfig()
 	if err != nil {
 		log.Error("Config validation failed.", err)
 		return nil, err
@@ -67,9 +76,9 @@ func LoadMepServerConfig() (*MepServerConfig, error) {
 	return &mepConfig, nil
 }
 
-func validateConfig(config *MepServerConfig) error {
+func (c *MepServerConfig) validateConfig() error {
 	validate := validator.New()
-	err := validate.Struct(config)
+	err := validate.Struct(c)
 	if err != nil {
 		return err
 	}
