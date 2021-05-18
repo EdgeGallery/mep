@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// util package
+// Package util implements mep auth utility funtions and contain constants
 package util
 
 import (
@@ -40,20 +40,21 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-const KeyFileMode os.FileMode = 0600
+const keyFileMode os.FileMode = 0600
 
-const KeySize int = 32
+const keySize int = 32
 const NonceSize int = 12
-const IterationNum int = 100000
-const ComponentSize int = 256
+const iterationNum int = 100000
+const componentSize int = 256
 
-const ComponentFilePath string = "cprop/c_properties"
-const SaltFilePath string = "sprop/s_properties"
-const EncryptedWorkKeyFilePath string = "wprop/w_properties"
-const WorkKeyNonceFilePath string = "wnprop/wn_properties"
-const EncryptedJwtPrivateKeyPwdFilePath string = "encrypted_jwt_private_key_pwd"
-const JwtPrivateKeyPwdNonceFilePath string = "jwt_private_key_nonce_pwd"
+const componentFilePath string = "cprop/c_properties"
+const saltFilePath string = "sprop/s_properties"
+const encryptedWorkKeyFilePath string = "wprop/w_properties"
+const workKeyNonceFilePath string = "wnprop/wn_properties"
+const encryptedJwtPrivateKeyPwdFilePath string = "encrypted_jwt_private_key_pwd"
+const jwtPrivateKeyPwdNonceFilePath string = "jwt_private_key_nonce_pwd"
 
+// AppConfigProperties application configuration properties
 type AppConfigProperties map[string]*[]byte
 
 var KeyComponentFromUserStr *[]byte
@@ -62,12 +63,12 @@ var cipherSuiteMap = map[string]uint16{
 	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
 
-// Get app configuration
+// GetAppConfig gets app configuration
 func GetAppConfig(k string) string {
 	return beego.AppConfig.String(k)
 }
 
-// Get public key from app configuration
+// GetPublicKey gets public key from app configuration
 func GetPublicKey() ([]byte, error) {
 	jwtPublicKey := GetAppConfig("jwt_public_key")
 	if len(jwtPublicKey) == 0 {
@@ -88,7 +89,7 @@ func GetPublicKey() ([]byte, error) {
 	return publicKey, nil
 }
 
-// Get private key from app configuration
+// GetPrivateKey gets private key from app configuration
 func GetPrivateKey() (*rsa.PrivateKey, error) {
 	encryptKeyFile := GetAppConfig("jwt_encrypted_private_key")
 	if len(encryptKeyFile) == 0 {
@@ -150,11 +151,11 @@ func GetPrivateKey() (*rsa.PrivateKey, error) {
 	return parsedKey, nil
 }
 
-// Get api gateway URL
+// GetAPIGwURL gets api gateway URL
 func GetAPIGwURL() (string, error) {
 	apiGwHost := GetAppConfig(ApigwHost)
 	apiGwPort := GetAppConfig(ApigwPort)
-	apiGwParamsAreValid, validateApiGwParamsErr := ValidateApiGwParams(apiGwHost, apiGwPort)
+	apiGwParamsAreValid, validateApiGwParamsErr := validateApiGwParams(apiGwHost, apiGwPort)
 	if validateApiGwParamsErr != nil || !apiGwParamsAreValid {
 		log.Error("validate Consumer url failed")
 		return "", validateApiGwParamsErr
@@ -163,7 +164,7 @@ func GetAPIGwURL() (string, error) {
 	return kongConsumerUrl, nil
 }
 
-// use aes 256 gcm algo to encrypt secret keys
+// EncryptByAES256GCM encrypts secret key using aes 256 gcm algo
 func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -181,7 +182,7 @@ func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, err
 	return ciphertext, nil
 }
 
-// use aes 256 gcm algo to decrypt secret keys
+// DecryptByAES256GCM encrypts secret key using aes 256 gcm algo
 func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -204,7 +205,7 @@ func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, er
 	return plaintext, nil
 }
 
-// Update tls configuration
+// TLSConfig provides TLS configuration
 func TLSConfig(crtName string) (*tls.Config, error) {
 	certNameConfig := GetAppConfig(crtName)
 	if len(certNameConfig) == 0 {
@@ -226,7 +227,7 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 	}
 
 	serverName := GetAppConfig("server_name")
-	serverNameIsValid, validateServerNameErr := ValidateServerName(serverName)
+	serverNameIsValid, validateServerNameErr := validateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
 		log.Error("validate server name error")
 		return nil, validateServerNameErr
@@ -268,10 +269,10 @@ func getCipherSuites(sslCiphers string) []uint16 {
 	return nil
 }
 
-// Generate work key by using root key
+// GetWorkKey generates work key by using root key
 func GetWorkKey() ([]byte, error) {
 	// get root key by key components
-	rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
+	rootKey, genRootKeyErr := genRootKey(componentFilePath, saltFilePath)
 	if genRootKeyErr != nil {
 		log.Error("failed to generate root key by key components")
 		return nil, genRootKeyErr
@@ -279,7 +280,7 @@ func GetWorkKey() ([]byte, error) {
 	log.Info("Succeed to generate root key by key components.")
 
 	// decrypt work key by root key.
-	workKey, decryptedWorkKeyErr := decryptKey(rootKey, EncryptedWorkKeyFilePath, WorkKeyNonceFilePath)
+	workKey, decryptedWorkKeyErr := decryptKey(rootKey, encryptedWorkKeyFilePath, workKeyNonceFilePath)
 	// clear root keyfv
 	ClearByteArray(rootKey)
 	if decryptedWorkKeyErr != nil {
@@ -299,8 +300,8 @@ func getJwtPrivateKeyPwd() ([]byte, error) {
 	}
 
 	// decrypt jwt private key password by root key.
-	jwtPrivateKeyPwd, decryptedJwtPrivateKeyPwdErr := decryptKey(workKey, EncryptedJwtPrivateKeyPwdFilePath,
-		JwtPrivateKeyPwdNonceFilePath)
+	jwtPrivateKeyPwd, decryptedJwtPrivateKeyPwdErr := decryptKey(workKey, encryptedJwtPrivateKeyPwdFilePath,
+		jwtPrivateKeyPwdNonceFilePath)
 	// clear work key
 	ClearByteArray(workKey)
 	if decryptedJwtPrivateKeyPwdErr != nil {
@@ -311,9 +312,9 @@ func getJwtPrivateKeyPwd() ([]byte, error) {
 	return jwtPrivateKeyPwd, nil
 }
 
-// Encrypt and save JWT password
+// EncryptAndSaveJwtPwd encrypts and save JWT password
 func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
-	pwdIsValid, err := ValidatePassword(jwtPrivateKeyPwd)
+	pwdIsValid, err := validateJwtPassword(jwtPrivateKeyPwd)
 	if err != nil || !pwdIsValid {
 		log.Error(err)
 		ClearByteArray(*jwtPrivateKeyPwd)
@@ -346,9 +347,9 @@ func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
 		return errors.New(errMsg)
 	}
 
-	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedJwtPrivateKeyPwdFilePath,
-		encryptedJwtPrivateKeyPwd, KeyFileMode)
-	writeNonceErr := ioutil.WriteFile(JwtPrivateKeyPwdNonceFilePath, jwtPrivateKeyPwdNonce, KeyFileMode)
+	writeEncryptedPwdErr := ioutil.WriteFile(encryptedJwtPrivateKeyPwdFilePath,
+		encryptedJwtPrivateKeyPwd, keyFileMode)
+	writeNonceErr := ioutil.WriteFile(jwtPrivateKeyPwdNonceFilePath, jwtPrivateKeyPwdNonce, keyFileMode)
 	ClearByteArray(encryptedJwtPrivateKeyPwd)
 	ClearByteArray(jwtPrivateKeyPwdNonce)
 	if writeEncryptedPwdErr != nil || writeNonceErr != nil {
@@ -360,11 +361,11 @@ func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
 	return nil
 }
 
-// Init root key and work key
+// InitRootKeyAndWorkKey initializes root key and work key
 func InitRootKeyAndWorkKey() error {
 	// generate and save random root key components if not exist
-	if !isFileOrDirExist(ComponentFilePath) || !isFileOrDirExist(SaltFilePath) {
-		genRandRootKeyComponentErr := genRandRootKeyComponent(ComponentFilePath, SaltFilePath)
+	if !isFileOrDirExist(componentFilePath) || !isFileOrDirExist(saltFilePath) {
+		genRandRootKeyComponentErr := genRandRootKeyComponent(componentFilePath, saltFilePath)
 		if genRandRootKeyComponentErr != nil {
 			log.Error("failed to generate random key")
 			return genRandRootKeyComponentErr
@@ -373,15 +374,15 @@ func InitRootKeyAndWorkKey() error {
 	}
 
 	// generate and save encrypted work key if not exist.
-	if !isFileOrDirExist(EncryptedWorkKeyFilePath) || !isFileOrDirExist(WorkKeyNonceFilePath) {
+	if !isFileOrDirExist(encryptedWorkKeyFilePath) || !isFileOrDirExist(workKeyNonceFilePath) {
 		// get root key by key components
-		rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
+		rootKey, genRootKeyErr := genRootKey(componentFilePath, saltFilePath)
 		if genRootKeyErr != nil {
 			log.Error("failed to generate root key")
 			return genRootKeyErr
 		}
 		log.Info("Succeed to generate root key by key components.")
-		workKey, genAndSaveWorkKeyErr := genAndSaveWorkKey(rootKey, EncryptedWorkKeyFilePath, WorkKeyNonceFilePath)
+		workKey, genAndSaveWorkKeyErr := genAndSaveWorkKey(rootKey, encryptedWorkKeyFilePath, workKeyNonceFilePath)
 		ClearByteArray(workKey)
 		ClearByteArray(rootKey)
 		if genAndSaveWorkKeyErr != nil {
@@ -394,7 +395,7 @@ func InitRootKeyAndWorkKey() error {
 }
 
 func genAndSaveWorkKey(rootKey []byte, encryptedWorkKeyFilePath string, workKeyNonceFilePath string) ([]byte, error) {
-	workKey := make([]byte, KeySize, 50)
+	workKey := make([]byte, keySize, 50)
 	_, workKeyErr := rand.Read(workKey)
 	if workKeyErr != nil {
 		return nil, fmt.Errorf("failed to generate random work secret key")
@@ -412,8 +413,8 @@ func genAndSaveWorkKey(rootKey []byte, encryptedWorkKeyFilePath string, workKeyN
 		return nil, fmt.Errorf("failed to encrypt work secret key")
 	}
 
-	writeEncryptedWorkKeyErr := ioutil.WriteFile(encryptedWorkKeyFilePath, encryptedWorkKey, KeyFileMode)
-	writeWorkKeyNonceErr := ioutil.WriteFile(workKeyNonceFilePath, workKeyNonce, KeyFileMode)
+	writeEncryptedWorkKeyErr := ioutil.WriteFile(encryptedWorkKeyFilePath, encryptedWorkKey, keyFileMode)
+	writeWorkKeyNonceErr := ioutil.WriteFile(workKeyNonceFilePath, workKeyNonce, keyFileMode)
 	ClearByteArray(encryptedWorkKey)
 	ClearByteArray(workKeyNonce)
 	if writeEncryptedWorkKeyErr != nil || writeWorkKeyNonceErr != nil {
@@ -449,8 +450,8 @@ func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
 		log.Error("parameter of key is not provided")
 		return nil, fmt.Errorf("parameter of key is not provided")
 	}
-	componentFromUser := make([]byte, ComponentSize, 300)
-	for i := 0; i < ComponentSize && i < len(*KeyComponentFromUserStr); i++ {
+	componentFromUser := make([]byte, componentSize, 300)
+	for i := 0; i < componentSize && i < len(*KeyComponentFromUserStr); i++ {
 		componentFromUser[i] = (*KeyComponentFromUserStr)[i]
 	}
 
@@ -468,18 +469,18 @@ func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
 	}
 
 	// get component from hard code
-	componentFromHardCode := make([]byte, ComponentSize, 300)
-	componentFromHardCodeTmp := []byte(ComponentContent)
-	for i := 0; i < ComponentSize && i < len(componentFromHardCodeTmp); i++ {
+	componentFromHardCode := make([]byte, componentSize, 300)
+	componentFromHardCodeTmp := []byte(componentContent)
+	for i := 0; i < componentSize && i < len(componentFromHardCodeTmp); i++ {
 		componentFromHardCode[i] = componentFromHardCodeTmp[i]
 	}
 
 	// generate root key by key components
-	tmpComponent := make([]byte, ComponentSize, 300)
-	for i := 0; i < ComponentSize; i++ {
+	tmpComponent := make([]byte, componentSize, 300)
+	for i := 0; i < componentSize; i++ {
 		tmpComponent[i] = componentFromUser[i] ^ componentFromFile[i] ^ componentFromHardCode[i]
 	}
-	rootKey := pbkdf2.Key(tmpComponent, salt, IterationNum, KeySize, sha256.New)
+	rootKey := pbkdf2.Key(tmpComponent, salt, iterationNum, keySize, sha256.New)
 	ClearByteArray(componentFromUser)
 	ClearByteArray(componentFromFile)
 	ClearByteArray(componentFromHardCode)
@@ -490,20 +491,20 @@ func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
 }
 
 func genRandRootKeyComponent(componentFilePath string, saltFilePath string) error {
-	component := make([]byte, ComponentSize, 300)
+	component := make([]byte, componentSize, 300)
 	_, generateComponentErr := rand.Read(component)
 	if generateComponentErr != nil {
 		return fmt.Errorf("failed to generate random key component")
 	}
 
-	salt := make([]byte, ComponentSize, 300)
+	salt := make([]byte, componentSize, 300)
 	_, generateSaltErr := rand.Read(salt)
 	if generateSaltErr != nil {
 		ClearByteArray(component)
 		return fmt.Errorf("failed to generate random key salt")
 	}
-	writeComponent1FileErr := ioutil.WriteFile(componentFilePath, component, KeyFileMode)
-	writeSaltFileErr := ioutil.WriteFile(saltFilePath, salt, KeyFileMode)
+	writeComponent1FileErr := ioutil.WriteFile(componentFilePath, component, keyFileMode)
+	writeSaltFileErr := ioutil.WriteFile(saltFilePath, salt, keyFileMode)
 	// clear component
 	ClearByteArray(component)
 	// clear salt
@@ -522,7 +523,7 @@ func isFileOrDirExist(path string) bool {
 	return true
 }
 
-// Clear byte array from memory
+// ClearByteArray clears byte array from memory
 func ClearByteArray(data []byte) {
 	if data == nil {
 		return
@@ -532,7 +533,7 @@ func ClearByteArray(data []byte) {
 	}
 }
 
-// Validate db parameters
+// ValidateDbParams validates db parameters
 func ValidateDbParams(dbPwd string) (bool, error) {
 	dbPwdBytes := []byte(dbPwd)
 	dbPwdIsValid, validateDbPwdErr := validatePassword(&dbPwdBytes)

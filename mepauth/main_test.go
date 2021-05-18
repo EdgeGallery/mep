@@ -22,7 +22,7 @@ import (
 	"github.com/agiledragon/gomonkey"
 	"github.com/astaxie/beego/orm"
 	"io"
-	"mepauth/dbAdapter"
+	"mepauth/adapter"
 	"mepauth/util"
 	"os"
 	"reflect"
@@ -59,13 +59,13 @@ func TestInitDb(t *testing.T) {
 			})
 			defer patch4.Reset()
 
-			var pgdb *dbAdapter.PgDb
-			patch5 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "InitOrmer", func(*dbAdapter.PgDb) error {
+			var pgdb *adapter.PgDb
+			patch5 := gomonkey.ApplyMethod(reflect.TypeOf(pgdb), "InitOrmer", func(*adapter.PgDb) error {
 				return nil
 			})
 
 			defer patch5.Reset()
-			dbAdapter.Db = dbAdapter.InitDb()
+			adapter.InitDb()
 		})
 	})
 }
@@ -130,8 +130,8 @@ func TestDoInitialization(t *testing.T) {
 	Convey("Do Initialization", t, func() {
 		Convey("for success", func() {
 			network := []byte("example.com")
-			var initializer *ApiGwInitializer
-			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
+			var initializer *apiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*apiGwInitializer, *[]byte) error {
 				return nil
 			})
 			defer patch1.Reset()
@@ -149,8 +149,8 @@ func TestDoInitialization(t *testing.T) {
 
 		Convey("for InitAPIGateway fail", func() {
 			network := []byte("example.com")
-			var initializer *ApiGwInitializer
-			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
+			var initializer *apiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*apiGwInitializer, *[]byte) error {
 				return errors.New("InitAPIGateway fail")
 			})
 			patch2 := gomonkey.ApplyFunc(util.TLSConfig, func(string) (*tls.Config, error) {
@@ -164,8 +164,8 @@ func TestDoInitialization(t *testing.T) {
 
 		Convey("for InitRootKeyAndWorkKey fail", func() {
 			network := []byte("example.com")
-			var initializer *ApiGwInitializer
-			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*ApiGwInitializer, *[]byte) error {
+			var initializer *apiGwInitializer
+			patch1 := gomonkey.ApplyMethod(reflect.TypeOf(initializer), "InitAPIGateway", func(*apiGwInitializer, *[]byte) error {
 				return nil
 			})
 			defer patch1.Reset()

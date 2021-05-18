@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// conf controller
+// Package controllers implements mep auth controller
 package controllers
 
 import (
@@ -22,14 +22,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
-	"mepauth/dbAdapter"
+	"mepauth/adapter"
+	"net/http"
 
 	"mepauth/models"
 	"mepauth/util"
 )
 
-const AppInsId string = "app_ins_id"
+const appInsId string = "app_ins_id"
 
+// ConfController configuration controller
 type ConfController struct {
 	BaseController
 }
@@ -44,10 +46,10 @@ type ConfController struct {
 // @router /appMng/v1/applications/:applicationId/confs [put]
 func (c *ConfController) Put() {
 	log.Info("Put AK/SK configuration request received.")
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	clientIp := c.Ctx.Request.Header.Get(xRealIp)
 	err := c.validateSrcAddress(clientIp)
 	if err != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.ClientIpaddressInvalid)
 		return
 	}
 	c.logReceivedMsg(clientIp)
@@ -66,18 +68,18 @@ func (c *ConfController) Put() {
 		if err != nil {
 			switch err.Error() {
 			case util.AppIDFailMsg:
-				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for application instance ID")
+				c.handleLoggingForError(clientIp, http.StatusBadRequest, "Invalid input for application instance ID")
 				return
 			case util.AkFailMsg:
 			case util.SkFailMsg:
-				c.handleLoggingForError(clientIp, util.BadRequest, "Invalid input for ak or sk")
+				c.handleLoggingForError(clientIp, http.StatusBadRequest, "Invalid input for ak or sk")
 				return
 			default:
-				c.handleLoggingForError(clientIp, util.IntSerErr, "Error while saving configuration")
+				c.handleLoggingForError(clientIp, http.StatusInternalServerError, "Error while saving configuration")
 			}
 		}
 	} else {
-		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 	}
 	c.handleLoggingForSuccess(clientIp, "")
 }
@@ -92,17 +94,17 @@ func (c *ConfController) Put() {
 func (c *ConfController) Delete() {
 
 	log.Info("Delete AK/SK configuration request received.")
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	clientIp := c.Ctx.Request.Header.Get(xRealIp)
 	err := c.validateSrcAddress(clientIp)
 	if err != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.ClientIpaddressInvalid)
 		return
 	}
 	c.logReceivedMsg(clientIp)
 
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.AppIDFailMsg)
 		return
 	}
 
@@ -110,9 +112,9 @@ func (c *ConfController) Delete() {
 		AppInsId: appInsId,
 	}
 
-	err = dbAdapter.Db.DeleteData(authInfoRecord, AppInsId)
+	err = adapter.Db.DeleteData(authInfoRecord, appInsId)
 	if err != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
 	}
 	c.handleLoggingForSuccess(clientIp, "")
@@ -128,17 +130,17 @@ func (c *ConfController) Delete() {
 func (c *ConfController) Get() {
 
 	log.Info("Get AK/SK configuration request received.")
-	clientIp := c.Ctx.Request.Header.Get(XRealIp)
+	clientIp := c.Ctx.Request.Header.Get(xRealIp)
 	err := c.validateSrcAddress(clientIp)
 	if err != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.ClientIpaddressInvalid)
 		return
 	}
 	c.logReceivedMsg(clientIp)
 
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 	if validateErr := util.ValidateUUID(appInsId); validateErr != nil {
-		c.handleLoggingForError(clientIp, util.BadRequest, util.AppIDFailMsg)
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, util.AppIDFailMsg)
 		return
 	}
 
@@ -146,29 +148,18 @@ func (c *ConfController) Get() {
 		AppInsId: appInsId,
 	}
 
-	err = dbAdapter.Db.ReadData(authInfoRecord, AppInsId)
+	err = adapter.Db.ReadData(authInfoRecord, appInsId)
 	if err != nil && err.Error() != util.PgOkMsg {
-		c.handleLoggingForError(clientIp, util.BadRequest, err.Error())
+		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
 	}
 	c.Data["json"] = authInfoRecord
 	c.ServeJSON()
-	log.Info("Response message for ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
-		Resource + c.Ctx.Input.URL() + "] Result [Success]")
+	log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
+		resource + c.Ctx.Input.URL() + "] Result [Success]")
 }
 
-func (c *ConfController) writeErrorResponse(errMsg string, code int) {
-	log.Error(errMsg)
-	c.writeResponse(errMsg, code)
-}
-
-func (c *ConfController) writeResponse(msg string, code int) {
-	c.Data["json"] = msg
-	c.Ctx.ResponseWriter.WriteHeader(code)
-	c.ServeJSON()
-}
-
-// Save Ak and Sk configuration into file
+// ConfigureAkAndSk save Ak and Sk configuration into file
 func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 
 	log.Infof("ak/sk configuration is received, the corresponding app is " + appInsID)
@@ -210,7 +201,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Nonce:    string(nonceBytes),
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
-	err = dbAdapter.Db.InsertOrUpdateData(authInfoRecord, AppInsId)
+	err = adapter.Db.InsertOrUpdateData(authInfoRecord, appInsId)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package controllers implements mep auth controller
 package controllers
 
 import (
@@ -24,25 +25,25 @@ import (
 )
 
 const (
-	Operation = "] Operation ["
-	Resource  = " Resource ["
+	operation = "] operation ["
+	resource  = " resource ["
 )
 
-// Base Controller
+// BaseController base controller
 type BaseController struct {
 	beego.Controller
 }
 
 // To display log for received message
 func (c *BaseController) logReceivedMsg(clientIp string) {
-	log.Info("Received message from ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
-		Resource + c.Ctx.Input.URL() + "]")
+	log.Info("Received message from ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
+		resource + c.Ctx.Input.URL() + "]")
 }
 
 // To display log for received message
 func (c *BaseController) logReceivedMsgWithAk(clientIp string, ak string) {
-	log.Info("Received message from ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + Operation +
-		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "]")
+	log.Info("Received message from ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + operation +
+		c.Ctx.Request.Method + "]" + resource + c.Ctx.Input.URL() + "]")
 }
 
 // Handled logging for error case
@@ -52,13 +53,13 @@ func (c *BaseController) handleLoggingForError(clientIp string, code int, errMsg
 }
 
 func (c *BaseController) logErrResponseMsg(clientIp string, errMsg string) {
-	log.Info("Response message for ClientIP [" + clientIp + Operation +
-		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
+	log.Info("Response message for ClientIP [" + clientIp + operation +
+		c.Ctx.Request.Method + "]" + resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
 }
 
 func (c *BaseController) logErrResponseMsgWithAk(clientIp string, errMsg string, ak string) {
-	log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + Operation +
-		c.Ctx.Request.Method + "]" + Resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
+	log.Info("Response message for ClientIP [" + clientIp + "] ClientAK [" + ak + "]" + operation +
+		c.Ctx.Request.Method + "]" + resource + c.Ctx.Input.URL() + "] Result [Failure: " + errMsg + ".]")
 }
 
 // Write error response
@@ -78,8 +79,8 @@ func (c *BaseController) writeResponse(msg string, code int) {
 func (c *BaseController) handleLoggingForSuccess(clientIp string, msg string) {
 	c.ServeJSON()
 	c.Data["json"] = "Success."
-	log.Info("Response message for ClientIP [" + clientIp + Operation + c.Ctx.Request.Method + "]" +
-		Resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + ".]")
+	log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
+		resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + ".]")
 }
 
 // Validate source address
