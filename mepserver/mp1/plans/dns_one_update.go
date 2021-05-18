@@ -315,8 +315,8 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	}
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.AppInstanceId,
-		ApplicationName: t.AppName,
+		Id:   t.AppInstanceId,
+		Name: t.AppName,
 	}
 
 	err = t.updateDNSToDataPlane(dnsConfigInPut, dnsOnStore, appInfo, rrType)

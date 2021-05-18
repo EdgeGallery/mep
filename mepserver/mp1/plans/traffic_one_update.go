@@ -149,8 +149,8 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	}
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.AppInstanceId,
-		ApplicationName: appDConfig.AppName,
+		Id:   t.AppInstanceId,
+		Name: appDConfig.AppName,
 	}
 	if trafficInPut.State != trafficRule.State {
 		if trafficInPut.State == "ACTIVE" {

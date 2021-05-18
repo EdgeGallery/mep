@@ -471,8 +471,8 @@ func (t *task) addDNSOnMp2(ruleId string, newRule interface{}, existingRule inte
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.AddDNSRule(appInfo, ruleId, dnsRule.DomainName, dnsRule.IPAddressType,
 		dnsRule.IPAddress, dnsRule.TTL)
@@ -484,8 +484,8 @@ func (t *task) setDNSOnMp2(ruleId string, newRule interface{}, existingRule inte
 		return fmt.Errorf(ExistRuleError)
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 
 	dnsExistingRule := existingRule.(*dataplane.DNSRule)
@@ -524,8 +524,8 @@ func (t *task) deleteDNSOnMp2(ruleId string, newRule interface{}, existingRule i
 	}
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.DeleteDNSRule(appInfo, ruleId)
 }
@@ -594,8 +594,8 @@ func (t *task) addTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.AddTrafficRule(appInfo, ruleId, trRule.FilterType, trRule.Action,
 		trRule.Priority, trRule.TrafficFilter)
@@ -610,8 +610,8 @@ func (t *task) setTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 	trExistingRule := existingRule.(*dataplane.DNSRule)
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 
 	if trRule.State == "" {
@@ -646,8 +646,8 @@ func (t *task) deleteTrafficOnMp2(ruleId string, newRule interface{}, existingRu
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.DeleteTrafficRule(appInfo, ruleId)
 }
