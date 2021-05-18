@@ -59,18 +59,18 @@ func LoadMepServerConfig() (*MepServerConfig, error) {
 	configFilePath := filepath.FromSlash(util.MepServerConfigPath)
 	configData, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		log.Error("Reading configuration file error.", nil)
+		log.Error("Reading MEP configuration file error.", nil)
 		return nil, err
 	}
 	var mepConfig MepServerConfig
 	err = yaml.Unmarshal(configData, &mepConfig)
 	if err != nil {
-		log.Error("Parsing configuration file error.", nil)
+		log.Error("Parsing MEP configuration file error.", nil)
 		return nil, err
 	}
 	err = mepConfig.validateConfig()
 	if err != nil {
-		log.Error("Config validation failed.", err)
+		log.Error("MEP config validation failed.", err)
 		return nil, err
 	}
 	return &mepConfig, nil

@@ -61,13 +61,13 @@ func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, errGet := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if errGet != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etch failed")
 		return workspace.TaskFinish
 	}
 
 	if len(resp.Kvs) == 0 {
-		log.Errorf(nil, "subscription does not exist")
+		log.Errorf(nil, "Subscription does not exist.")
 		t.SetFirstErrorCode(util.SubscriptionNotFound, "subscription not exist")
 		return workspace.TaskFinish
 	}
@@ -77,7 +77,7 @@ func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "delete subscription from etcd failed")
+		log.Errorf(nil, "Delete subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etch failed")
 		return workspace.TaskFinish
 	}

@@ -64,13 +64,13 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etch failed")
 		return workspace.TaskFinish
 	}
 
 	if len(resp.Kvs) == 0 {
-		log.Errorf(nil, "subscription doesn't exist")
+		log.Errorf(nil, "Subscription doesn't exist.")
 		t.SetFirstErrorCode(util.SubscriptionNotFound, "subscription not exist")
 		return workspace.TaskFinish
 	}
@@ -89,7 +89,7 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 		t.HttpRsp = sub
 	}
 	if jsonErr != nil {
-		log.Error("subscription parsed fail", nil)
+		log.Error("Subscription parsed failed.", nil)
 		t.SetFirstErrorCode(util.ParseInfoErr, "subscription parsed fail")
 		return workspace.TaskFinish
 	}

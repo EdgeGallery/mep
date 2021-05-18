@@ -255,7 +255,7 @@ func GetAllSubscriberInfoFromDB() map[string]*models.SerAvailabilityNotification
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		return nil
 	}
 	for _, kvs := range resp.Kvs {

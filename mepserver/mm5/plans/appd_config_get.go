@@ -36,7 +36,7 @@ func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
 
 	appDConfigEntry, err := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if err != 0 {
-		log.Errorf(nil, "get appD config from data-store failed")
+		log.Errorf(nil, "Get appD config from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "appD config retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -44,7 +44,7 @@ func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
 	appDInStore := &models.AppDConfig{}
 	jsonErr := json.Unmarshal(appDConfigEntry, appDInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the appd config from data-store")
+		log.Errorf(nil, "Failed to parse the appd config from data-store.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse appd config  from data-store failed")
 		return workspace.TaskFinish
 	}

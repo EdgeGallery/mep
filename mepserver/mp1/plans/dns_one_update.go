@@ -49,12 +49,12 @@ type DecodeDnsRestReq struct {
 func (t *DecodeDnsRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("Parameters validation failed.", err)
 		return workspace.TaskFinish
 	}
 	err = t.parseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", nil)
+		log.Error("Parse rest body failed.", nil)
 	}
 	return workspace.TaskFinish
 }
@@ -65,27 +65,27 @@ func (t *DecodeDnsRestReq) parseBody(r *http.Request) error {
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read failed", nil)
+		log.Error("Dns request body read failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return err
 	}
 	if len(msg) > meputil.RequestBodyLength {
 		err = errors.New("request body too large")
-		log.Errorf(err, "request body too large %d", len(msg))
+		log.Errorf(err, "Request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
 
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check param failed", nil)
+		log.Error("Check param failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "check Param failed")
 		return err
 	}
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(nil, "json unmarshalling failed")
+		log.Errorf(nil, "Dns request body unmarshalling failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
 		return errors.New("json unmarshalling failed")
 	}
@@ -129,7 +129,7 @@ func (t *DecodeDnsRestReq) getParam(r *http.Request) error {
 		return err
 	}
 	if err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("validate X-AppinstanceId failed", err)
+		log.Error("Validate X-AppinstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return err
 	}
@@ -180,7 +180,7 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	appDConfigEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
 		log.Errorf(errors.New("get operation failed"),
-			"dns rule retrieval from data-store failed on update request")
+			"Dns rule retrieval from data-store failed on update request.")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -191,7 +191,8 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	if appDConfigEntry != nil {
 		jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
 		if jsonErr != nil {
-			log.Errorf(errors.New("json parse failed"), "failed to parse the dns entry from data-store on update request")
+			log.Errorf(errors.New("json parse failed"),
+				"Failed to parse the dns entry from data-store on update request.")
 			t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "parse dns rules failed")
 			return workspace.TaskFinish
 		}
@@ -213,7 +214,7 @@ func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	dataOnStoreBytes, err := json.Marshal(dnsOnStore)
 	if err != nil {
-		log.Errorf(err, "failed to parse the dns entry from data-store on update request")
+		log.Errorf(err, "Failed to parse the dns entry from data-store on update request.")
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "parse dns rules failed")
 		return workspace.TaskFinish
 	}
@@ -303,7 +304,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 		err = t.dnsAgent.DeleteResourceRecordTypeA(dnsOnStore.DomainName, rrType)
 	}
 	if err != nil {
-		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server.",
+		log.Errorf(err, "Dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server.",
 			t.AppInstanceId, t.DNSRuleId)
 
 		// Revert the update in the data store in failure case
@@ -321,7 +322,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	err = t.updateDNSToDataPlane(dnsConfigInPut, dnsOnStore, appInfo, rrType)
 
 	if err != nil {
-		log.Errorf(err, "dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane.",
+		log.Errorf(err, "Dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane.",
 			t.AppInstanceId, t.DNSRuleId)
 		// Revert the entry in dns server
 		t.revertEntryFromDNSServer(dnsConfigInPut.State, dnsOnStore.DomainName, rrType, dnsOnStore.IPAddress,
@@ -347,7 +348,7 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 func (t *DNSRuleUpdate) revertEntryFromDB(appDConfig *models.AppDConfig) {
 	errCode, _ := t.updateDnsRecordOnDataStore(*appDConfig)
 	if errCode != 0 {
-		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
+		log.Errorf(nil, "Failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on data-store, "+
 			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
 	}
 }
@@ -361,7 +362,7 @@ func (t *DNSRuleUpdate) revertEntryFromDNSServer(state, domainName, rrType, ipAd
 			[]string{ipAddress}, ttl)
 	}
 	if err != nil {
-		log.Errorf(nil, "failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on dns-server, "+
+		log.Errorf(nil, "Failed to revert dns rule(app-id: %s, dns-rule-id: %s) update on dns-server, "+
 			"this might lead to inconsistency.", t.AppInstanceId, t.DNSRuleId)
 	}
 }

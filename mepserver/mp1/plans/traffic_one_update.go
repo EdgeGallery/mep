@@ -57,14 +57,14 @@ func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	}
 
 	if len(t.TrafficRuleId) == 0 {
-		log.Errorf(nil, "invalid app/traffic id on update request")
+		log.Errorf(nil, "Invalid app/traffic id on update request.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "invalid update request")
 		return workspace.TaskFinish
 	}
 
 	appDConfigDB, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "Update traffic rules failed")
+		log.Errorf(nil, "Update traffic rules failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "update rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -100,7 +100,7 @@ func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	dataStoreEntryBytes, err := json.Marshal(trafficRule)
 	if err != nil {
-		log.Errorf(err, "Traffic rule parse failed")
+		log.Errorf(err, "Traffic rule parse failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "internal error on data parsing")
 		return workspace.TaskFinish
 	}
@@ -136,7 +136,7 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	appDConfig.AppTrafficRule[ruleIndex] = *trafficInPut
 	updateJSON, err := json.Marshal(appDConfig)
 	if err != nil {
-		log.Errorf(err, "Can not marshal the input traffic body")
+		log.Errorf(err, "Can not marshal the input traffic body.")
 		return meputil.ParseInfoErr, "can not marshal traffic info"
 	}
 

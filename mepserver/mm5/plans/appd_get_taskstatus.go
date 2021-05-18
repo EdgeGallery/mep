@@ -39,7 +39,7 @@ type DecodeTaskRestReq struct {
 func (t *DecodeTaskRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed.", nil)
 		return workspace.TaskFinish
 	}
 	return workspace.TaskFinish
@@ -51,7 +51,7 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 	t.TaskId = queryReq.Get(":taskId")
 	err := meputil.ValidateUUID(t.TaskId)
 	if err != nil {
-		log.Error("taskId validation failed", err)
+		log.Error("TaskId validation failed.", err)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "taskId validation failed, invalid uuid")
 		return err
 	}
@@ -73,7 +73,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 
 	taskEntry, err := backend.GetRecord(meputil.AppDLCMTasksPath + t.TaskId)
 	if err != 0 {
-		log.Errorf(nil, "get task rule from data-store failed")
+		log.Errorf(nil, "Get task rule from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "task rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -82,7 +82,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 
 	taskStatus, err := backend.GetRecord(meputil.AppDLCMTaskStatusPath + appInstInStore + "/" + t.TaskId)
 	if err != 0 {
-		log.Errorf(nil, "get task status rule from data-store failed")
+		log.Errorf(nil, "Get task status rule from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "task status rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -90,7 +90,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 	taskStatusInStore := &models.TaskStatus{}
 	jsonErr := json.Unmarshal(taskStatus, taskStatusInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the task status from data-store")
+		log.Errorf(nil, "Failed to parse the task status from data-store.")
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "parse task status from data-store failed")
 		return workspace.TaskFinish
 	}

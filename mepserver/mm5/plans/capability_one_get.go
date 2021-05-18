@@ -54,7 +54,7 @@ func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
 
 	var err = meputil.ValidateServiceID(t.CapabilityId)
 	if err != nil {
-		log.Error("Invalid service ID", err)
+		log.Error("Invalid service id.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "Invalid service ID")
 		return workspace.TaskFinish
 	}
@@ -70,7 +70,7 @@ func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
 
 	resp, errGetOneInstance := core.InstanceAPI.GetOneInstance(t.Ctx, req)
 	if errGetOneInstance != nil || resp.Instance == nil {
-		log.Error("get one instance error", nil)
+		log.Error("Get one instance error.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance error")
 		return workspace.TaskFinish
 	}
@@ -79,7 +79,7 @@ func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
 
 	capabilityId := resp.Instance.GetServiceId() + resp.Instance.GetInstanceId()
 	if capabilityId != t.CapabilityId {
-		log.Error("capability id miss-match", nil)
+		log.Error("Capability id miss-match.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "capability id miss-match")
 		return workspace.TaskFinish
 	}
@@ -112,7 +112,7 @@ func (t *CapabilityGet) buildConsumerList() int {
 	subscribeKeyPath := meputil.GetSubscribeKeyPath(meputil.SerAvailabilityNotificationSubscription)
 	appServiceList, errCode := backend.GetRecordsWithCompleteKeyPath(subscribeKeyPath[:len(subscribeKeyPath)-1])
 	if errCode != 0 {
-		log.Errorf(nil, "get entries from data-store failed")
+		log.Errorf(nil, "Get entries from data-store failed.")
 		return errCode
 	}
 
@@ -127,7 +127,7 @@ func (t *CapabilityGet) buildConsumerList() int {
 		subscriptionNotify := &models.SerAvailabilityNotificationSubscription{}
 		jsonErr := json.Unmarshal(subscriptionData, subscriptionNotify)
 		if jsonErr != nil {
-			log.Errorf(nil, "failed to parse the subscription entry from data-store")
+			log.Errorf(nil, "Failed to parse the subscription entry from data-store.")
 			return meputil.OperateDataWithEtcdErr
 		}
 		t.fillConsumerListForSubscription(subscriptionNotify, appInstanceId)

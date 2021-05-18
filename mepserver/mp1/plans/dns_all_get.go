@@ -51,7 +51,7 @@ func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
 	appDInStore := models.AppDConfig{}
 	jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the dns entries from data-store")
+		log.Errorf(nil, "Failed to parse the dns entries from data-store.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
 		return workspace.TaskFinish
 	}

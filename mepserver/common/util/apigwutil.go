@@ -66,7 +66,7 @@ func NewApiGwIf() *ApiGwIf {
 func (a *ApiGwIf) getApiGwUrl() string {
 	appConfig, err := GetAppConfig()
 	if err != nil {
-		log.Error("Get App Config failed.", err)
+		log.Error("Get app config failed.", err)
 		return ""
 	}
 	kongUrl := fmt.Sprintf("https://%s:%s", appConfig["apigw_host"], appConfig["apigw_port"])
@@ -81,7 +81,7 @@ func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
 	err := SendPostRequest(kongServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
-		log.Error("failed to add API gateway service", err)
+		log.Error("Failed to add API gateway service.", err)
 	}
 }
 
@@ -91,7 +91,7 @@ func (a *ApiGwIf) AddApiGwRoute(routeInfo RouteInfo) {
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
 	err := SendPostRequest(kongRouteUrl, jsonStr, a.tlsCfg)
 	if err != nil {
-		log.Error("failed to add API gateway route", err)
+		log.Error("Failed to add API gateway route.", err)
 	}
 }
 
@@ -102,7 +102,7 @@ func (a *ApiGwIf) EnableJwtPlugin(routeInfo RouteInfo) {
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
 	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
-		log.Error("Enable kong jwt plugin failed", err)
+		log.Error("Register API GW jwt plugin failed.", err)
 	}
 }
 

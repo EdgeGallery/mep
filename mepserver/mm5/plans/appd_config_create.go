@@ -46,12 +46,12 @@ type DecodeAppDRestReq struct {
 func (t *DecodeAppDRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed for appd request.", nil)
 		return workspace.TaskFinish
 	}
 	err = t.parseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", nil)
+		log.Error("Parse rest body failed.", nil)
 	}
 	return workspace.TaskFinish
 }
@@ -65,7 +65,7 @@ func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
 	t.AppInstanceId = queryReq.Get(":appInstanceId")
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("Validate X-AppInstanceId failed", err)
+		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return nil
 	}
@@ -79,7 +79,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read failed", nil)
+		log.Error("Input body read failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return err
 	}
@@ -87,21 +87,21 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 	/* We can have the total of 32 traffic Rule and 64 DNS Rules so need sufficient length*/
 	if len(msg) > (meputil.RequestBodyLength * 8) {
 		err = errors.New("request body too large")
-		log.Errorf(nil, "request body too large %d", len(msg))
+		log.Errorf(nil, "Request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
 
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check param failed", nil)
+		log.Error("Check param failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "check Param failed")
 		return err
 	}
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(nil, "json unmarshalling failed")
+		log.Errorf(nil, "Request body unmarshalling failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
 		return errors.New("json unmarshalling failed")
 	}
@@ -114,7 +114,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 		errorString := "Invalid value for input on: "
 		for _, verr := range verrs.(validator.ValidationErrors) {
 			log.Errorf(err, "Validation Error(namespace: %v, field: %v, struct namespace:%v, struct field: %v, "+
-				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v)", verr.Namespace(), verr.Field(),
+				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v).", verr.Namespace(), verr.Field(),
 				verr.StructNamespace(), verr.StructField(), verr.Tag(), verr.ActualTag(), verr.Kind(), verr.Type(),
 				verr.Value(), verr.Param())
 			errorString += fmt.Sprintf(" %v", verr.Field())
@@ -131,7 +131,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 	var temp map[string]interface{}
 	err := json.Unmarshal(msg, &temp)
 	if err != nil {
-		log.Errorf(err, "invalid json to map: %s", util.BytesToStringWithNoCopy(msg))
+		log.Errorf(err, "Invalid json to map: %s.", util.BytesToStringWithNoCopy(msg))
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 
 	msg, err = json.Marshal(&temp)
 	if err != nil {
-		log.Errorf(err, "invalid map to json")
+		log.Errorf(err, "Invalid map to json.")
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
@@ -180,20 +180,20 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 			2. Add the this request to DB (job, task and task status)
 	*/
 	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
-		log.Errorf(nil, "duplicate app instance")
+		log.Errorf(nil, "Duplicate app instance.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app instance")
 		return workspace.TaskFinish
 	}
 
 	if IsAppNameAlreadyExists(appDConfigInput.AppName) {
-		log.Errorf(nil, "duplicate app name")
+		log.Errorf(nil, "Duplicate app name.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app name")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf(nil, "app instance has other operation in progress")
+		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}

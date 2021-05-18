@@ -88,17 +88,17 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 	if appDConfigInput.Operation != http.MethodPost {
 		appDConfigEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + appInstanceId)
 		if errCode != 0 {
-			log.Errorf(nil, "app config (appId: %s) retrieval from data-store failed.", appInstanceId)
+			log.Errorf(nil, "App config (appId: %s) retrieval from data-store failed.", appInstanceId)
 			return workspace.ErrCode(errCode), "get app config rule from data-store failed"
 		}
 		err := json.Unmarshal(appDConfigEntry, appDInStore)
 		if err != nil {
-			log.Errorf(err, "failed to parse the appd config from data-store")
+			log.Errorf(err, "Failed to parse the appd config from data-store.")
 			return meputil.OperateDataWithEtcdErr, "parsing app config rule from data-store failed"
 		}
 	}
 	if appDConfigInput.Operation == http.MethodPut && appDConfigInput.AppName != appDInStore.AppName {
-		log.Errorf(nil, "app-name miss-match")
+		log.Errorf(nil, "App-name miss-match.")
 		return meputil.OperateDataWithEtcdErr, "app-name doesn't match"
 	}
 
@@ -115,21 +115,21 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 		appDConfigBytes, err = json.Marshal(appDConfigInput)
 	}
 	if err != nil {
-		log.Errorf(nil, "can not marshal appDConfig info")
+		log.Errorf(nil, "Can not marshal appDConfig info.")
 		return meputil.ParseInfoErr, "can not marshal appDConfig info"
 	}
 
 	// Add to Jobs DB
 	errCode := backend.PutRecord(meputil.AppDLCMJobsPath+appInstanceId, appDConfigBytes)
 	if errCode != 0 {
-		log.Errorf(nil, "app config (appId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (appId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
 	errCode = backend.PutRecord(meputil.AppDLCMTasksPath+taskId, []byte(appInstanceId))
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId}, true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
@@ -137,7 +137,7 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 	if taskStatus.TrafficRuleStatusLst == nil && taskStatus.DNSRuleStatusLst == nil {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "no modification found")
+		log.Errorf(nil, "No modification found.")
 		return meputil.SubscriptionNotFound, "no modification data found in the input"
 	}
 
@@ -150,7 +150,7 @@ func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
 	if isDuplicateDomainNameForCreateExists(appInstanceId, appDConfigInput, taskStatus) {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "duplicate dns entry found in the request")
+		log.Errorf(nil, "Duplicate dns entry found in the request.")
 		return meputil.DuplicateOperation, "duplicate dns entry"
 	}
 
@@ -158,7 +158,7 @@ func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
 	if err != nil {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "can not marshal status info")
+		log.Errorf(nil, "Can not marshal status info.")
 		return meputil.ParseInfoErr, "can not marshal status info"
 	}
 
@@ -166,7 +166,7 @@ func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 

@@ -46,7 +46,7 @@ type DecodeCapabilityQueryReq struct {
 func (t *DecodeCapabilityQueryReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed.", nil)
 		return workspace.TaskFinish
 	}
 	return workspace.TaskFinish
@@ -129,7 +129,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 
 	appServiceList, errCode := backend.GetRecordsWithCompleteKeyPath(subscribeKeyPath[:len(subscribeKeyPath)-1])
 	if errCode != 0 {
-		log.Errorf(nil, "get entries from data-store failed")
+		log.Errorf(nil, "Get entries from data-store failed.")
 		return errCode
 	}
 
@@ -144,7 +144,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 		subscriptionNotify := &models.SerAvailabilityNotificationSubscription{}
 		jsonErr := json.Unmarshal(subscriptionData, subscriptionNotify)
 		if jsonErr != nil {
-			log.Errorf(nil, "failed to parse the subscription entry from data-store")
+			log.Errorf(nil, "Failed to parse the subscription entry from data-store.")
 			return meputil.OperateDataWithEtcdErr
 		}
 		t.fillConsumerListForSubscription(subscriptionNotify, appInstanceId)

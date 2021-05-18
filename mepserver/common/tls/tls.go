@@ -51,7 +51,7 @@ func (c *MepServerTLS) Decrypt(src string) (string, error) {
 	decrypt := src
 	certPwd, err := util.GetCertPwd()
 	if err != nil {
-		log.Errorf(err, "get cert pwd failed")
+		log.Errorf(err, "Get cert pwd failed.")
 		return decrypt, err
 	}
 	decrypt = svcutil.BytesToStringWithNoCopy(certPwd)

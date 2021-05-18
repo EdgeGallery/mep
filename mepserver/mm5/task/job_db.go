@@ -33,13 +33,13 @@ type appDJobDB struct {
 func newAppDJobDB(appInstanceId string) *appDJobDB {
 	jobsEntry, errCode := backend.GetRecord(util.AppDLCMJobsPath + appInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "retrieve jobs from temp-cache on data-store failed")
+		log.Errorf(nil, "Retrieve jobs from temp-cache on data-store failed.")
 		return nil
 	}
 	appDConfig := &models.AppDConfig{}
 	err := json.Unmarshal(jobsEntry, appDConfig)
 	if err != nil {
-		log.Errorf(nil, "failed to parse the appDConfig from data-store")
+		log.Errorf(nil, "Failed to parse the appd config from data-store.")
 		return nil
 	}
 	return &appDJobDB{appInstanceId, appDConfig}
@@ -48,7 +48,7 @@ func newAppDJobDB(appInstanceId string) *appDJobDB {
 func (a *appDJobDB) deleteEntry() error {
 	errCode := backend.DeleteRecord(util.AppDLCMJobsPath + a.appInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "delete jobs from temp-cache on data-store failed")
+		log.Errorf(nil, "Delete jobs from temp-cache on data-store failed.")
 		return fmt.Errorf("error: delete entry failed")
 	}
 	return nil

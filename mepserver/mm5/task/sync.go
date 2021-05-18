@@ -38,8 +38,8 @@ type Worker struct {
 	dnsAgent         dns.DNSAgent
 }
 
-const dataInconsisError = "failed to revert the data, this will lead to data inconsistency"
-const ExistRuleError = "existig rule expected"
+const dataInconsistentError = "Failed to revert the data, this will lead to data inconsistency."
+const ExistRuleError = "existing rule expected"
 
 func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DNSAgent, dnsType string) *Worker {
 	w.dataPlane = dataPlane
@@ -59,7 +59,7 @@ func (w *Worker) ProcessDataPlane(appName, appInstanceId, taskId string) {
 	defer w.waitWorkerFinish.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf(nil, "Sync process panic: %v \n %s", r, string(debug.Stack()))
+			log.Errorf(nil, "Sync process panic: %v.\n %s", r, string(debug.Stack()))
 		}
 	}()
 	w.ProcessDataPlaneSync(appName, appInstanceId, taskId)
@@ -70,7 +70,7 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 
 	syncJob := newTask(appName, appInstanceId, taskId, w.dataPlane, w.dnsAgent, w.dnsTypeConfig)
 	if syncJob == nil {
-		log.Error("failed to process the task, something went wrong", nil)
+		log.Error("Failed to process the task, something went wrong.", nil)
 		_ = backend.DeletePaths([]string{util.AppDLCMJobsPath + appInstanceId}, true)
 		taskStatus := newStatusDB(appInstanceId, taskId)
 		if taskStatus != nil {
@@ -82,31 +82,31 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 	}
 	err := syncJob.handleDNSRules(util.ApplyFunc)
 	if err != nil {
-		log.Error("failed to process the task in dns rules", err)
+		log.Error("Failed to process the task in dns rules.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to configure dns rules).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
 	err = syncJob.handleTrafficRules(util.ApplyFunc)
 	if err != nil {
-		log.Error("failed to process the task in traffic rules", err)
+		log.Error("Failed to process the task in traffic rules.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to configure traffic rules).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
 	err = syncJob.handleConfigDBWriteOnSuccess()
 	if err != nil {
-		log.Error("failed to save appd config", err)
+		log.Error("Failed to save appd config.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to write appdconfig db).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
@@ -657,14 +657,14 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 
 	for _, dnsRuleStatus := range t.statusDb.status.DNSRuleStatusLst {
 		if dnsRuleStatus.State != util.WaitConfigDBWrite {
-			log.Errorf(nil, "invalid state(%v) for dns rule(%s)", dnsRuleStatus.State, dnsRuleStatus.Id)
+			log.Errorf(nil, "Invalid state(%v) for dns rule(%s).", dnsRuleStatus.State, dnsRuleStatus.Id)
 			t.statusDb.setFailureReason("Internal error(invalid dns rule state).")
 			return fmt.Errorf("invalid state for dns rule(%s)", dnsRuleStatus.Id)
 		}
 	}
 	for _, trfRuleStatus := range t.statusDb.status.TrafficRuleStatusLst {
 		if trfRuleStatus.State != util.WaitConfigDBWrite {
-			log.Errorf(nil, "invalid state(%v) for traffic rule(%s)", trfRuleStatus.State, trfRuleStatus.Id)
+			log.Errorf(nil, "Invalid state(%v) for traffic rule(%s).", trfRuleStatus.State, trfRuleStatus.Id)
 			t.statusDb.setFailureReason("Internal error(invalid traffic rule state).")
 			return fmt.Errorf("invalid state for traffic rule(%s)", trfRuleStatus.Id)
 		}
@@ -677,7 +677,7 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 
 	appDConfigBytes, err := json.Marshal(t.appDJobDb.appDConfig)
 	if err != nil {
-		log.Errorf(nil, "can not marshal appDConfig info")
+		log.Errorf(nil, "Can not marshal appd config info.")
 		return err
 	}
 
@@ -689,7 +689,7 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 	}
 
 	if errCode != 0 {
-		log.Error("AppD config DB write error", err)
+		log.Error("AppD config DB write error.", err)
 		t.statusDb.setFailureReason("Internal error(failed to write appdconfig db).")
 		return err
 	}
@@ -701,20 +701,20 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 func (t *task) handleErrorOnProcessing() error {
 	err := t.handleDNSRules(util.RevertFunc)
 	if err != nil {
-		log.Error("failed to revert dns rules", err)
+		log.Error("Failed to revert dns rules.", err)
 		return err
 	}
 
 	err = t.handleTrafficRules(util.RevertFunc)
 	if err != nil {
-		log.Error("failed to revert dns rules", err)
+		log.Error("Failed to revert dns rules.", err)
 		return err
 	}
 
 	t.statusDb.status.Progress = util.TaskProgressFailure
 	err = t.statusDb.pushDB()
 	if err != nil {
-		log.Errorf(nil, "couldn't update progress failure status, this will lead to data inconsistency")
+		log.Errorf(nil, "Couldn't update progress failure status, this will lead to data inconsistency.")
 		return err
 	}
 

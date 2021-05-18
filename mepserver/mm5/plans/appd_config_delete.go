@@ -50,14 +50,14 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 			3. update the this request to DB (job, task and task status)
 	*/
 	if !IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
-		log.Errorf(nil, "app instance not found")
+		log.Errorf(nil, "App instance not found.")
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf(nil, "app instance has other operation in progress")
+		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}

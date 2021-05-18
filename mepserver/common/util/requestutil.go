@@ -34,32 +34,32 @@ import (
 func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
 	appConfig, err := GetAppConfig()
 	if err != nil {
-		log.Error("get app config error", nil)
+		log.Error("Get app config error.", nil)
 		return nil, err
 	}
 	certNameConfig := appConfig[crtName]
 	if len(certNameConfig) == 0 {
-		log.Error(crtName+" configuration is not set", nil)
+		log.Errorf(nil, "Certificate(%s) path doesn't available in the app config.", crtName)
 		return nil, errors.New("cert name configuration is not set")
 	}
 
 	crt, err := ioutil.ReadFile(certNameConfig)
 	if err != nil {
-		log.Error("unable to read certificate", nil)
+		log.Error("Unable to read certificate.", nil)
 		return nil, err
 	}
 
 	rootCAs := x509.NewCertPool()
 	ok := rootCAs.AppendCertsFromPEM(crt)
 	if !ok {
-		log.Error("failed to decode cert file", nil)
+		log.Error("Failed to decode the certificate file.", nil)
 		return nil, errors.New("failed to decode cert file")
 	}
 
 	serverName := appConfig["server_name"]
 	serverNameIsValid, validateServerNameErr := validateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error", nil)
+		log.Error("Validate server name error.", nil)
 		return nil, validateServerNameErr
 	}
 	sslCiphers := appConfig["ssl_ciphers"]
@@ -97,7 +97,7 @@ func getCipherSuites(sslCiphers string) []uint16 {
 		}
 		mapValue, ok := cipherSuiteMap[cipherName]
 		if !ok {
-			log.Error("not recommended cipher suite", nil)
+			log.Error("Not a recommended cipher suite.", nil)
 			return nil
 		}
 		cipherSuiteArr = append(cipherSuiteArr, mapValue)

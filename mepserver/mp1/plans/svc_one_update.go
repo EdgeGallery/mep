@@ -41,22 +41,22 @@ type UpdateInstance struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handles service update request
 func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	if t.ServiceId == "" {
-		log.Error("service id is empty", nil)
+		log.Error("Service id is empty on service update request.", nil)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "service id is empty")
 		return workspace.TaskFinish
 	}
 	mp1Ser, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
-		log.Error("request body invalid", nil)
+		log.Error("Service update request body invalid.", nil)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body invalid")
 		return workspace.TaskFinish
 	}
 	instance, err := meputil.GetServiceInstance(t.Ctx, t.ServiceId)
 	if err != nil {
-		log.Error("find service failed", nil)
+		log.Error("Find service on update failed.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "find service failed")
 		return workspace.TaskFinish
 	}
@@ -76,14 +76,14 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	domainProject := util.ParseDomainProject(t.Ctx)
 	centerErr := svcutil.UpdateInstance(t.Ctx, domainProject, &copyInstanceRef)
 	if centerErr != nil {
-		log.Error("update service failed", nil)
+		log.Error("Update service failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceUpdFailed, "update service failed")
 		return workspace.TaskFinish
 	}
 
 	err = meputil.Heartbeat(t.Ctx, t.ServiceId)
 	if err != nil {
-		log.Error("heartbeat failed", nil)
+		log.Error("Heartbeat update failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceUpdFailed, "heartbeat failed")
 		return workspace.TaskFinish
 	}

@@ -67,14 +67,14 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 
 	subscribeJSON, err := json.Marshal(mp1SubscribeInfo)
 	if err != nil {
-		log.Errorf(nil, "can not marshal subscribe info")
+		log.Errorf(nil, "Can not marshal subscribe info.")
 		t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscribe info error")
 		return workspace.TaskFinish
 	}
 
 	callbackUriNotValid := t.ValidateCallbackUri(subscribeJSON)
 	if callbackUriNotValid {
-		log.Error("url validation failed", nil)
+		log.Error("Call back URI validation failed.", nil)
 		t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
@@ -120,7 +120,7 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 	if callBack != "" {
 		isValid := isValidCallbackURI(callBack)
 		if !isValid {
-			log.Error("Invalid CallbackReference uri", nil)
+			log.Error("Invalid CallbackReference uri.", nil)
 			t.SetFirstErrorCode(util.RequestParamErr, "Invalid CallbackReference uri")
 			return true
 		}
@@ -148,7 +148,7 @@ func (t *SubscribeIst) marshalError(appInstanceId string) workspace.TaskCode {
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etcd failed on marshal error")
 		return workspace.TaskFinish
 	}
-	log.Error("marshal subscription info failed", nil)
+	log.Error("Marshal subscription info failed.", nil)
 	t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscription info failed")
 	return workspace.TaskFinish
 }
@@ -246,12 +246,12 @@ func (t *AppSubscribeLimit) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etcd failed")
 		return workspace.TaskFinish
 	}
 	if resp.Count >= util.AppSubscriptionCount {
-		log.Errorf(nil, "subscription limit has been reached")
+		log.Errorf(nil, "Subscription limit has been reached.")
 		t.SetFirstErrorCode(util.SubscriptionErr, "subscription has over the limit")
 	}
 	return workspace.TaskFinish
@@ -281,7 +281,7 @@ func (t *SubscribeIst) insertOrUpdateData(subscribeJSON []byte) error {
 	}
 	_, resultErr := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if resultErr != nil {
-		log.Errorf(nil, "subscription to etcd failed")
+		log.Errorf(nil, "Subscription to etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "put subscription to etcd failed")
 		return resultErr
 	}

@@ -55,10 +55,10 @@ func (t *DecodeAppTerminationReq) OnRequest(data string) workspace.TaskCode {
 		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
 	t.Ctx, err = t.GetFindParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("Parameters validation failed.", err)
 		return workspace.TaskFinish
 	}
-	log.Debugf("Query request arrived to fetch the app Id")
+	log.Debugf("Query request arrived to fetch the app Id.")
 	return workspace.TaskFinish
 }
 
@@ -69,7 +69,7 @@ func (t *DecodeAppTerminationReq) GetFindParam(r *http.Request) (context.Context
 
 	t.AppInstanceId = query.Get(":appInstanceId")
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("Validate X-AppInstanceId failed", err)
+		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 	log.Info("Application termination request.")
 	resp, errInt := backend.GetRecords("/cse-sr/inst/files///")
 	if errInt != 0 {
-		log.Errorf(nil, "query error from etcd")
+		log.Errorf(nil, "Data store read failed.")
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "query error from etcd")
 		return workspace.TaskFinish
 	}
@@ -99,7 +99,7 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		var instances map[string]interface{}
 		err := json.Unmarshal(value, &instances)
 		if err != nil {
-			log.Errorf(nil, "string convert to instance get failed")
+			log.Errorf(nil, "Instance unmarshall failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
@@ -107,14 +107,14 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		instances[meputil.ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instances)
 		if err != nil {
-			log.Errorf(nil, "instance convert to string failed")
+			log.Errorf(nil, "Instance marshall failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed.")
+			log.Errorf(nil, "Micro service instance unmarshall failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
@@ -149,11 +149,11 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 
 func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, string) {
 	if err != nil {
-		log.Error("service delete failed", nil)
+		log.Error("Service delete failed.", nil)
 		return meputil.SerErrServiceInstanceFailed, "service delete failed"
 	}
 	if response != nil && response.Response.Code == scerr.ErrInstanceNotExists {
-		log.Errorf(nil, "instance not found %s", response.String())
+		log.Errorf(nil, "Instance not found %s.", response.String())
 		return meputil.SerInstanceNotFound, "instance not found"
 	}
 	return 0, ""
@@ -169,17 +169,17 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	log.Info("Deleting authentication key entry.")
 	mepauthPort := os.Getenv("MEPAUTH_SERVICE_PORT")
 	if len(mepauthPort) <= 0 || len(mepauthPort) > meputil.MaxPortLength {
-		log.Error("Invalid mepauth port.", nil)
+		log.Error("Invalid mep-auth port.", nil)
 		return workspace.TaskFinish
 	} else if num, err := strconv.Atoi(mepauthPort); err == nil {
 		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Error("Invalid mepauth port.", nil)
+			log.Error("Invalid mep-auth port.", nil)
 			return workspace.TaskFinish
 		}
 	}
 	mepauthIp := os.Getenv("MEPAUTH_PORT_10443_TCP_ADDR")
 	if net.ParseIP(mepauthIp) == nil {
-		log.Error("mepauth ip env is not set", nil)
+		log.Error("Mep-auth ip env is not set.", nil)
 		return workspace.TaskFinish
 	}
 
@@ -188,12 +188,12 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	// Create request
 	req, err := http.NewRequest("DELETE", deleteUrl, nil)
 	if err != nil {
-		log.Errorf(nil, "Not able to send the request to mepauth %s", err.Error())
+		log.Errorf(nil, "Not able to send the request to mep-auth %s.", err.Error())
 		return workspace.TaskFinish
 	}
 	config, err := t.TlsConfig()
 	if err != nil {
-		log.Errorf(nil, "Unable to set the cipher %s", err.Error())
+		log.Errorf(nil, "Unable to set the cipher %s.", err.Error())
 		return workspace.TaskFinish
 	}
 	tr := &http.Transport{
@@ -205,23 +205,23 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf(nil, "mepauth not responding", err.Error())
+		log.Errorf(nil, "Mep-auth request failed.", err.Error())
 		return workspace.TaskFinish
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusBadRequest {
-		log.Error("mepauth having some problem", nil)
+		log.Error("Mep-auth reported failure.", nil)
 		return workspace.TaskFinish
 	}
 
 	// Read Response Body
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Error("Body is not readable", nil)
+		log.Error("Couldn't read the response body.", nil)
 		return workspace.TaskFinish
 	}
-	log.Info("Successfully deleted the mepauth key.")
+	log.Info("Successfully deleted the mep-auth key.")
 	return workspace.TaskFinish
 }
 
@@ -264,13 +264,13 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			4. Check inside DB for an error
 	*/
 	if !IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
-		log.Errorf(nil, "app instance not found")
+		log.Errorf(nil, "App instance not found.")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf(nil, "app instance has other operation in progress")
+		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}

@@ -34,7 +34,7 @@ type ProblemDetails struct {
 func (pd ProblemDetails) String() string {
 	d, err := json.Marshal(pd)
 	if err != nil {
-		log.Errorf(nil, "json marshalling failed")
+		log.Errorf(nil, "Problem details marshalling failed.")
 		return ""
 	}
 	return string(d)
