@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements dns client
+// Package dns implements dns client
 package dns
 
 import (
@@ -33,28 +33,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
-var remoteServerHost = meputil.DefaultDnsHost
-var remoteServerPort = meputil.DefaultDnsManagementPort
-
-func init() {
-	host := os.Getenv("DNS_SERVER_HOST")
-	if len(host) > meputil.MaxFQDNLength {
-		log.Warn("invalid dns remote server host configured, reset back to default")
-	} else {
-		remoteServerHost = host
-	}
-
-	port := os.Getenv("DNS_SERVER_PORT")
-	if len(port) > meputil.MaxPortLength {
-		log.Warn("invalid dns remote server port configured, reset back to default")
-	} else if num, err := strconv.Atoi(port); err == nil {
-		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Warn("invalid dns remote server port range, reset back to default")
-		} else {
-			remoteServerPort = num
-		}
-	}
-}
+const DNSServerURLFormat = "http://%s:%d/mep/dns_server_mgmt/v1/"
 
 type ResourceRecord struct {
 	Name  string   `json:"name"`
@@ -76,20 +55,50 @@ type RestDNSAgent struct {
 }
 
 func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
-	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", remoteServerHost, remoteServerPort))
+	agent := RestDNSAgent{}
+	err := agent.initDnsAgent()
 	if err != nil {
-		log.Errorf(nil, "Could not parse the DNS server endpoint.")
 		return &RestDNSAgent{}
 	}
-	agent := RestDNSAgent{ServerEndPoint: u}
 	return &agent
+}
+
+func (d *RestDNSAgent) initDnsAgent() error {
+	var remoteServerHost = meputil.DefaultDnsHost
+	var remoteServerPort = meputil.DefaultDnsManagementPort
+
+	host := os.Getenv("DNS_SERVER_HOST")
+	if len(host) > meputil.MaxFQDNLength {
+		log.Warn("invalid dns remote server host configured, reset back to default")
+	} else {
+		remoteServerHost = host
+	}
+
+	port := os.Getenv("DNS_SERVER_PORT")
+	if len(port) > meputil.MaxPortLength {
+		log.Warn("Invalid dns remote server port configured, reset back to default.")
+	} else if num, err := strconv.Atoi(port); err == nil {
+		if num <= 0 || num > meputil.MaxPortNumber {
+			log.Warn("Invalid dns remote server port range, reset back to default.")
+		} else {
+			remoteServerPort = num
+		}
+	}
+
+	u, err := url.Parse(fmt.Sprintf(DNSServerURLFormat, remoteServerHost, remoteServerPort))
+	if err != nil {
+		log.Errorf(nil, "Could not parse the DNS server endpoint.")
+		return err
+	}
+	d.ServerEndPoint = u
+	return nil
 }
 
 func (d *RestDNSAgent) GetEndpoint(paths ...string) string {
 	return meputil.JoinURL(d.ServerEndPoint.String(), paths...)
 }
 
-func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) error {
+func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrType, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
 		log.Errorf(nil, "Invalid DNS remote end point.")
 		return fmt.Errorf("invalid dns server endpoint")
@@ -101,7 +110,7 @@ func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrtype, class string, pointT
 	}
 
 	zones := []ZoneEntry{{Zone: ".", RR: &[]ResourceRecord{
-		{Name: hostName, Type: rrtype, Class: class, TTL: ttl, RData: pointTo}}}}
+		{Name: hostName, Type: rrType, Class: class, TTL: ttl, RData: pointTo}}}}
 	zoneJSON, err := json.Marshal(zones)
 	if err != nil {
 		log.Errorf(nil, "Marshal DNS info failed.")
