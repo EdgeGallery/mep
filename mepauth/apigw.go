@@ -19,6 +19,7 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/httplib"
@@ -71,7 +72,13 @@ func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 func (i *apiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 	// enable global http log plugin
 	pluginUrl := apiGwUrl + util.PluginPath
-	err := i.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
+	data, err := i.getHttpLogPluginData()
+	if err != nil {
+		log.Error("failed to marshal log plugin data")
+		return err
+	}
+	//err := i.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
+	err = i.SendPostRequest(pluginUrl, data)
 	if err != nil {
 		log.Error("Enable http log plugin failed")
 		return err
@@ -293,4 +300,17 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 		return err
 	}
 	return nil
+}
+
+func (i *apiGwInitializer) getHttpLogPluginData() (data []byte, err error) {
+	c := &models.ConfigInfo {
+		HTTPEndpoint: "https://mep-mm5:80/mep/service_govern/v1/kong_log",
+		Method:       "POST",
+		Timeout:      1000,
+		Keepalive:    1000,
+	}
+	return json.Marshal(&models.LogPluginInfo{
+		Name:   "http-log",
+		Config: *c,
+	})
 }
