@@ -69,7 +69,7 @@ type TaskStatusGet struct {
 }
 
 func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
-	log.Debugf("query request arrived to fetch task status for taskId %s.", t.TaskId)
+	log.Debugf("Query request arrived to fetch task status for taskId %s.", t.TaskId)
 
 	taskEntry, err := backend.GetRecord(meputil.AppDLCMTasksPath + t.TaskId)
 	if err != 0 {

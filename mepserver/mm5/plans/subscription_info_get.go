@@ -74,7 +74,7 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	// service numbers who subscribed by app
 	serviceSubscribedNum := len(serviceSubscribedSet)
 	log.Debugf(
-		"Subscription query response generated(app subscription count: %d, service subscription count: %d)",
+		"Subscription query response generated(app subscription count: %d, service subscription count: %d).",
 		appSubscribeNum, serviceSubscribedNum)
 
 	result := make(map[string]int)

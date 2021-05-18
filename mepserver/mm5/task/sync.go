@@ -312,7 +312,7 @@ func (t *task) processTrfEntryApply(trfNewRule *dataplane.TrafficRule, trfOldRul
 		}
 		var err error
 		if operation != nil && operation.apply != nil {
-			log.Debugf("Traffic apply(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("Traffic apply(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.apply(ruleStatus.Id, trfNewRule, trfOldRule)
 		}
 		if err != nil {
@@ -345,7 +345,7 @@ func (t *task) processTrfEntryRevert(trfNewRule *dataplane.TrafficRule, trfOldRu
 		}
 		var err error
 		if operation != nil && operation.revert != nil {
-			log.Debugf("Traffic revert(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("Traffic revert(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.revert(ruleStatus.Id, trfNewRule, trfOldRule)
 		}
 		if err != nil {
@@ -403,7 +403,7 @@ func (t *task) processDNSEntryApply(dnsNewRule *dataplane.DNSRule, dnsOldRule *d
 		}
 		var err error
 		if operation != nil && operation.apply != nil {
-			log.Debugf("DNS apply(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("DNS apply(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.apply(ruleStatus.Id, dnsNewRule, dnsOldRule)
 		}
 		if err != nil {
@@ -435,7 +435,7 @@ func (t *task) processDNSEntryRevert(dnsNewRule *dataplane.DNSRule, dnsOldRule *
 		}
 		var err error
 		if operation != nil && operation.revert != nil {
-			log.Debugf("DNS revert(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("DNS revert(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.revert(ruleStatus.Id, dnsNewRule, dnsOldRule)
 		}
 		if err != nil {

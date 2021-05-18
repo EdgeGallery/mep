@@ -98,7 +98,7 @@ func (t *GetSubscribes) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscription info failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Response for all the app subscription information with appId %s", appInstanceId)
+	log.Debugf("Response for all the app subscription information with appId %s.", appInstanceId)
 
 	return workspace.TaskFinish
 }

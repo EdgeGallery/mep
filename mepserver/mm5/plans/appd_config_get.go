@@ -32,7 +32,7 @@ type AppDConfigGet struct {
 }
 
 func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
-	log.Debugf("query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
+	log.Debugf("Query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
 
 	appDConfigEntry, err := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if err != 0 {

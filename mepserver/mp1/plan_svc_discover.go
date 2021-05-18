@@ -141,7 +141,7 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance request failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("query request arrived to fetch all the service information with appId %s.", req.AppId)
+	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
 	if req.ServiceName == "" {
 		var errFindByKey error
 		t.CoreRsp, errFindByKey = meputil.FindInstanceByKey(t.QueryParam)

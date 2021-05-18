@@ -56,7 +56,7 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	appInstanceId := t.AppInstanceId
 	subscribeId := t.SubscribeId
 	log.Debugf("Query request arrived to fetch the subscription information with  "+
-		"appId %s and subscriptionId %s", appInstanceId, subscribeId)
+		"appId %s and subscriptionId %s.", appInstanceId, subscribeId)
 
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(t.SubscribeType) +
@@ -93,7 +93,7 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(util.ParseInfoErr, "subscription parsed fail")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Response for app subscription information with appId %s and subscriptionId %s",
+	log.Debugf("Response for app subscription information with appId %s and subscriptionId %s.",
 		appInstanceId, subscribeId)
 	return workspace.TaskFinish
 }

@@ -95,7 +95,7 @@ func (s *statusDB) setStateAndProgress(ruleType util.AppDRuleType, ruleId string
 		}
 	}
 
-	log.Debugf("Updated state as %v for rule %v", state, ruleId)
+	log.Debugf("Updated state as %v for rule %v.", state, ruleId)
 
 	return err
 }

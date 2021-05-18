@@ -130,7 +130,7 @@ func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	t.HttpRsp = mp1Rsp
-	log.Debugf("Response for service information in heartbeat with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Response for service information in heartbeat with subscriptionId %s.", req.ProviderServiceId)
 	return workspace.TaskFinish
 }
 

@@ -283,7 +283,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "marshal service info failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("response sent for service registration with appId %s", t.AppInstanceId)
+	log.Debugf("Response sent for service registration with appId %s.", t.AppInstanceId)
 	return workspace.TaskFinish
 }
 

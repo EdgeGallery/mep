@@ -78,7 +78,7 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
-	log.Debugf("request received for app subscription with appId %s", t.AppInstanceId)
+	log.Debugf("Request received for app subscription with appId %s.", t.AppInstanceId)
 	t.SubscribeId = uuid.NewV4().String()
 	err = t.insertOrUpdateData(subscribeJSON)
 	if err != nil {
@@ -90,7 +90,7 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	if err != nil {
 		return t.marshalError(t.AppInstanceId)
 	}
-	log.Debugf("response sent for app subscription with appId %s ", t.AppInstanceId)
+	log.Debugf("Response sent for app subscription with appId %s.", t.AppInstanceId)
 
 	return workspace.TaskFinish
 }

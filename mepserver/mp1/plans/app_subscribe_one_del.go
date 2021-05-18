@@ -53,7 +53,7 @@ func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId
 	subscribeId := t.SubscribeId
-	log.Debugf("Delete request arrived with app subscription with appId %s and subscriptionId %s",
+	log.Debugf("Delete request arrived with app subscription with appId %s and subscriptionId %s.",
 		appInstanceId, subscribeId)
 	appSubKeyPath := util.GetSubscribeKeyPath(t.SubscribeType) + appInstanceId + "/" + subscribeId
 	opts := []registry.PluginOp{

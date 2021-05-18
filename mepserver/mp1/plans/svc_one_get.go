@@ -57,7 +57,7 @@ func (t *GetOneDecode) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance request error")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Query request arrived to fetch the service information with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Query request arrived to fetch the service information with subscriptionId %s.", req.ProviderServiceId)
 	return workspace.TaskFinish
 
 }
@@ -137,7 +137,7 @@ func (t *GetOneInstance) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "marshal service info failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Response for service information with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Response for service information with subscriptionId %s.", req.ProviderServiceId)
 	return workspace.TaskFinish
 }
 
