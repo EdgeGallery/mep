@@ -55,10 +55,11 @@ type RestDNSAgent struct {
 }
 
 func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
+	log.Info("New DNS agent initialization.")
 	agent := RestDNSAgent{}
 	err := agent.initDnsAgent()
 	if err != nil {
-		return &RestDNSAgent{}
+		return &agent
 	}
 	return &agent
 }
