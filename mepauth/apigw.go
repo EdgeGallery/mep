@@ -292,7 +292,7 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 // Send post request
 func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) error {
 
-	req := httplib.Post(consumerURL)
+	req := httplib.Put(consumerURL)
 	req.Header(util.ContentType, util.JsonUtf8)
 	req.SetTLSClientConfig(i.tlsConfig)
 	req.Body(jsonStr)
@@ -308,7 +308,7 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 	}
 
 	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
-		log.Error("Request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
+		log.Error("Request sending returned failure response with status code " + strconv.Itoa(resp.StatusCode))
 		return errors.New("request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
 	}
 	return nil
