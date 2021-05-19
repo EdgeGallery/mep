@@ -70,8 +70,8 @@ const CertSecNonceFilePath string = "ssl/cert_pwd_nonce"
 
 var KeyComponentFromUserStr *[]byte
 
-// InfoToProperties put k,v into map
-func InfoToProperties(properties map[string]string, key string, value string) {
+// UpdatePropertiesMap put k,v into map
+func UpdatePropertiesMap(properties map[string]string, key string, value string) {
 	if value != "" {
 		properties[key] = value
 	}
@@ -141,13 +141,11 @@ func HttpErrResponse(w http.ResponseWriter, statusCode int, obj interface{}) {
 	}
 }
 
-// Heartbeat use put to update a service register info
-func Heartbeat(ctx context.Context, mp1SvcId string) error {
-	serviceID := mp1SvcId[:len(mp1SvcId)/2]
-	instanceID := mp1SvcId[len(mp1SvcId)/2:]
+// RecordHeartbeat use put to update a service register info
+func RecordHeartbeat(ctx context.Context, mp1SvcId string) error {
 	req := &proto.HeartbeatRequest{
-		ServiceId:  serviceID,
-		InstanceId: instanceID,
+		ServiceId:  mp1SvcId[:len(mp1SvcId)/2],
+		InstanceId: mp1SvcId[len(mp1SvcId)/2:],
 	}
 	_, err := core.InstanceAPI.Heartbeat(ctx, req)
 	return err
@@ -213,6 +211,7 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 		}
 	}
 	if len(findResp) == 0 {
+		// The error message null is checked in the callers, hence do not change this
 		return nil, fmt.Errorf("null")
 	}
 	response := &proto.Response{Code: 0, Message: ""}
@@ -283,23 +282,14 @@ func ValidateAppInstanceIdWithHeader(id string, r *http.Request) error {
 	if id == r.Header.Get("X-AppinstanceID") {
 		return nil
 	}
-	if validateUrl(r) {
+	if strings.Contains(r.URL.Path, ServicesPath) {
 		return nil
 	}
 	return errors.New("UnAuthorization to access the resource")
 }
 
-func validateUrl(r *http.Request) bool {
-	url := r.URL.Path
-	if strings.Contains(url, ServicesPath) {
-		return true
-	}
-	return false
-
-}
-
-// GetResourceInfo get resource info
-func GetResourceInfo(r *http.Request) string {
+// GetHttpResourceInfo get resource info
+func GetHttpResourceInfo(r *http.Request) string {
 	resource := r.URL.String()
 	if resource == "" {
 		return "UNKNOWN"

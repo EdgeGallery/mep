@@ -98,20 +98,20 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 			req.Instance.Status = "DOWN"
 		}
 		properties := req.Instance.Properties
-		meputil.InfoToProperties(properties, "transportId", s.TransportID)
-		meputil.InfoToProperties(properties, "serializer", s.Serializer)
-		meputil.InfoToProperties(properties, "ScopeOfLocality", s.ScopeOfLocality)
-		meputil.InfoToProperties(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
-		meputil.InfoToProperties(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
-		meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(0))
+		meputil.UpdatePropertiesMap(properties, "transportId", s.TransportID)
+		meputil.UpdatePropertiesMap(properties, "serializer", s.Serializer)
+		meputil.UpdatePropertiesMap(properties, "ScopeOfLocality", s.ScopeOfLocality)
+		meputil.UpdatePropertiesMap(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
+		meputil.UpdatePropertiesMap(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
+		meputil.UpdatePropertiesMap(properties, serviceLivenessInterval, strconv.Itoa(0))
 		if s.LivenessInterval != 0 {
-			meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(meputil.DefaultHeartbeatInterval))
+			meputil.UpdatePropertiesMap(properties, serviceLivenessInterval, strconv.Itoa(meputil.DefaultHeartbeatInterval))
 			s.LivenessInterval = meputil.DefaultHeartbeatInterval
 		}
-		meputil.InfoToProperties(properties, "mecState", s.State)
+		meputil.UpdatePropertiesMap(properties, "mecState", s.State)
 		secNanoSec := strconv.FormatInt(time.Now().UTC().UnixNano(), FormatIntBase)
-		meputil.InfoToProperties(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
-		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
+		meputil.UpdatePropertiesMap(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
+		meputil.UpdatePropertiesMap(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
 		req.Instance.Endpoints, epType = s.registerEndpoints()
@@ -173,15 +173,15 @@ func (s *ServiceInfo) transportInfoToProperties(properties map[string]string) {
 	if properties == nil {
 		return
 	}
-	meputil.InfoToProperties(properties, "transportInfo/id", s.TransportInfo.ID)
-	meputil.InfoToProperties(properties, "transportInfo/name", s.TransportInfo.Name)
-	meputil.InfoToProperties(properties, "transportInfo/description", s.TransportInfo.Description)
-	meputil.InfoToProperties(properties, "transportInfo/type", string(s.TransportInfo.TransType))
-	meputil.InfoToProperties(properties, "transportInfo/protocol", s.TransportInfo.Protocol)
-	meputil.InfoToProperties(properties, "transportInfo/version", s.TransportInfo.Version)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/id", s.TransportInfo.ID)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/name", s.TransportInfo.Name)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/description", s.TransportInfo.Description)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/type", string(s.TransportInfo.TransType))
+	meputil.UpdatePropertiesMap(properties, "transportInfo/protocol", s.TransportInfo.Protocol)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/version", s.TransportInfo.Version)
 	grantTypes := strings.Join(s.TransportInfo.Security.OAuth2Info.GrantTypes, "，")
-	meputil.InfoToProperties(properties, "transportInfo/security/oAuth2Info/grantTypes", grantTypes)
-	meputil.InfoToProperties(properties, "transportInfo/security/oAuth2Info/tokenEndpoint",
+	meputil.UpdatePropertiesMap(properties, "transportInfo/security/oAuth2Info/grantTypes", grantTypes)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/security/oAuth2Info/tokenEndpoint",
 		s.TransportInfo.Security.OAuth2Info.TokenEndpoint)
 
 }
@@ -190,10 +190,10 @@ func (s *ServiceInfo) serCategoryToProperties(properties map[string]string) {
 	if properties == nil {
 		return
 	}
-	meputil.InfoToProperties(properties, "serCategory/href", s.SerCategory.Href)
-	meputil.InfoToProperties(properties, "serCategory/id", s.SerCategory.ID)
-	meputil.InfoToProperties(properties, "serCategory/name", s.SerCategory.Name)
-	meputil.InfoToProperties(properties, "serCategory/version", s.SerCategory.Version)
+	meputil.UpdatePropertiesMap(properties, "serCategory/href", s.SerCategory.Href)
+	meputil.UpdatePropertiesMap(properties, "serCategory/id", s.SerCategory.ID)
+	meputil.UpdatePropertiesMap(properties, "serCategory/name", s.SerCategory.Name)
+	meputil.UpdatePropertiesMap(properties, "serCategory/version", s.SerCategory.Version)
 }
 
 // FromServiceInstance transform MicroServiceInstance to ServiceInfo

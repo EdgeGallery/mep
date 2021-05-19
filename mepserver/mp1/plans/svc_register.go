@@ -49,7 +49,7 @@ type DecodeRestReq struct {
 // OnRequest decodes the service request messages
 func (t *DecodeRestReq) OnRequest(data string) workspace.TaskCode {
 	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetHttpResourceInfo(t.R))
 
 	err := t.GetParam(t.R)
 	if err != nil {

@@ -48,7 +48,7 @@ type DecodeHeartbeatRestReq struct {
 func (t *DecodeHeartbeatRestReq) OnRequest(data string) workspace.TaskCode {
 	var err error
 	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s] in heartbeat.",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetHttpResourceInfo(t.R))
 	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
 	if err != nil {
 		log.Error("Parameters validation for heartbeat failed.", err)
@@ -197,10 +197,10 @@ func (t *UpdateHeartbeat) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.ServiceInactive, "The service is in INACTIVE state")
 		return workspace.TaskFinish
 	}
-	meputil.InfoToProperties(properties, "mecState", meputil.ActiveState)
+	meputil.UpdatePropertiesMap(properties, "mecState", meputil.ActiveState)
 	secNanoSec := strconv.FormatInt(time.Now().UTC().UnixNano(), meputil.FormatIntBase)
-	meputil.InfoToProperties(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
-	meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
+	meputil.UpdatePropertiesMap(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
+	meputil.UpdatePropertiesMap(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 	req := &proto.UpdateInstancePropsRequest{
 		ServiceId:  serviceID,
 		InstanceId: instanceID,

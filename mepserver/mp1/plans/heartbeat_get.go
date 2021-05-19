@@ -48,7 +48,7 @@ type GetOneDecodeHeartbeat struct {
 func (t *GetOneDecodeHeartbeat) OnRequest(data string) workspace.TaskCode {
 	var err error
 	log.Infof("Received message of get heartbeat from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetResourceInfo(t.R))
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetHttpResourceInfo(t.R))
 	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
 	if err != nil {
 		log.Error("Parameters validation failed on heartbeat.", err)

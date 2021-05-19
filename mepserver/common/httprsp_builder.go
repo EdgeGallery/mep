@@ -64,7 +64,7 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 			Detail: "server internal function failed",
 		}
 		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
-			util.GetResourceInfo(t.R), body.Detail)
+			util.GetHttpResourceInfo(t.R), body.Detail)
 		util.HttpErrResponse(t.W, util.RemoteServerErr, body)
 		return workspace.TaskFinish
 	}
@@ -78,11 +78,11 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 		statusCode, httpBody := t.cvtHttpErrInfo(errInfo)
 		util.HttpErrResponse(t.W, statusCode, httpBody)
 		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
-			util.GetResourceInfo(t.R), errInfo.Message)
+			util.GetHttpResourceInfo(t.R), errInfo.Message)
 		return workspace.TaskFinish
 	}
 	log.Infof(successEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethod(t.R),
-		util.GetResourceInfo(t.R))
+		util.GetHttpResourceInfo(t.R))
 	t.writeResponse(t.W, t.HttpErrInf, t.HttpRsp)
 	return workspace.TaskFinish
 }

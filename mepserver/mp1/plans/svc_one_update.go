@@ -81,7 +81,7 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	err = meputil.Heartbeat(t.Ctx, t.ServiceId)
+	err = meputil.RecordHeartbeat(t.Ctx, t.ServiceId)
 	if err != nil {
 		log.Error("Heartbeat update failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceUpdFailed, "heartbeat failed")
