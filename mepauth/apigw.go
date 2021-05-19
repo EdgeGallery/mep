@@ -307,10 +307,9 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 		log.Error("Request's response not received")
 	}
 
-	log.Info("Request posted successfully")
-
 	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
-		return errors.New("Request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
+		log.Error("Request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
+		return errors.New("request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
 	}
 	return nil
 }
