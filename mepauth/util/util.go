@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util implements mep auth utility funtions and contain constants
+// Package util implements mep auth utility functions and contain constants
 package util
 
 import (
@@ -72,7 +72,8 @@ func GetAppConfig(k string) string {
 func GetPublicKey() ([]byte, error) {
 	jwtPublicKey := GetAppConfig("jwt_public_key")
 	if len(jwtPublicKey) == 0 {
-		log.Error("jwt public key configuration is not set")
+		log.Error("" +
+			" public key configuration is not set")
 		return nil, errors.New("jwt public key configuration is not set")
 	}
 
@@ -157,7 +158,7 @@ func GetAPIGwURL() (string, error) {
 	apiGwPort := GetAppConfig(ApigwPort)
 	apiGwParamsAreValid, validateApiGwParamsErr := validateApiGwParams(apiGwHost, apiGwPort)
 	if validateApiGwParamsErr != nil || !apiGwParamsAreValid {
-		log.Error("validate Consumer url failed")
+		log.Error("Validation of consumer URL failed")
 		return "", validateApiGwParamsErr
 	}
 	kongConsumerUrl := fmt.Sprintf("https://%s:%s", apiGwHost, apiGwPort)
@@ -210,35 +211,37 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 	certNameConfig := GetAppConfig(crtName)
 	if len(certNameConfig) == 0 {
 		log.Error(crtName + " configuration is not set")
-		return nil, errors.New("cert name configuration is not set")
+		return nil, errors.New("certificate name configuration is not set")
 	}
 
 	crt, err := ioutil.ReadFile(certNameConfig)
 	if err != nil {
-		log.Error("unable to read certificate")
+		log.Error("Unable to read certificate file")
 		return nil, err
 	}
 
 	rootCAs := x509.NewCertPool()
 	ok := rootCAs.AppendCertsFromPEM(crt)
 	if !ok {
-		log.Error("failed to decode cert file")
-		return nil, errors.New("failed to decode cert file")
+		log.Error("Failed to decode certificate file")
+		return nil, errors.New("failed to decode certificate file")
 	}
 
 	serverName := GetAppConfig("server_name")
 	serverNameIsValid, validateServerNameErr := validateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error")
+		log.Error("Server name validation failed")
 		return nil, validateServerNameErr
 	}
 	sslCiphers := GetAppConfig("ssl_ciphers")
 	if len(sslCiphers) == 0 {
-		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
+		log.Error(sslCiphers + "configuration is not set")
+		return nil, errors.New("ssl cipher configuration is not set")
 	}
 	cipherSuites := getCipherSuites(sslCiphers)
 	if cipherSuites == nil {
-		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
+		log.Error("Unable to get cipher suite")
+		return nil, errors.New("unable to get cipher suite")
 	}
 	return &tls.Config{
 		RootCAs:      rootCAs,
@@ -258,7 +261,7 @@ func getCipherSuites(sslCiphers string) []uint16 {
 		}
 		mapValue, ok := cipherSuiteMap[cipherName]
 		if !ok {
-			log.Error("not recommended cipher suite")
+			log.Error("Not recommended cipher suite")
 			return nil
 		}
 		cipherSuiteArr = append(cipherSuiteArr, mapValue)

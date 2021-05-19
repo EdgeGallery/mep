@@ -23,8 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/httplib"
+	"io/ioutil"
 	"mepauth/models"
 	"mepauth/routers"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -43,7 +45,7 @@ type apiGwInitializer struct {
 func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
-		log.Error("Failed to get api gateway url")
+		log.Error("Failed to get API gateway URL")
 		return getApiGwUrlErr
 	}
 	err := i.SetApiGwConsumer(apiGwUrl)
@@ -294,10 +296,19 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 	req.Header(util.ContentType, util.JsonUtf8)
 	req.SetTLSClientConfig(i.tlsConfig)
 	req.Body(jsonStr)
-	_, err := req.String()
+	resp, err := req.Response()
 	if err != nil {
-		log.Error("send Post Request Failed")
+		log.Error("Request sending is having error")
 		return err
+	}
+	defer resp.Body.Close()
+	_, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		log.Error("Request's response not received")
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		return errors.New("Request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
 	}
 	return nil
 }

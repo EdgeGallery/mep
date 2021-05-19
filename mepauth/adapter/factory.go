@@ -19,6 +19,7 @@ package adapter
 
 import (
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"mepauth/util"
 	"os"
 )
@@ -45,6 +46,7 @@ func getDbAdapter() (Database, error) {
 func InitDb() () {
 	db, err := getDbAdapter()
 	if err != nil {
+		log.Error("Unable to get DB adapter: " + err.Error())
 		os.Exit(1)
 	}
 	Db = db
