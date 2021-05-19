@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// Parameters related to use of OAuth 2.0
+// SecurityInfoOAuth2Info parameters related to use of OAuth 2.0
 type SecurityInfoOAuth2Info struct {
 	GrantTypes    []string `json:"grantTypes" validate:"omitempty,max=4,min=1,dive,oneof=OAUTH2_AUTHORIZATION_CODE OAUTH2_IMPLICIT_GRANT OAUTH2_RESOURCE_OWNER OAUTH2_CLIENT_CREDENTIALS"`
 	TokenEndpoint string   `json:"tokenEndpoint" validate:"omitempty,uri"`

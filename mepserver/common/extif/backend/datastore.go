@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package backend implements dns client
+// Package backend implements datastore interface
 package backend
 
 import (

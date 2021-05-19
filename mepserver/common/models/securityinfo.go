@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// This type represents security information related to a transport
+// SecurityInfo represents security information related to a transport
 type SecurityInfo struct {
 	OAuth2Info SecurityInfoOAuth2Info `json:"oAuth2Info,omitempty"`
 }

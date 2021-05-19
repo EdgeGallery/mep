@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
 import (
@@ -22,6 +22,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// AppDConfig holds the application configurations such as traffic and dns rules.
 type AppDConfig struct {
 	AppTrafficRule []dataplane.TrafficRule `json:"appTrafficRule" validate:"dive,max=16"`
 	AppDNSRule     []dataplane.DNSRule     `json:"appDNSRule" validate:"dive,max=32"`
@@ -31,6 +32,7 @@ type AppDConfig struct {
 	Operation string `json:"operation,omitempty"` // For local use in the DB only
 }
 
+// TaskStatus hold the status of asynchronous sync task for app configuration
 type TaskStatus struct {
 	Progress             int          `json:"progress"`
 	TrafficRuleStatusLst []RuleStatus `json:"trafficRuleStatusList"`
@@ -38,12 +40,14 @@ type TaskStatus struct {
 	Details              string       `json:"details" validate:"omitempty"`
 }
 
+// RuleStatus holds status of either traffic or dns rules on sync from eg to data-plane
 type RuleStatus struct {
 	Id     string                 `json:"id"`
 	State  meputil.AppDRuleStatus `json:"state"`  //One of INIT, MP2_OK, LOCAL_OK, DB_OK
 	Method meputil.OperType       `json:"method"` // Outgoing request method
 }
 
+// TaskProgress response model
 type TaskProgress struct {
 	TaskId        string `json:"taskId"`
 	AppInstanceId string `json:"appInstanceId"`

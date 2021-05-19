@@ -46,6 +46,7 @@ const (
 	ForbiddenOperation                            = 20
 )
 
+// Mep server api paths
 const (
 	RootPath              = "/mep"
 	Mm5RootPath           = "/mepcfg"
@@ -78,12 +79,14 @@ const (
 	Liveness           = "/liveness"
 )
 
+// Resource state
 const (
 	ActiveState    = "ACTIVE"
 	InactiveState  = "INACTIVE"
 	SuspendedState = "SUSPENDED"
 )
 
+// Address type
 const (
 	IPv4Type = "IP_V4"
 	IPv6Type = "IP_V6"

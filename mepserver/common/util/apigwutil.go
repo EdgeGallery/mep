@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package util implements mep server utility functions and constants
 package util
 
 import (
@@ -30,24 +31,29 @@ var cipherSuiteMap = map[string]uint16{
 	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 }
 
+// RouteInfo represents api gateway route model
 type RouteInfo struct {
 	Id      int64   `json:"routeId"`
 	AppId   string  `json:"appId"`
 	SerInfo SerInfo `orm:"type(json)" json:"serInfo"`
 }
 
+// SerInfo represents api gateway service info
 type SerInfo struct {
 	SerName string `json:"serName"`
 	Uri     string `json:"uri"`
 }
 
+// ApiGWInterface holds an api gateway instance
 var ApiGWInterface *ApiGwIf
 
+// ApiGwIf represents api gateway interface
 type ApiGwIf struct {
 	baseURL string
 	tlsCfg  *tls.Config
 }
 
+// NewApiGwIf initialize new api gate way instance
 func NewApiGwIf() *ApiGwIf {
 	a := &ApiGwIf{}
 	baseUrl := a.getApiGwUrl()
@@ -74,6 +80,7 @@ func (a *ApiGwIf) getApiGwUrl() string {
 
 }
 
+// AddApiGwService add new service in the api gateway for application
 func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
 	kongServiceUrl := a.baseURL + "/services"
 	serName := routeInfo.SerInfo.SerName
@@ -85,6 +92,7 @@ func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
 	}
 }
 
+// AddApiGwRoute add new route in the api gateway for application
 func (a *ApiGwIf) AddApiGwRoute(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes"
@@ -95,7 +103,7 @@ func (a *ApiGwIf) AddApiGwRoute(routeInfo RouteInfo) {
 	}
 }
 
-// enable kong jwt plugin
+// EnableJwtPlugin enables kong jwt plugin
 func (a *ApiGwIf) EnableJwtPlugin(routeInfo RouteInfo) {
 	serName := routeInfo.SerInfo.SerName
 	kongPluginUrl := a.baseURL + serviceUrl + serName + "/plugins"
@@ -106,6 +114,7 @@ func (a *ApiGwIf) EnableJwtPlugin(routeInfo RouteInfo) {
 	}
 }
 
+// ApiGwDelRoute delete application route from api gateway
 func (a *ApiGwIf) ApiGwDelRoute(serName string) {
 	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
 	req := httplib.Delete(kongRouteUrl)

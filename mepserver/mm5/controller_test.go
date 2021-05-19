@@ -1087,7 +1087,7 @@ dataplane:
 
 	defer dnsTestServer.Close()
 
-	patch6 := gomonkey.ApplyFunc((*dns.RestDNSAgent).GetEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
+	patch6 := gomonkey.ApplyFunc((*dns.RestDNSAgent).BuildDNSEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
 		log.Infof("DNS Agent End Point: %v", dnsTestServer.URL)
 		return dnsTestServer.URL
 	})

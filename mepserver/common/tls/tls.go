@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-//mepserver tls plugin for service center
+//Package tls is a tls plugin for service center
 package tls
 
 import (
@@ -30,7 +30,7 @@ func init() {
 
 }
 
-// new plugin instance
+// New plugin instance
 func New() mgr.PluginInstance {
 	return &MepServerTLS{}
 }
@@ -38,6 +38,7 @@ func New() mgr.PluginInstance {
 type MepServerTLS struct {
 }
 
+// Encrypt data
 func (c *MepServerTLS) Encrypt(src string) (string, error) {
 	df, ok := mgr.DynamicPluginFunc(mgr.CIPHER, "Encrypt").(func(src string) (string, error))
 	if ok {
@@ -46,6 +47,7 @@ func (c *MepServerTLS) Encrypt(src string) (string, error) {
 	return src, nil
 }
 
+// Decrypt data
 func (c *MepServerTLS) Decrypt(src string) (string, error) {
 
 	decrypt := src

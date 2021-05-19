@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package models implements mep server object models
 package models
 
 import (
@@ -23,22 +24,25 @@ import (
 	"strconv"
 )
 
+// ServiceLivenessInfo represents the liveness request body
 type ServiceLivenessInfo struct {
 	State     string    `json:"state"`
 	TimeStamp TimeStamp `json:"timeStamp"`
 	Interval  int       `json:"interval"`
 }
 
+// TimeStamp represents the liveness timestamp
 type TimeStamp struct {
 	Seconds     uint32 `json:"seconds"`
 	Nanoseconds uint32 `json:"nanoSeconds"`
 }
 
+// ServiceLivenessUpdate represents the liveness update body
 type ServiceLivenessUpdate struct {
 	State string `json:"state" validate:"required,oneof=ACTIVE"`
 }
 
-// transform MicroServiceInstance to HeartbeatInfo
+// FromServiceInstance transform MicroServiceInstance to HeartbeatInfo
 func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	if inst == nil || inst.Properties == nil {
 		return
@@ -67,7 +71,7 @@ func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstan
 	s.Interval = interval
 }
 
-//Check the patched details
+// UpdateHeartbeat check the patched details
 func (t *ServiceLivenessUpdate) UpdateHeartbeat() string {
 	return t.State
 }

@@ -655,10 +655,12 @@ func JoinURL(base string, paths ...string) string {
 		strings.TrimLeft(path.Join(paths...), "/"))
 }
 
+// GenerateUniqueId generates a unique uuid4 based id
 func GenerateUniqueId() string {
 	return uuid.NewV4().String()
 }
 
+// AppConfigProperties represents application config map
 type AppConfigProperties map[string]string
 
 // read app.conf file to AppConfigProperties object

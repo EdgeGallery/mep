@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// This type represents the general information of a MEC service.
+// TransportInfo represents the general information of a MEC service.
 type TransportInfo struct {
 	ID          string         `json:"id" validate:"omitempty,max=64,validateId"`
 	Name        string         `json:"name" validate:"omitempty,max=128,validateName"`

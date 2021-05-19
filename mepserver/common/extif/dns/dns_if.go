@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package dns implements dns client functionalities
+// Package dns defines dns client interfaces
 package dns
 
 // RuleEntry DNS rule record

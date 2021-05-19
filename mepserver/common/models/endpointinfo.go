@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
+// EndPointInfo model as per the ETSI MEC 011 document to hold the endpoint data
 type EndPointInfo struct {
 	Uris        []string              `json:"uris" validate:"omitempty,dive,uri"`
-	Addresses   []EndPointInfoAddress `json:"addresses" validate:"omitempty,dive"`
+	Addresses   []EndPointInfoAddress `json:"addresses" validate:"omitempty"`
 	Alternative interface{}           `json:"alternative"`
 }
 
+// EndPointInfoAddress represents the end point address
 type EndPointInfoAddress struct {
 	Host string `json:"host" validate:"required"`
 	Port uint32 `json:"port" validate:"required,gt=0,lte=65535"`

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements architecture work space
+// Package workspace implements architecture work space
 package workspace
 
 type TaskBaseIf interface {
@@ -35,22 +35,22 @@ type TaskBase struct {
 	resultCode ErrCode
 }
 
-// set task base name
+// WithName set task base name
 func (t *TaskBase) WithName(name string) {
 	t.Name = name
 }
 
-// task base parse params
+// Parse task base parse params
 func (t *TaskBase) Parse(params string) {
 	t.Param = append(t.Param, params)
 }
 
-// task base on fork
+// OnFork task base on fork
 func (t *TaskBase) OnFork(wkSpace interface{}, param interface{}) int {
 	return 0
 }
 
-// task base on stop
+// OnStop task base on stop
 func (t *TaskBase) OnStop() int {
 	return 0
 }
@@ -61,12 +61,12 @@ const (
 	TaskFinish TaskCode = iota
 )
 
-// task base on request
+// OnRequest task base on request
 func (t *TaskBase) OnRequest(wkSpace interface{}) TaskCode {
 	return TaskFinish
 }
 
-// set task base error code
+// SetFirstErrorCode set task base error code
 func (t *TaskBase) SetFirstErrorCode(code ErrCode, msg string) {
 	if t.resultCode > TaskOK {
 		return
@@ -75,17 +75,17 @@ func (t *TaskBase) SetFirstErrorCode(code ErrCode, msg string) {
 	t.errMsg = msg
 }
 
-// get error code
+// GetErrCode get error code
 func (t *TaskBase) GetErrCode() (ErrCode, string) {
 	return t.resultCode, t.errMsg
 }
 
-// set error info
+// SetSerErrInfo set error info
 func (t *TaskBase) SetSerErrInfo(serErr *SerErrInfo) {
 	t.serErr = serErr
 }
 
-// get error info
+// GetSerErrInfo get error info
 func (t *TaskBase) GetSerErrInfo() *SerErrInfo {
 	return t.serErr
 }

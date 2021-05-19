@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// This type represents a subscription to the notifications from the  MEC platform regarding the availability of a MEC service or a list of MEC services.
+// AppTerminationNotificationSubscription represents a subscription to the notifications from the  MEC platform regarding the availability of a MEC service or a list of MEC services.
 type AppTerminationNotificationSubscription struct {
 	SubscriptionId    string `json:"subscriptionId,omitempty"`
 	SubscriptionType  string `json:"subscriptionType" validate:"required,oneof=AppTerminationNotificationSubscription SerAvailabilityNotificationSubscription"`

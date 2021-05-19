@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-// Package interface for data-plane
+// Package dataplane defines the data-plane interfaces
 package dataplane
 
 import (
 	"mepserver/common/config"
 )
 
+// TunnelInfo represents the traffic tunnel configurations
 type TunnelInfo struct {
 	TunnelType       string `json:"tunnelType" validate:"omitempty,oneof=GTP_U GRE"`
 	TunnelDstAddress string `json:"tunnelDstAddress" validate:"omitempty,ip"`
 	TunnelSrcAddress string `json:"tunnelSrcAddress" validate:"omitempty,ip"`
 }
+
+// DstInterface holds the traffic destination interface configurations
 type DstInterface struct {
 	InterfaceType string     `json:"interfaceType" validate:"omitempty,oneof=TUNNEL MAC IP"`
 	TunnelInfo    TunnelInfo `json:"tunnelInfo"`
@@ -78,7 +81,9 @@ type ApplicationInfo struct {
 	Name string
 }
 
+// DataPlane interface functions
 type DataPlane interface {
+
 	// InitDataPlane Initialize the data-plane
 	InitDataPlane(config *config.MepServerConfig) (err error)
 

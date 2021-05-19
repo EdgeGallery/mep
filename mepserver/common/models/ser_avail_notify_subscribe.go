@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// This type represents a subscription to the notifications from the  MEC platform regarding the availability of a MEC service or a list of MEC services.
+// SerAvailabilityNotificationSubscription represents a subscription to the notifications from the  MEC platform regarding the availability of a MEC service or a list of MEC services.
 type SerAvailabilityNotificationSubscription struct {
 	SubscriptionId    string            `json:"subscriptionId,omitempty"`
 	SubscriptionType  string            `json:"subscriptionType" validate:"required,oneof=AppTerminationNotificationSubscription SerAvailabilityNotificationSubscription"`
@@ -34,19 +34,19 @@ type Self struct {
 	Href string `json:"href,omitempty"`
 }
 
-// ServiceAvailabilityNotification serviceAvailabilityNotification
+// ServiceAvailabilityNotification represents the notification body
 type ServiceAvailabilityNotification struct {
 	NotificationType  string              `json:"notificationType,omitempty"`
 	ServiceReferences []ServiceReferences `json:"serviceReferences,omitempty"`
 	Links             SerSubscription     `json:"_links,omitempty"`
 }
 
-// SerSubscription serSubscription
+// SerSubscription holds the notification callback links
 type SerSubscription struct {
-	Susbcription SerLinkType `json:"subscription,omitempty"`
+	Subscription SerLinkType `json:"subscription,omitempty"`
 }
 
-// ServiceReferences serviceReferences
+// ServiceReferences holds the service information
 type ServiceReferences struct {
 	Link          SerLinkType `json:"link,omitempty"`
 	SerName       string      `json:"serName,omitempty"`
@@ -55,7 +55,7 @@ type ServiceReferences struct {
 	ChangeType    string      `json:"changeType,omitempty"`
 }
 
-// SerLinkType serLinkType
+// SerLinkType holds the link information
 type SerLinkType struct {
 	Href string `json:"href,omitempty"`
 }

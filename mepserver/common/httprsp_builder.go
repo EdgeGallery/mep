@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package common implements mep server common functionalities
 package common
 
 import (
@@ -36,6 +36,7 @@ import (
 	"mepserver/common/util"
 )
 
+// SendHttpRsp holds the http response building parameters
 type SendHttpRsp struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,in"`
 	R          *http.Request   `json:"r,in"`
@@ -45,7 +46,7 @@ type SendHttpRsp struct {
 	StatusCode int
 }
 
-// OnRequest
+// OnRequest builds an http response based on the input provided
 func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 	// remove service-center server header
 	t.W.Header().Del(util.ServerHeader)

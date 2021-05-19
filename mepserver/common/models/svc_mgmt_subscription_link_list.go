@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
+// MecServiceMgmtApiSubscriptionLinkList represents the service management subscription list
 type MecServiceMgmtApiSubscriptionLinkList struct {
 	Links SubscriptionLinks `json:"_links"`
 }
 
+// SubscriptionLinks holds the callback uri and subscriptions list
 type SubscriptionLinks struct {
 	Self          Self           `json:"self"`
 	Subscriptions []Subscription `json:"subscriptions"`
 }
 
+// Subscription model
 type Subscription struct {
 	Href string `json:"href"`
 	Rel  string `json:"rel"`

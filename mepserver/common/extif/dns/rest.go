@@ -33,8 +33,9 @@ import (
 	meputil "mepserver/common/util"
 )
 
-const DNSServerURLFormat = "http://%s:%d/mep/dns_server_mgmt/v1/"
+const ServerURLFormat = "http://%s:%d/mep/dns_server_mgmt/v1/"
 
+// ResourceRecord represents the dns resource record
 type ResourceRecord struct {
 	Name  string   `json:"name"`
 	Type  string   `json:"type"`
@@ -43,17 +44,20 @@ type ResourceRecord struct {
 	RData []string `json:"rData"`
 }
 
+// ZoneEntry represents the dns zone
 type ZoneEntry struct {
 	Zone string            `json:"zone"`
 	RR   *[]ResourceRecord `json:"rr"`
 }
 
+// RestDNSAgent dns agent
 type RestDNSAgent struct {
 	DNSAgent
 	ServerEndPoint *url.URL `json:"serverEndPoint"`
 	client         http.Client
 }
 
+// NewRestDNSAgent creates and initialize a dns agent
 func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
 	log.Info("New DNS agent initialization.")
 	agent := RestDNSAgent{}
@@ -86,7 +90,7 @@ func (d *RestDNSAgent) initDnsAgent() error {
 		}
 	}
 
-	u, err := url.Parse(fmt.Sprintf(DNSServerURLFormat, remoteServerHost, remoteServerPort))
+	u, err := url.Parse(fmt.Sprintf(ServerURLFormat, remoteServerHost, remoteServerPort))
 	if err != nil {
 		log.Errorf(nil, "Could not parse the DNS server endpoint.")
 		return err
@@ -95,10 +99,12 @@ func (d *RestDNSAgent) initDnsAgent() error {
 	return nil
 }
 
-func (d *RestDNSAgent) GetEndpoint(paths ...string) string {
+// BuildDNSEndpoint generates the dns server endpoint
+func (d *RestDNSAgent) BuildDNSEndpoint(paths ...string) string {
 	return meputil.JoinURL(d.ServerEndPoint.String(), paths...)
 }
 
+// SetResourceRecordTypeA update a dns entry in dns server
 func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrType, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
 		log.Errorf(nil, "Invalid DNS remote end point.")
@@ -118,7 +124,7 @@ func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrType, class string, pointT
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, d.GetEndpoint("rrecord"),
+	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord"),
 		bytes.NewBuffer(zoneJSON))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS update failed.")
@@ -139,6 +145,7 @@ func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrType, class string, pointT
 
 }
 
+// DeleteResourceRecordTypeA deletes an entry from dns server
 func (d *RestDNSAgent) DeleteResourceRecordTypeA(host, rrtype string) error {
 	if d.ServerEndPoint == nil {
 		log.Errorf(nil, "Invalid DNS remote end point.")
@@ -149,7 +156,7 @@ func (d *RestDNSAgent) DeleteResourceRecordTypeA(host, rrtype string) error {
 		hostName = host + "."
 	}
 
-	httpReq, err := http.NewRequest(http.MethodDelete, d.GetEndpoint("rrecord", hostName, rrtype),
+	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype),
 		bytes.NewBuffer([]byte("{}")))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS delete failed.")

@@ -37,6 +37,7 @@ const PropertiesMapSize = 5
 const FormatIntBase = 10
 const serviceLivenessInterval = "livenessInterval"
 
+// ServiceInfo holds the service info response/request body
 type ServiceInfo struct {
 	SerInstanceId     string        `json:"serInstanceId,omitempty"`
 	SerName           string        `json:"serName" validate:"required,max=128,validateName"`

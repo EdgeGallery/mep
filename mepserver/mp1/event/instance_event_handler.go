@@ -171,7 +171,7 @@ func (h *InstanceEtsiEventHandler) sendMsg(notificationInfo models.ServiceAvaila
 	appInstID := app[len(app)-2]
 	location := fmt.Sprintf("%s/applications/%s/subscriptions/%s", util2.MecServicePath, appInstID,
 		subscriptionID)
-	notificationInfo.Links.Susbcription.Href = location
+	notificationInfo.Links.Subscription.Href = location
 	notificationInfoJSON, err := json.Marshal(notificationInfo)
 	if err != nil {
 		return

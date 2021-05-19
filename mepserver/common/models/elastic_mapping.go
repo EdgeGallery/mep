@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 )
 
+// ElasticLogMapping model holds the elastic request
 type ElasticLogMapping struct {
 	Mappings Mappings `json:"mappings"`
 }
@@ -33,6 +34,7 @@ type Mappings struct {
 	Properties Properties `json:"properties"`
 }
 
+// GetHttpLogMapping generates elastic search http log mapping request body
 func GetHttpLogMapping() string {
 	esMap := ElasticLogMapping{}
 	esMap.Mappings.Properties.StartedAt.Type = "date"

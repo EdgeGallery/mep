@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util implements utility methods
+// Package util implements mep server utility functions and constants
 package util
 
 import (
