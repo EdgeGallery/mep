@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"mepauth/models"
 	"mepauth/routers"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -292,7 +293,7 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 // Send post request
 func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) error {
 
-	req := httplib.Put(consumerURL)
+	req := httplib.Post(consumerURL)
 	req.Header(util.ContentType, util.JsonUtf8)
 	req.SetTLSClientConfig(i.tlsConfig)
 	req.Body(jsonStr)
@@ -307,7 +308,7 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 		log.Error("Request's response not received")
 	}
 
-	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) {
+	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) && resp.StatusCode != http.StatusConflict {
 		log.Error("Request sending returned failure response with status code " + strconv.Itoa(resp.StatusCode))
 		return errors.New("request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
 	}
