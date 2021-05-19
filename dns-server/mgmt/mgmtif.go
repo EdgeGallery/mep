@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package mgmt.
 package mgmt
 
 import (
@@ -21,6 +23,7 @@ import (
 	"dns-server/datastore"
 )
 
+// ManagementCtrl Management ctrl interface.
 type ManagementCtrl interface {
 	// Start controller module
 	StartController(store *datastore.DataStore, ipAddr net.IP, port uint)
