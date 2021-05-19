@@ -36,6 +36,7 @@ import (
 const PropertiesMapSize = 5
 const FormatIntBase = 10
 const serviceLivenessInterval = "livenessInterval"
+const serviceGatewayURIFormatString = "https://mep-api-gw.mep:8443/%s"
 
 // ServiceInfo holds the service info response/request body
 type ServiceInfo struct {
@@ -61,8 +62,8 @@ type Selves struct {
 	Href string `json:"liveness,omitempty"`
 }
 
-// ToServiceRequest transform ServiceInfo to CreateServiceRequest
-func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
+// GenerateServiceRequest transform ServiceInfo to CreateServiceRequest
+func (s *ServiceInfo) GenerateServiceRequest(req *proto.CreateServiceRequest) {
 	if req != nil {
 		if req.Service == nil {
 			req.Service = &proto.MicroService{}
@@ -79,8 +80,8 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 	}
 }
 
-// ToRegisterInstance transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
+// GenerateRegisterInstance transform ServiceInfo to RegisterInstanceRequest
+func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -113,7 +114,7 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints()
+		req.Instance.Endpoints, epType = s.registerEndpoints()
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -130,14 +131,13 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 	}
 }
 
-func (s *ServiceInfo) toEndpoints() ([]string, string) {
+func (s *ServiceInfo) registerEndpoints() ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		var serviceUris []string
-		serviceId := util.GenerateUuid()[0:20]
-		serviceName := s.SerName + serviceId
+		serviceId, serviceName := s.generateServiceIdAndName()
 		for _, uri := range s.TransportInfo.Endpoint.Uris {
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
-			registerToApiGw(uri, serviceName, serviceId)
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serviceName))
+			s.registerToApiGw(uri, serviceName, serviceId)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -145,11 +145,10 @@ func (s *ServiceInfo) toEndpoints() ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
 		var serviceUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			serviceId := util.GenerateUuid()[0:20]
-			serviceName := s.SerName + serviceId
+			serviceId, serviceName := s.generateServiceIdAndName()
 			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
-			registerToApiGw(gwUri, serviceName, serviceId)
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serviceName))
+			s.registerToApiGw(gwUri, serviceName, serviceId)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -161,9 +160,13 @@ func (s *ServiceInfo) toEndpoints() ([]string, string) {
 		}
 		jsonText := string(jsonBytes)
 		endPoints = append(endPoints, jsonText)
-		return endPoints, "alternative"
+		return endPoints, meputil.Alternatives
 	}
 	return nil, ""
+}
+func (s *ServiceInfo) generateServiceIdAndName() (string, string) {
+	serviceId := util.GenerateUuid()[0:20]
+	return serviceId, s.SerName + serviceId
 }
 
 func (s *ServiceInfo) transportInfoToProperties(properties map[string]string) {
@@ -209,7 +212,6 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.SerName = inst.Properties["serName"]
 	s.TransportID = inst.Properties["transportId"]
 	s.Serializer = inst.Properties["serializer"]
-	epType := inst.Properties["endPointType"]
 	s.ScopeOfLocality = inst.Properties["ScopeOfLocality"]
 	var err error
 	s.LivenessInterval, err = strconv.Atoi(inst.Properties[serviceLivenessInterval])
@@ -227,11 +229,11 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	if err != nil {
 		log.Warn("parse bool IsLocal fail")
 	}
-	s.fromEndpoints(inst.Endpoints, epType)
+	s.fromEndpoints(inst.Endpoints, inst.Properties["endPointType"])
 	s.transportInfoFromProperties(inst.Properties)
 }
 
-func registerToApiGw(uri string, serviceName, serviceId string) {
+func (s *ServiceInfo) registerToApiGw(uri string, serviceName, serviceId string) {
 	log.Infof("API gateway registration for new service(name: %s, id: %s, uri: %s).", serviceName, serviceId, uri)
 	serInfo := meputil.SerInfo{
 		SerName: serviceName,
@@ -258,11 +260,11 @@ func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {
 }
 
 func (s *ServiceInfo) fromEndpoints(uris []string, epType string) {
-	if epType == "uris" {
+	if epType == meputil.Uris {
 		s.TransportInfo.Endpoint.Uris = uris
 		return
 	}
-	if epType == "addresses" {
+	if epType == meputil.Addresses {
 
 		s.TransportInfo.Endpoint.Addresses = make([]EndPointInfoAddress, 0, 1)
 		for _, v := range uris {
@@ -277,7 +279,10 @@ func (s *ServiceInfo) fromEndpoints(uris []string, epType string) {
 			s.TransportInfo.Endpoint.Addresses = append(s.TransportInfo.Endpoint.Addresses, tmp)
 		}
 	}
-	if epType == "alternative" {
+	if epType == meputil.Alternatives {
+		if len(uris) == 0 {
+			return
+		}
 		jsonObj, err := meputil.JsonTextToObj(uris[0])
 		if err != nil {
 			s.TransportInfo.Endpoint.Alternative = jsonObj

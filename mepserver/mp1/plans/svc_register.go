@@ -194,7 +194,7 @@ func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 	}
 
 	req := &proto.CreateServiceRequest{}
-	serviceInfo.ToServiceRequest(req)
+	serviceInfo.GenerateServiceRequest(req)
 	resp, err := core.ServiceAPI.Create(t.Ctx, req)
 	if err != nil {
 		log.Error("Service center service api create fail.", nil)
@@ -231,7 +231,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}
-	serviceInfo.ToRegisterInstance(req)
+	serviceInfo.GenerateRegisterInstance(req)
 	req.Instance.ServiceId = t.ServiceId
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	resp, err := core.InstanceAPI.Register(t.Ctx, req)

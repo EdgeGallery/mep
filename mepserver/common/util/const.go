@@ -107,7 +107,11 @@ const (
 	DeleteMethod = "DELETE"
 )
 
-const Uris string = "uris"
+const (
+	Uris         = "uris"
+	Addresses    = "addresses"
+	Alternatives = "alternative"
+)
 
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
