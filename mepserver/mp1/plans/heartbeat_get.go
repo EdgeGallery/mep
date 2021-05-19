@@ -118,7 +118,10 @@ func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 	mp1Rsp := &models.ServiceLivenessInfo{}
 	t.filterAppInstanceId(resp.Instance)
 	if resp.Instance != nil {
-		mp1Rsp.FromServiceInstance(resp.Instance)
+		if nil != mp1Rsp.FromServiceInstance(resp.Instance) {
+			t.SetFirstErrorCode(meputil.SerInstanceNotFound, "heartbeat data parsing failed")
+			return workspace.TaskFinish
+		}
 	} else {
 		log.Error("Service instance id in heartbeat not found.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "service instance id in heartbeat not found")

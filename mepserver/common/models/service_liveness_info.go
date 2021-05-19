@@ -43,32 +43,36 @@ type ServiceLivenessUpdate struct {
 }
 
 // FromServiceInstance transform MicroServiceInstance to HeartbeatInfo
-func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
+func (s *ServiceLivenessInfo) FromServiceInstance(inst *proto.MicroServiceInstance) error {
 	if inst == nil || inst.Properties == nil {
-		return
+		return nil
 	}
 	var err error
 	var interval int
 	var seconds, nanoSeconds uint64
 	interval, err = strconv.Atoi(inst.Properties["livenessInterval"])
 	if err != nil {
-		log.Warn("liveness Interval is fail")
+		log.Error("Liveness Interval data parsing failed.", err)
+		return err
 	}
 	if interval == 0 {
-		log.Warn("It is not subscribed for heartbeat")
+		log.Warn("It is not subscribed for heartbeat.")
 	}
 	s.State = inst.Properties["mecState"]
 	seconds, err = strconv.ParseUint(inst.Properties["timestamp/seconds"], FormatIntBase, meputil.BitSize)
 	if err != nil {
-		log.Warn("timestamp seconds is fail")
+		log.Error("Timestamp seconds parsing failed.", err)
+		return err
 	}
 	s.TimeStamp.Seconds = uint32(seconds)
 	nanoSeconds, err = strconv.ParseUint(inst.Properties["timestamp/nanoseconds"], FormatIntBase, meputil.BitSize)
 	if err != nil {
-		log.Warn("timestamp seconds is fail")
+		log.Error("Timestamp nano seconds parsing failed.", err)
+		return err
 	}
 	s.TimeStamp.Nanoseconds = uint32(nanoSeconds)
 	s.Interval = interval
+	return nil
 }
 
 // UpdateHeartbeat check the patched details
