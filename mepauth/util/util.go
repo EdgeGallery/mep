@@ -72,8 +72,7 @@ func GetAppConfig(k string) string {
 func GetPublicKey() ([]byte, error) {
 	jwtPublicKey := GetAppConfig("jwt_public_key")
 	if len(jwtPublicKey) == 0 {
-		log.Error("" +
-			" public key configuration is not set")
+		log.Error("JWT public key configuration is not set")
 		return nil, errors.New("jwt public key configuration is not set")
 	}
 

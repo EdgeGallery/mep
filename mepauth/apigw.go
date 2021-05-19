@@ -80,7 +80,6 @@ func (i *apiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 		log.Error("failed to marshal log plugin data")
 		return err
 	}
-	//err := i.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
 	err = i.SendPostRequest(pluginUrl, data)
 	if err != nil {
 		log.Error("Enable http log plugin failed")
