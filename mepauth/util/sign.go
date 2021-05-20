@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util implements mep auth utility funtions and contain constants
+// Package util implements mep auth utility functions and contain constants
 package util
 
 import (

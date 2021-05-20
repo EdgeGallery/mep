@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util implements mep auth utility funtions and contain constants
+// Package util implements mep auth utility functions and contain constants
 package util
 
 import (
@@ -63,7 +63,8 @@ func ValidateSk(sk *[]byte) error {
 // Validate Server Name
 func validateServerName(serverName string) (bool, error) {
 	if len(serverName) > maxHostNameLen {
-		return false, errors.New("server or host name validation failed")
+		log.Error("Server name length validation failed")
+		return false, errors.New("server or host name length validation failed")
 	}
 	return regexp.MatchString(serverNameRegex, serverName)
 }
@@ -76,6 +77,7 @@ func validateApiGwParams(apiGwHost string, apiGwPort string) (bool, error) {
 	}
 	apiGwPortIsValid, validateApiGwPortErr := regexp.MatchString(portRegex, apiGwPort)
 	if validateApiGwPortErr != nil || !apiGwPortIsValid {
+		log.Error("API gateway port doesn't match the expected pattern")
 		return apiGwPortIsValid, validateApiGwPortErr
 	}
 	return true, nil
@@ -164,7 +166,7 @@ func ValidateInputArgs(appConfig AppConfigProperties) bool {
 // ValidateKeyComponentUserInput validates key component user string against minimum length
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < componentSize {
-		log.Error("key component user string length is not valid")
+		log.Error("Key component user string length is not valid")
 		return  fmt.Errorf("key component user string length is not valid")
 	}
 	return nil

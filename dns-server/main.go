@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+//
 package main
 
 import (
@@ -31,7 +33,7 @@ import (
 	"dns-server/util"
 )
 
-// Input placeholder
+// Input placeholder.
 type InputParameters struct {
 	dbName          *string // DB name placeholder
 	port            *uint   // dns port number
@@ -43,14 +45,14 @@ type InputParameters struct {
 	loadBalance     *bool   // need load balancing?
 }
 
-// Input flag parameters registration
+// Input flag parameters registration.
 func registerInputParameters(inParam *InputParameters) {
 	if inParam == nil {
 		log.Fatalf( "Input config is not ready yet.")
 		return
 	}
 	inParam.dbName = flag.String("db", "dbEgDns", "Database name")
-	inParam.port = flag.Uint("port", util.DefaultDnsPort, "Port number to listens to")
+	inParam.port = flag.Uint("port", util.DefaultDNSPort, "Port number to listens to")
 	inParam.mgmtPort = flag.Uint("managementPort", util.DefaultManagementPort,
 		"Management interface port number to listens to")
 	inParam.connTimeOut = flag.Uint("connectionTimeout", util.DefaultConnTimeout,
@@ -64,16 +66,16 @@ func registerInputParameters(inParam *InputParameters) {
 	flag.Parse()
 }
 
-// Input parameter validation, parsing and generating configuration for running the dns server
+// Input parameter validation, parsing and generating configuration for running the dns server.
 func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	// Validate db name
-	if len(*inParam.dbName) >= util.MaxDbNameLength {
+	if len(*inParam.dbName) >= util.MaxDBNameLength {
 		err := fmt.Errorf("error: db name should be less than 256")
 		log.Fatalf("Failed to parse db name(%s).", err.Error())
 	}
-	if strings.ContainsAny(*inParam.dbName, util.DbStringExceptions) {
+	if strings.ContainsAny(*inParam.dbName, util.DBStringExceptions) {
 		err := fmt.Errorf("error: db name should be a single world and should not have \"%s\"",
-			util.DbStringExceptions)
+			util.DBStringExceptions)
 		log.Fatalf( "Failed to parse db name(%s). %s", *inParam.dbName, err.Error())
 	}
 
@@ -106,9 +108,9 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 		log.Fatalf( "Failed to parse ip address(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
-	if ipAdd.IsMulticast() || ipAdd.Equal(net.IPv4bcast) {
+	if ipAdd != nil && (ipAdd.IsMulticast() || ipAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.ipAddString, err.Error())
+		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
 	// Validate Management IP address
@@ -118,9 +120,9 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 		log.Fatalf( "Failed to parse management ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
-	if ipMgmtAdd.IsMulticast() || ipMgmtAdd.Equal(net.IPv4bcast) {
+	if ipMgmtAdd != nil && (ipMgmtAdd.IsMulticast() || ipMgmtAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.ipMgmtAddString, err.Error())
+		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
 	// Validate forwarder
@@ -130,9 +132,9 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 		log.Fatalf( "Failed to parse forwarder address(%s). %s", *inParam.forwarder, err.Error())
 	}
 
-	if forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast) {
+	if forwarderAdd !=nil && (forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip addresss(%s). %s", *inParam.forwarder, err.Error())
+		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.forwarder, err.Error())
 	}
 
 	return &Config{dbName: *inParam.dbName,
@@ -147,7 +149,7 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 }
 
 func waitForSignal() {
-	sig := make(chan os.Signal)
+	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
@@ -171,9 +173,8 @@ func main() {
 	mgmtCtl := &mgmt.Controller{}
 	dnsServer := NewServer(config, store, mgmtCtl)
 
-	err := dnsServer.Run()
 	defer dnsServer.Stop()
-	if err != nil {
+	if err := dnsServer.Run(); err != nil {
 		log.Fatal("Failed to Start the DNS server.", err)
 	}
 
