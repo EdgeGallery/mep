@@ -78,12 +78,12 @@ func GetPublicKey() ([]byte, error) {
 
 	publicKey, err := ioutil.ReadFile(jwtPublicKey)
 	if err != nil {
-		log.Error("unable to read public key file")
+		log.Error("Unable to read public key file")
 		return nil, errors.New("unable to read public key file")
 	}
 	publicKeyBlock, _ := pem.Decode(publicKey)
 	if publicKeyBlock == nil || publicKeyBlock.Type != "PUBLIC KEY" {
-		log.Error("failed to decode public key file")
+		log.Error("Failed to decode public key file")
 		return nil, errors.New("failed to decode public key file")
 	}
 	return publicKey, nil
@@ -209,7 +209,7 @@ func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, er
 func TLSConfig(crtName string) (*tls.Config, error) {
 	certNameConfig := GetAppConfig(crtName)
 	if len(certNameConfig) == 0 {
-		log.Error(crtName + " configuration is not set")
+		log.Error( "Certificate name is not set")
 		return nil, errors.New("certificate name configuration is not set")
 	}
 
@@ -234,7 +234,7 @@ func TLSConfig(crtName string) (*tls.Config, error) {
 	}
 	sslCiphers := GetAppConfig("ssl_ciphers")
 	if len(sslCiphers) == 0 {
-		log.Error(sslCiphers + "configuration is not set")
+		log.Error("SSL cipher configuration is not set")
 		return nil, errors.New("ssl cipher configuration is not set")
 	}
 	cipherSuites := getCipherSuites(sslCiphers)
@@ -276,10 +276,9 @@ func GetWorkKey() ([]byte, error) {
 	// get root key by key components
 	rootKey, genRootKeyErr := genRootKey(componentFilePath, saltFilePath)
 	if genRootKeyErr != nil {
-		log.Error("failed to generate root key by key components")
+		log.Error("Failed to generate root key by key components")
 		return nil, genRootKeyErr
 	}
-	log.Info("Succeed to generate root key by key components.")
 
 	// decrypt work key by root key.
 	workKey, decryptedWorkKeyErr := decryptKey(rootKey, encryptedWorkKeyFilePath, workKeyNonceFilePath)
@@ -289,7 +288,6 @@ func GetWorkKey() ([]byte, error) {
 		log.Error(decryptedWorkKeyErr.Error())
 		return nil, decryptedWorkKeyErr
 	}
-	log.Info("Succeed to decrypt work key.")
 	return workKey, nil
 }
 
@@ -333,7 +331,7 @@ func EncryptAndSaveJwtPwd(jwtPrivateKeyPwd *[]byte) error {
 	// get work key
 	workKey, getWorkKeyErr := GetWorkKey()
 	if getWorkKeyErr != nil {
-		log.Error("failed to get work key")
+		log.Error("Failed to get work key")
 		ClearByteArray(*jwtPrivateKeyPwd)
 		ClearByteArray(jwtPrivateKeyPwdNonce)
 		return getWorkKeyErr
@@ -369,7 +367,7 @@ func InitRootKeyAndWorkKey() error {
 	if !isFileOrDirExist(componentFilePath) || !isFileOrDirExist(saltFilePath) {
 		genRandRootKeyComponentErr := genRandRootKeyComponent(componentFilePath, saltFilePath)
 		if genRandRootKeyComponentErr != nil {
-			log.Error("failed to generate random key")
+			log.Error("Failed to generate random key")
 			return genRandRootKeyComponentErr
 		}
 		log.Info("Succeed to generate random key components and salt.")
@@ -380,7 +378,7 @@ func InitRootKeyAndWorkKey() error {
 		// get root key by key components
 		rootKey, genRootKeyErr := genRootKey(componentFilePath, saltFilePath)
 		if genRootKeyErr != nil {
-			log.Error("failed to generate root key")
+			log.Error("Failed to generate root key")
 			return genRootKeyErr
 		}
 		log.Info("Succeed to generate root key by key components.")
@@ -388,7 +386,7 @@ func InitRootKeyAndWorkKey() error {
 		ClearByteArray(workKey)
 		ClearByteArray(rootKey)
 		if genAndSaveWorkKeyErr != nil {
-			log.Error("failed to generate and save work key")
+			log.Error("Failed to generate and save work key")
 			return genAndSaveWorkKeyErr
 		}
 		log.Info("Succeed to generate and save encrypted work key and nonce.")
@@ -449,7 +447,7 @@ func decryptKey(key []byte, encryptedKeyFilePath string, keyNonceFilePath string
 func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
 	// get component from user input
 	if len(*KeyComponentFromUserStr) == 0 {
-		log.Error("parameter of key is not provided")
+		log.Error("Parameter of key is not provided")
 		return nil, fmt.Errorf("parameter of key is not provided")
 	}
 	componentFromUser := make([]byte, componentSize, 300)

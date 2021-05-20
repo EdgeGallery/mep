@@ -138,7 +138,7 @@ func ValidateIpAndCidr(trustedNetworkList []string) (bool, error) {
 			isValidCidr = false
 		}
 		if !isValidIp && !isValidCidr {
-			log.Error("ip/cidr parsing failed")
+			log.Error("Parsing of IP/CIDR in trusted network list failed")
 			return false, errors.New("ip/cidr parsing failed")
 		}
 	}

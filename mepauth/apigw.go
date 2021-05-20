@@ -77,7 +77,7 @@ func (i *apiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 	pluginUrl := apiGwUrl + util.PluginPath
 	data, err := i.getHttpLogPluginData()
 	if err != nil {
-		log.Error("failed to marshal log plugin data")
+		log.Error("Failed to marshal log plugin data")
 		return err
 	}
 	err = i.SendPostRequest(pluginUrl, data)
@@ -100,7 +100,7 @@ func (i *apiGwInitializer) SetApiGwConsumer(apiGwUrl string) error {
 
 	mepAuthKey := util.GetAppConfig("mepauth_key")
 	if len(mepAuthKey) == 0 {
-		msg := "mep auth key configuration is not set"
+		msg := "MEP auth key configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
@@ -125,13 +125,13 @@ func (i *apiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
 	// since mep is also in the same pos, same ip address will work
 	mepServerHost := util.GetAppConfig("mepserver_host")
 	if len(mepServerHost) == 0 {
-		msg := "mep server host configuration is not set"
+		msg := "MEP server host configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
 	mepServerPort := util.GetAppConfig("mepserver_port")
 	if len(mepServerPort) == 0 {
-		msg := "mep server port configuration is not set"
+		msg := "MEP server port configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
@@ -167,7 +167,7 @@ func (i *apiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
 		util.RateLimitPlugin, util.MepserverRateConf))
 	err = i.SendPostRequest(mepServerPluginUrl, ratePluginReq)
 	if err != nil {
-		log.Error("Enable mep server appid-header plugin failed")
+		log.Error("Enable mep server rate limit plugin failed")
 		return err
 	}
 	// enable mep server response-transformer plugin
@@ -184,21 +184,21 @@ func (i *apiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]
 	// add mep auth service and route to kong
 	httpsPort := util.GetAppConfig("HttpsPort")
 	if len(httpsPort) == 0 {
-		msg := "https port configuration is not set"
+		msg := "HTTPS port configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
 	// Since kong is also deployed in same pod, it can reach by the ip address
 	mepAuthHost := util.GetAppConfig("HTTPSAddr")
 	if len(mepAuthHost) == 0 {
-		msg := "mep auth host configuration is not set"
+		msg := "MEP auth host configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
 	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
 	err := i.AddServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
 	if err != nil {
-		log.Error("Add mep server route to kong failed.")
+		log.Error("Addition of mep server route to kong failed.")
 		return err
 	}
 	// enable mep auth rate-limiting plugin
@@ -207,7 +207,7 @@ func (i *apiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]
 		util.RateLimitPlugin, util.MepauthRateConf))
 	err = i.SendPostRequest(mepAuthPluginURL, mepAuthRatePluReq)
 	if err != nil {
-		log.Error("Enable mep auth appid-header plugin failed.")
+		log.Error("Enable MEP auth rate limit plugin failed.")
 		return err
 	}
 	// enable mep auth response-transformer plugin
@@ -226,11 +226,11 @@ func (i *apiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]
 				util.IpRestrictPlugin, i.getTrustedIpList(trustedNetworksList)))
 			err = i.SendPostRequest(mepAuthPluginURL, mepIpRestrict)
 			if err != nil {
-				log.Error("Ip restriction failed")
+				log.Error("IP restriction failed")
 				return err
 			}
 		} else {
-			log.Info("trusted list input is not valid, allowing all the networks")
+			log.Info("Trusted network list input is not valid, allowing all the networks")
 		}
 	}
 	return nil
@@ -263,7 +263,7 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 		targetURL, serviceName))
 	errMepService := i.SendPostRequest(kongServiceURL, serviceReq)
 	if errMepService != nil {
-		log.Error("Add " + serviceName + " service to kong failed.")
+		log.Error("Addition of " + serviceName + " service to kong failed.")
 		return errMepService
 	}
 
@@ -283,7 +283,7 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 
 	err := i.SendPostRequest(kongRouteURL, routeReq)
 	if err != nil {
-		log.Error("Add " + serviceName + " route to kong failed.")
+		log.Error("Addition of " + serviceName + " route to kong failed.")
 		return err
 	}
 	return nil
