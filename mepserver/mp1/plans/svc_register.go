@@ -231,7 +231,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}
-	serviceInfo.ToRegisterInstance(req)
+	serviceInfo.ToRegisterInstance(req,false)
 	req.Instance.ServiceId = t.ServiceId
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	resp, err := core.InstanceAPI.Register(t.Ctx, req)

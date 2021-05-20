@@ -101,6 +101,7 @@ const (
 
 const (
 	PostMethod   = "POST"
+	PutMethod   = "PUT"
 	DeleteMethod = "DELETE"
 )
 

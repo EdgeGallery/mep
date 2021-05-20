@@ -121,6 +121,11 @@ func SendPostRequest(url string, jsonStr []byte, tlsCfg *tls.Config) error {
 	return SendRequest(url, PostMethod, jsonStr, tlsCfg)
 }
 
+// SendPutRequest sends post request
+func SendPutRequest(url string, jsonStr []byte, tlsCfg *tls.Config) error {
+	return SendRequest(url, PutMethod, jsonStr, tlsCfg)
+}
+
 // SendDelRequest Sends delete request
 func SendDelRequest(url string, tlsCfg *tls.Config) error {
 	return SendRequest(url, DeleteMethod, nil, tlsCfg)
@@ -133,6 +138,10 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 	switch method {
 	case PostMethod:
 		req = httplib.Post(url)
+		req.Header("Content-Type", "application/json; charset=utf-8")
+		req.Body(jsonStr)
+	case PutMethod:
+		req = httplib.Put(url)
 		req.Header("Content-Type", "application/json; charset=utf-8")
 		req.Body(jsonStr)
 	case DeleteMethod:

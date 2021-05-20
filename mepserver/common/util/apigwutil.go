@@ -74,30 +74,30 @@ func (a *ApiGwIf) getApiGwUrl() string {
 
 }
 
-func (a *ApiGwIf) AddApiGwService(routeInfo RouteInfo) {
-	kongServiceUrl := a.baseURL + "/services"
-	serName := routeInfo.SerInfo.SerName
-	serUrl := routeInfo.SerInfo.Uri
+func (a *ApiGwIf) AddOrUpdateApiGwService(serInfo SerInfo) {
+	serName := serInfo.SerName
+	serUrl := serInfo.Uri
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	err := SendPostRequest(kongServiceUrl, jsonStr, a.tlsCfg)
+	kongServiceUrl := a.baseURL + "/services" + serName
+	err := SendPutRequest(kongServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("failed to add API gateway service", err)
 	}
 }
 
-func (a *ApiGwIf) AddApiGwRoute(routeInfo RouteInfo) {
-	serName := routeInfo.SerInfo.SerName
-	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes"
+func (a *ApiGwIf) AddOrUpdateApiGwRoute(serInfo SerInfo) {
+	serName := serInfo.SerName
+	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes" + serName
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	err := SendPostRequest(kongRouteUrl, jsonStr, a.tlsCfg)
+	err := SendPutRequest(kongRouteUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("failed to add API gateway route", err)
 	}
 }
 
 // enable kong jwt plugin
-func (a *ApiGwIf) EnableJwtPlugin(routeInfo RouteInfo) {
-	serName := routeInfo.SerInfo.SerName
+func (a *ApiGwIf) EnableJwtPlugin(serInfo SerInfo) {
+	serName := serInfo.SerName
 	kongPluginUrl := a.baseURL + serviceUrl + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
 	err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)

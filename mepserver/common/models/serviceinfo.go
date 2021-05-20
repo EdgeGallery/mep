@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/servicecomb-service-center/pkg/util"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 
@@ -79,7 +77,7 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
+func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, updateFlag bool) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -112,7 +110,7 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints()
+		req.Instance.Endpoints, epType = s.toEndpoints(updateFlag)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -129,14 +127,12 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest) {
 	}
 }
 
-func (s *ServiceInfo) toEndpoints() ([]string, string) {
+func (s *ServiceInfo) toEndpoints(updateFlag bool) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		var serviceUris []string
-		serviceId := util.GenerateUuid()[0:20]
-		serviceName := s.SerName + serviceId
 		for _, uri := range s.TransportInfo.Endpoint.Uris {
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
-			registerToApiGw(uri, serviceName, serviceId)
+			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName))
+			registerToApiGw(uri, s.SerName, updateFlag)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -144,11 +140,9 @@ func (s *ServiceInfo) toEndpoints() ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
 		var serviceUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			serviceId := util.GenerateUuid()[0:20]
-			serviceName := s.SerName + serviceId
 			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", serviceName))
-			registerToApiGw(gwUri, serviceName, serviceId)
+			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", s.SerName))
+			registerToApiGw(gwUri, s.SerName, updateFlag)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -230,21 +224,18 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.transportInfoFromProperties(inst.Properties)
 }
 
-func registerToApiGw(uri string, serviceName, serviceId string) {
+func registerToApiGw(uri string, serviceName string, updateFlag bool) {
 	log.Infof("SerName: %s, uri: %v", serviceName, uri)
 	serInfo := meputil.SerInfo{
 		SerName: serviceName,
 		Uri:     uri,
 	}
-	routeInfo := meputil.RouteInfo{
-		Id:      1,
-		AppId:   serviceId,
-		SerInfo: serInfo,
+	log.Infof("serInfo: %s, routeInfo: %s", serviceName, serInfo)
+	meputil.ApiGWInterface.AddOrUpdateApiGwService(serInfo)
+	meputil.ApiGWInterface.AddOrUpdateApiGwRoute(serInfo)
+	if !updateFlag {
+		meputil.ApiGWInterface.EnableJwtPlugin(serInfo)
 	}
-	log.Infof("serInfo: %s, routeInfo: %s", serviceName, routeInfo)
-	meputil.ApiGWInterface.AddApiGwService(routeInfo)
-	meputil.ApiGWInterface.AddApiGwRoute(routeInfo)
-	meputil.ApiGWInterface.EnableJwtPlugin(routeInfo)
 }
 
 func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {
