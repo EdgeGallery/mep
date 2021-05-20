@@ -29,6 +29,7 @@ import (
 
 type DeleteAppDConfig struct {
 	workspace.TaskBase
+	AppDCommon
 	Ctx           context.Context     `json:"ctx,in"`
 	W             http.ResponseWriter `json:"w,in"`
 	AppInstanceId string              `json:"appInstanceId,in"`
@@ -49,14 +50,14 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Check if any other ongoing operation for this AppInstance Id in the system.
 			3. update the this request to DB (job, task and task status)
 	*/
-	if !IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if !t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) {
+	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
@@ -67,7 +68,7 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := UpdateProcessingDatabase(t.AppInstanceId, taskId, &appDConfig)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish
@@ -75,6 +76,6 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	t.worker.StartNewTask(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	t.HttpRsp = GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
+	t.HttpRsp = t.generateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

@@ -23,7 +23,10 @@ import (
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/mm5/task"
+	"net"
 	"net/http"
+	"os"
+	"strconv"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/rest"
@@ -51,8 +54,9 @@ func initMm5Router() {
 
 type Mm5Service struct {
 	v4.MicroServiceService
-	config    *config.MepServerConfig
-	mp2Worker task.Worker
+	config         *config.MepServerConfig
+	mepAuthBaseUrl string
+	mp2Worker      task.Worker
 }
 
 func (m *Mm5Service) Init() error {
@@ -73,16 +77,37 @@ func (m *Mm5Service) Init() error {
 	if dataPlane == nil {
 		return fmt.Errorf("error: unsupported data-plane")
 	}
-
 	if err := dataPlane.InitDataPlane(mepConfig); err != nil {
 		return err
 	}
-
 	log.Infof("Data-plane initialized to %s.", m.config.DataPlane.Type)
-
 	m.mp2Worker.InitializeWorker(dataPlane, dnsAgent, m.config.DNSAgent.Type)
 
+	m.mepAuthBaseUrl, err = m.ReadMepAuthEndpoint()
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (m *Mm5Service) ReadMepAuthEndpoint() (string, error) {
+	mepAuthPort := os.Getenv(meputil.EnvMepAuthPort)
+	if len(mepAuthPort) <= 0 || len(mepAuthPort) > meputil.MaxPortLength {
+		log.Error("Invalid mep-auth port.", nil)
+		return "", fmt.Errorf("port validation error")
+	} else if num, err := strconv.Atoi(mepAuthPort); err == nil {
+		if num <= 0 || num > meputil.MaxPortNumber {
+			log.Error("Mep-auth port parse failed.", nil)
+			return "", fmt.Errorf("port parse error")
+		}
+	}
+	mepAuthIp := os.Getenv(meputil.EnvMepAuthHost)
+	if net.ParseIP(mepAuthIp) == nil {
+		log.Error("Mep-auth ip env is not set.", nil)
+		return "", fmt.Errorf("ip parse error")
+	}
+
+	return fmt.Sprintf(meputil.MepAuthBaseUrlFormat, mepAuthIp, mepAuthPort), nil
 }
 
 func (m *Mm5Service) URLPatterns() []rest.Route {
@@ -190,7 +215,7 @@ func (m *Mm5Service) terminateAppInstance(w http.ResponseWriter, r *http.Request
 		&plans.DecodeAppTerminationReq{},
 		(&plans.DeleteAppDConfigWithSync{}).WithWorker(&m.mp2Worker),
 		&plans.DeleteService{},
-		&plans.DeleteFromMepauth{})
+		(&plans.DeleteFromMepauth{}).WithEndPoint(m.mepAuthBaseUrl))
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)

@@ -27,6 +27,7 @@ import (
 
 type AppDConfigGet struct {
 	workspace.TaskBase
+	AppDCommon
 	AppInstanceId string      `json:"appInstanceId,in"`
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }

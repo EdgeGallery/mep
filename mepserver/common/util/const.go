@@ -244,3 +244,9 @@ const (
 )
 
 const LivenessPath = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+
+const (
+	EnvMepAuthPort = "MEPAUTH_SERVICE_PORT"
+	EnvMepAuthHost = "MEPAUTH_PORT_10443_TCP_ADDR"
+)
+const MepAuthBaseUrlFormat = "https://%s:%s/mepauth/v1/applications"

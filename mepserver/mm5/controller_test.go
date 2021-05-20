@@ -379,7 +379,7 @@ func TestDeleteConfigRules(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 
 		// To handle two db call for Task Status or taskID-->AppID database.
 		if strings.Contains(path, "jobs") {
@@ -391,36 +391,29 @@ func TestDeleteConfigRules(t *testing.T) {
 			return recordInDb, 0
 		}
 	})
+	defer patches.Reset()
 
-	patch2 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
-
+	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
 		// Return Success.
 		return 0
 	})
 
-	patch3 := gomonkey.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
-
+	patches.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
 		// Return Success.
 		return 0
 	})
 
-	patch4 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) bool {
-
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
 
-	patch5 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
-
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		// Return Success.
 		return taskId.String()
 	})
-
-	defer patch1.Reset()
-	defer patch2.Reset()
-	defer patch3.Reset()
-	defer patch4.Reset()
-	defer patch5.Reset()
 
 	// 1
 	service.URLPatterns()[3].Func(mockWriter, getRequest)
@@ -501,20 +494,19 @@ func TestDeleteConfigRulesOperationInProgress(t *testing.T) {
 	mockWriter.On("Write").Return(0, nil)
 	mockWriter.On("WriteHeader", 403)
 
-	patch1 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) bool {
-
+	var appDComm *plans.AppDCommon
+	patches := gomonkey.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	defer patches.Reset()
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
 
-	patch2 := gomonkey.ApplyFunc(plans.IsAnyOngoingOperationExist, func(appInstanceId string) bool {
-
-		// Return Success.
-		return true
-	})
-
-	defer patch1.Reset()
-	defer patch2.Reset()
 	// 1
 	service.URLPatterns()[3].Func(mockWriter, getRequest)
 
@@ -935,7 +927,7 @@ func TestCreateAppDConfigRuleNoneDataPlane(t *testing.T) {
 
 	//taskId
 
-	patchInit1 := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+	patches := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
 		configData := `
 # dns agent configuration
 dnsAgent:
@@ -960,7 +952,11 @@ dataplane:
 		}
 		return &mepConfig, nil
 	})
-	defer patchInit1.Reset()
+	defer patches.Reset()
+	var mm5Serv *Mm5Service
+	patches.ApplyMethod(reflect.TypeOf(mm5Serv), "ReadMepAuthEndpoint", func(*Mm5Service) (string, error) {
+		return "", nil
+	})
 
 	service := Mm5Service{}
 	err := service.Init()
@@ -1033,7 +1029,7 @@ dataplane:
 	mockWriter.On("WriteHeader", 200)
 
 	db := safeDB{}
-	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		log.Infof("Get path: %v.", path)
 		db.String()
 		if db.Get(path) != nil {
@@ -1043,9 +1039,8 @@ dataplane:
 
 		return nil, util.SubscriptionNotFound
 	})
-	defer patch1.Reset()
 
-	patch2 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
 		log.Infof("Put path: %v.", path)
 		log.Infof("Put value: %v.", string(value))
 		db.String()
@@ -1053,9 +1048,8 @@ dataplane:
 		// Return Success.
 		return 0
 	})
-	defer patch2.Reset()
 
-	patch3 := gomonkey.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
+	patches.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
 		log.Infof("Delete path: %v", paths)
 		db.String()
 		for _, path := range paths {
@@ -1063,19 +1057,16 @@ dataplane:
 		}
 		return 0
 	})
-	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		return taskId.String()
 	})
-	defer patch4.Reset()
 
-	patch5 := gomonkey.ApplyFunc((*http.Client).Do, func(client *http.Client, req *http.Request) (*http.Response,
+	patches.ApplyFunc((*http.Client).Do, func(client *http.Client, req *http.Request) (*http.Response,
 		error) {
 		response := http.Response{Status: "200 OK", StatusCode: 200}
 		return &response, nil
 	})
-	defer patch5.Reset()
 
 	dnsTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -1087,11 +1078,10 @@ dataplane:
 
 	defer dnsTestServer.Close()
 
-	patch6 := gomonkey.ApplyFunc((*dns.RestDNSAgent).BuildDNSEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
+	patches.ApplyFunc((*dns.RestDNSAgent).BuildDNSEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
 		log.Infof("DNS Agent End Point: %v", dnsTestServer.URL)
 		return dnsTestServer.URL
 	})
-	defer patch6.Reset()
 
 	// 1
 	service.URLPatterns()[0].Func(mockWriter, postRequest)
@@ -1882,7 +1872,7 @@ func TestAppInstanceTermination(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	patch1 := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
 
 		ins1 := &proto.MicroServiceInstance{
@@ -1903,16 +1893,15 @@ func TestAppInstanceTermination(t *testing.T) {
 
 		return records, 0
 	})
-	defer patch1.Reset()
+	defer patches.Reset()
 
 	n := &srv.InstanceService{}
-	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
 		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
 		return nil, nil
 	})
-	defer patch2.Reset()
 
-	patch3 := gomonkey.ApplyFunc(os.Getenv, func(key string) string {
+	patches.ApplyFunc(os.Getenv, func(key string) string {
 		if key == "MEPAUTH_SERVICE_PORT" {
 			return "10443"
 		}
@@ -1921,37 +1910,31 @@ func TestAppInstanceTermination(t *testing.T) {
 		}
 		return "edgegallery"
 	})
-	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) (isExists bool) {
-
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	defer patch4.Reset()
-
-	patch5 := gomonkey.ApplyFunc(plans.IsAnyOngoingOperationExist, func(appInstanceId string) bool {
-
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	defer patch5.Reset()
-
-	patch6 := gomonkey.ApplyFunc(plans.UpdateProcessingDatabase, func(string, string, *models.AppDConfig) (workspace.ErrCode, string) {
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
-	defer patch6.Reset()
 
 	n1 := &task.Worker{}
-	patch7 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
 	})
-	defer patch7.Reset()
 
-	patch8 := gomonkey.ApplyFunc(task.CheckErrorInDB, func(string, string) error {
+	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
 		return nil
 	})
-	defer patch8.Reset()
 
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
@@ -1977,7 +1960,7 @@ func TestAppInstanceTermination1(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	patch1 := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
 
 		ins1 := &proto.MicroServiceInstance{
@@ -1998,16 +1981,15 @@ func TestAppInstanceTermination1(t *testing.T) {
 
 		return records, 0
 	})
-	defer patch1.Reset()
+	defer patches.Reset()
 
 	n := &srv.InstanceService{}
-	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
 		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
 		return nil, nil
 	})
-	defer patch2.Reset()
 
-	patch3 := gomonkey.ApplyFunc(os.Getenv, func(key string) string {
+	patches.ApplyFunc(os.Getenv, func(key string) string {
 		if key == "MEPAUTH_SERVICE_PORT" {
 			return "10443"
 		}
@@ -2016,37 +1998,31 @@ func TestAppInstanceTermination1(t *testing.T) {
 		}
 		return "edgegallery"
 	})
-	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) (isExists bool) {
-
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	defer patch4.Reset()
-
-	patch5 := gomonkey.ApplyFunc(plans.IsAnyOngoingOperationExist, func(appInstanceId string) bool {
-
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	defer patch5.Reset()
-
-	patch6 := gomonkey.ApplyFunc(plans.UpdateProcessingDatabase, func(string, string, *models.AppDConfig) (workspace.ErrCode, string) {
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
-	defer patch6.Reset()
 
 	n1 := &task.Worker{}
-	patch7 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
 	})
-	defer patch7.Reset()
 
-	patch8 := gomonkey.ApplyFunc(task.CheckErrorInDB, func(string, string) error {
+	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
 		return nil
 	})
-	defer patch8.Reset()
 
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}
@@ -2072,7 +2048,7 @@ func TestAppInstanceTermination2(t *testing.T) {
 	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
 
-	patch1 := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		records := make(map[string][]byte)
 
 		ins1 := &proto.MicroServiceInstance{
@@ -2093,16 +2069,15 @@ func TestAppInstanceTermination2(t *testing.T) {
 
 		return records, 0
 	})
-	defer patch1.Reset()
+	defer patches.Reset()
 
 	n := &srv.InstanceService{}
-	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
 		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
 		return nil, nil
 	})
-	defer patch2.Reset()
 
-	patch3 := gomonkey.ApplyFunc(os.Getenv, func(key string) string {
+	patches.ApplyFunc(os.Getenv, func(key string) string {
 		if key == "MEPAUTH_SERVICE_PORT" {
 			return ""
 		}
@@ -2111,37 +2086,31 @@ func TestAppInstanceTermination2(t *testing.T) {
 		}
 		return "edgegallery"
 	})
-	defer patch3.Reset()
 
-	patch4 := gomonkey.ApplyFunc(plans.IsAppInstanceIdAlreadyExists, func(appInstanceId string) (isExists bool) {
-
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	defer patch4.Reset()
-
-	patch5 := gomonkey.ApplyFunc(plans.IsAnyOngoingOperationExist, func(appInstanceId string) bool {
-
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	defer patch5.Reset()
-
-	patch6 := gomonkey.ApplyFunc(plans.UpdateProcessingDatabase, func(string, string, *models.AppDConfig) (workspace.ErrCode, string) {
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
-	defer patch6.Reset()
 
 	n1 := &task.Worker{}
-	patch7 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
 	})
-	defer patch7.Reset()
 
-	patch8 := gomonkey.ApplyFunc(task.CheckErrorInDB, func(string, string) error {
+	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
 		return nil
 	})
-	defer patch8.Reset()
 
 	// Mock the response writer
 	mockWriterGet := &mockHttpWriterWithoutWrite{}

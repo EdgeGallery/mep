@@ -62,6 +62,7 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 
 type TaskStatusGet struct {
 	workspace.TaskBase
+	AppDCommon
 	R       *http.Request       `json:"r,in"`
 	W       http.ResponseWriter `json:"w,in"`
 	TaskId  string              `json:"taskId,in"`
@@ -107,7 +108,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 		progress = 0
 	}
 
-	t.HttpRsp = GenerateTaskResponse(t.TaskId, appInstInStore, state,
+	t.HttpRsp = t.generateTaskResponse(t.TaskId, appInstInStore, state,
 		strconv.Itoa(progress), taskStatusInStore.Details)
 
 	return workspace.TaskFinish

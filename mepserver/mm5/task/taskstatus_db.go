@@ -124,7 +124,7 @@ func (s *statusDB) setFailureReason(reason string) {
 	}
 }
 
-func CheckErrorInDB(appInstanceId string, taskId string) error {
+func CheckForStatusDBError(appInstanceId string, taskId string) error {
 	path := util.AppDLCMTaskStatusPath + appInstanceId + "/" + taskId
 
 	statusBytes, errCode := backend.GetRecord(path)

@@ -23,22 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
+	"github.com/apache/servicecomb-service-center/server/core"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
+	scerr "github.com/apache/servicecomb-service-center/server/error"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/task"
-	"net"
 	"net/http"
 	"os"
-	"strconv"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/util"
-	"github.com/apache/servicecomb-service-center/server/core"
-	"github.com/apache/servicecomb-service-center/server/core/proto"
-	scerr "github.com/apache/servicecomb-service-center/server/error"
 )
 
 type DecodeAppTerminationReq struct {
@@ -99,7 +96,7 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		var instances map[string]interface{}
 		err := json.Unmarshal(value, &instances)
 		if err != nil {
-			log.Errorf(nil, "Instance unmarshall failed.")
+			log.Errorf(nil, "Instance decode failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
@@ -107,14 +104,14 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		instances[meputil.ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instances)
 		if err != nil {
-			log.Errorf(nil, "Instance marshall failed.")
+			log.Errorf(nil, "Instance encode failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "Micro service instance unmarshall failed.")
+			log.Errorf(nil, "Micro service instance decode failed.")
 			t.SetFirstErrorCode(meputil.ParseInfoErr, err.Error())
 			return workspace.TaskFinish
 		}
@@ -162,29 +159,18 @@ func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, strin
 type DeleteFromMepauth struct {
 	workspace.TaskBase
 	AppInstanceId string `json:"appInstanceId,in"`
+	authBaseUrl   string
+}
+
+func (t *DeleteFromMepauth) WithEndPoint(baseUrl string) *DeleteFromMepauth {
+	t.authBaseUrl = baseUrl
+	return t
 }
 
 // OnRequest handles
 func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	log.Info("Deleting authentication key entry.")
-	mepauthPort := os.Getenv("MEPAUTH_SERVICE_PORT")
-	if len(mepauthPort) <= 0 || len(mepauthPort) > meputil.MaxPortLength {
-		log.Error("Invalid mep-auth port.", nil)
-		return workspace.TaskFinish
-	} else if num, err := strconv.Atoi(mepauthPort); err == nil {
-		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Error("Invalid mep-auth port.", nil)
-			return workspace.TaskFinish
-		}
-	}
-	mepauthIp := os.Getenv("MEPAUTH_PORT_10443_TCP_ADDR")
-	if net.ParseIP(mepauthIp) == nil {
-		log.Error("Mep-auth ip env is not set.", nil)
-		return workspace.TaskFinish
-	}
-
-	deleteUrl := fmt.Sprintf("https://%s:%s/mepauth/v1/applications/%s/confs", mepauthIp, mepauthPort, t.AppInstanceId)
-
+	deleteUrl := fmt.Sprintf(t.authBaseUrl+"/%s/confs", t.AppInstanceId)
 	// Create request
 	req, err := http.NewRequest("DELETE", deleteUrl, nil)
 	if err != nil {
@@ -199,9 +185,7 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 	tr := &http.Transport{
 		TLSClientConfig: config,
 	}
-
 	client := &http.Client{Transport: tr}
-
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
@@ -228,7 +212,6 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 // TlsConfig Constructs tls configuration
 func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 	rootCAs := x509.NewCertPool()
-
 	domainName := os.Getenv("MEPSERVER_CERT_DOMAIN_NAME")
 	if meputil.ValidateDomainName(domainName) != nil {
 		return nil, errors.New("domain name validation failed")
@@ -243,6 +226,7 @@ func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 
 type DeleteAppDConfigWithSync struct {
 	workspace.TaskBase
+	AppDCommon
 	Ctx           context.Context `json:"ctx,in"`
 	AppInstanceId string          `json:"appInstanceId,in"`
 	HttpRsp       interface{}     `json:"httpRsp,out"`
@@ -263,13 +247,13 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	if !IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if !t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) {
+	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
@@ -279,14 +263,14 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 	appDConfig.Operation = http.MethodDelete
 
 	taskId := meputil.GenerateUniqueId()
-	errCode, msg := UpdateProcessingDatabase(t.AppInstanceId, taskId, &appDConfig)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish
 	}
 	t.Worker.ProcessDataPlaneSync(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	err := task.CheckErrorInDB(t.AppInstanceId, taskId)
+	err := task.CheckForStatusDBError(t.AppInstanceId, taskId)
 	if err != nil {
 		log.Errorf(nil, err.Error())
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, err.Error())

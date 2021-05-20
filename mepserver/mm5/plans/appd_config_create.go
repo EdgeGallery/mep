@@ -152,6 +152,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 
 type CreateAppDConfig struct {
 	workspace.TaskBase
+	AppDCommon
 	Ctx           context.Context     `json:"ctx,in"`
 	W             http.ResponseWriter `json:"w,in"`
 	AppInstanceId string              `json:"appInstanceId,in"`
@@ -179,20 +180,20 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Also check if any other ongoing operation for this AppInstanceId
 			2. Add the this request to DB (job, task and task status)
 	*/
-	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
 		log.Errorf(nil, "Duplicate app instance.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app instance")
 		return workspace.TaskFinish
 	}
 
-	if IsAppNameAlreadyExists(appDConfigInput.AppName) {
+	if t.IsAppNameAlreadyExists(appDConfigInput.AppName) {
 		log.Errorf(nil, "Duplicate app name.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app name")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) {
+	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
@@ -212,7 +213,7 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	// Add to Task InstanceID mapping DB
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := UpdateProcessingDatabase(t.AppInstanceId, taskId, appDConfigInput)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput)
 
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
@@ -221,6 +222,6 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	t.worker.StartNewTask(appDConfigInput.AppName, t.AppInstanceId, taskId)
 
-	t.HttpRsp = GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
+	t.HttpRsp = t.generateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }
