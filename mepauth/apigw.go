@@ -23,8 +23,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego/httplib"
+	"io/ioutil"
 	"mepauth/models"
 	"mepauth/routers"
+	"net/http"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -43,7 +46,7 @@ type apiGwInitializer struct {
 func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
-		log.Error("Failed to get api gateway url")
+		log.Error("Failed to get API gateway URL")
 		return getApiGwUrlErr
 	}
 	err := i.SetApiGwConsumer(apiGwUrl)
@@ -77,7 +80,6 @@ func (i *apiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 		log.Error("failed to marshal log plugin data")
 		return err
 	}
-	//err := i.SendPostRequest(pluginUrl, []byte(models.GetHttpLogPluginData()))
 	err = i.SendPostRequest(pluginUrl, data)
 	if err != nil {
 		log.Error("Enable http log plugin failed")
@@ -294,10 +296,20 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 	req.Header(util.ContentType, util.JsonUtf8)
 	req.SetTLSClientConfig(i.tlsConfig)
 	req.Body(jsonStr)
-	_, err := req.String()
+	resp, err := req.Response()
 	if err != nil {
-		log.Error("send Post Request Failed")
+		log.Error("Request sending is having error")
 		return err
+	}
+	defer resp.Body.Close()
+	_, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		log.Error("Request's response not received")
+	}
+
+	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) && resp.StatusCode != http.StatusConflict {
+		log.Error("Request sending returned failure response with status code " + strconv.Itoa(resp.StatusCode))
+		return errors.New("request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
 	}
 	return nil
 }

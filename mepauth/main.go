@@ -55,13 +55,13 @@ func readPropertiesFile(filename string) (util.AppConfigProperties, error) {
 	}
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Error("Failed to open the file.")
+		log.Error("Failed to open the properties file.")
 		return nil, err
 	}
 	defer file.Close()
 	config, err := scanConfig(file)
 	if err != nil {
-		log.Error("Failed to read the file.")
+		log.Error("Failed to read the properties file.")
 		clearAppConfigOnExit(config)
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func main() {
 	configFilePath := filepath.FromSlash("/usr/mep/mprop/mepauth.properties")
 	appConfig, err := readPropertiesFile(configFilePath)
 	if err != nil {
-		log.Error("Failed to read the config parameters from properties file")
+		log.Error("Failed to read the configuration parameters from properties file")
 		return
 	}
 	// Clearing all the sensitive information on exit for error case. For the success case
@@ -87,7 +87,7 @@ func main() {
 	keyComponentUserStr := appConfig["KEY_COMPONENT"]
 	err = util.ValidateKeyComponentUserInput(keyComponentUserStr)
 	if err != nil {
-		log.Error("input validation failed.")
+		log.Error("Input validation of key component failed.")
 		return
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
@@ -109,7 +109,7 @@ func main() {
 	}
 	tlsConf, err := util.TLSConfig("HTTPSCertFile")
 	if err != nil {
-		log.Error("failed to config tls for beego")
+		log.Error("Failed to add TLS configuration for beego")
 		return
 	}
 	controllers.InitAuthInfoList()
@@ -136,7 +136,7 @@ func doInitialization(trustedNetworks *[]byte) bool {
 
 	config, err := util.TLSConfig("apigw_cacert")
 	if err != nil {
-		log.Error("unable to read certificate")
+		log.Error("Failed to add TLS configurations during API gateway initialization")
 		return false
 	}
 
@@ -144,12 +144,12 @@ func doInitialization(trustedNetworks *[]byte) bool {
 
 	err = initializer.InitAPIGateway(trustedNetworks)
 	if err != nil {
-		log.Error("Failed to init api gateway.")
+		log.Error("Failed to initialize API gateway.")
 		return false
 	}
 	err = util.InitRootKeyAndWorkKey()
 	if err != nil {
-		log.Error("Failed to init root key and work key.")
+		log.Error("Failed to initialize root key and work key.")
 		return false
 	}
 	return true

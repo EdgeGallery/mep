@@ -59,7 +59,7 @@ func TestValidateServerName(t *testing.T) {
 			"edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org.edgegallery.org."
 		ok, err = validateServerName(tooLongServerName)
 		So(ok, ShouldBeFalse)
-		So(err.Error(), ShouldEqual, "server or host name validation failed")
+		So(err.Error(), ShouldEqual, "server or host name length validation failed")
 		notMatchServerName := "abc*def.org"
 		ok, err = validateServerName(notMatchServerName)
 		So(ok, ShouldBeFalse)
