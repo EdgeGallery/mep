@@ -31,73 +31,73 @@ func TestInitAuthInfoList(t *testing.T) {
 }
 
 func TestIsAkInBlockList(t *testing.T) {
-	convey.Convey("IsAkInBlockList", t, func() {
+	convey.Convey("isAkInBlockList", t, func() {
 		convey.Convey("for success", func() {
 			InitAuthInfoList()
-			StartValidatingAk("ak")
-			StartBlockListingAk("ak")
-			res := IsAkInBlockList("ak")
+			startValidatingAk("ak")
+			startBlockListingAk("ak")
+			res := isAkInBlockList("ak")
 			convey.So(res, convey.ShouldBeTrue)
 		})
 
 		convey.Convey("for fail state", func() {
 			InitAuthInfoList()
-			StartValidatingAk("ak")
-			res := IsAkInBlockList("ak")
+			startValidatingAk("ak")
+			res := isAkInBlockList("ak")
 			convey.So(res, convey.ShouldBeFalse)
 		})
 
 		convey.Convey("for fail", func() {
-			res := IsAkInBlockList("ak2")
+			res := isAkInBlockList("ak2")
 			convey.So(res, convey.ShouldBeFalse)
 		})
 	})
 }
 
 func TestIsAkInValidationList(t *testing.T) {
-	convey.Convey("IsAkInValidationList", t, func() {
+	convey.Convey("isAkInValidationList", t, func() {
 		convey.Convey("for success", func() {
 			InitAuthInfoList()
-			StartValidatingAk("ak")
-			res := IsAkInValidationList("ak")
+			startValidatingAk("ak")
+			res := isAkInValidationList("ak")
 			convey.So(res, convey.ShouldBeTrue)
 		})
 		convey.Convey("for fail", func() {
 			InitAuthInfoList()
-			res := IsAkInValidationList("ak")
+			res := isAkInValidationList("ak")
 			convey.So(res, convey.ShouldBeFalse)
 		})
 	})
 }
 
 func TestStopValidatingAk(t *testing.T) {
-	convey.Convey("StopValidatingAk", t, func() {
+	convey.Convey("stopValidatingAk", t, func() {
 		convey.Convey("for success", func() {
 			InitAuthInfoList()
-			StartValidatingAk("ak")
-			StopValidatingAk("ak")
+			startValidatingAk("ak")
+			stopValidatingAk("ak")
 		})
 	})
 }
 
 func TestClearAkFromBlockListing(t *testing.T) {
-	convey.Convey("ClearAkFromBlockListing", t, func() {
+	convey.Convey("clearAkFromBlockListing", t, func() {
 		convey.Convey("for success", func() {
 			InitAuthInfoList()
-			StartValidatingAk("ak")
-			ClearAkFromBlockListing("ak")
+			startValidatingAk("ak")
+			clearAkFromBlockListing("ak")
 		})
 	})
 }
 
 func TestProcessAkForBlockListing(t *testing.T) {
-	convey.Convey("ProcessAkForBlockListing", t, func() {
+	convey.Convey("processAkForBlockListing", t, func() {
 		convey.Convey("for success", func() {
-			StartValidatingAk("ak")
-			ProcessAkForBlockListing("ak")
+			startValidatingAk("ak")
+			processAkForBlockListing("ak")
 		})
 		convey.Convey("for fail", func() {
-			ProcessAkForBlockListing("ak")
+			processAkForBlockListing("ak")
 		})
 	})
 }

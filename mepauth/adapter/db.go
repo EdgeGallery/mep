@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package dbAdapter
+// Package adapter contains database interface and implements database adapter
+package adapter
 
 // Database API's
 type Database interface {
-	// Initialize database
+	// InitDatabase initializes database
 	InitDatabase() error
 
-	// Insert data into database
+	// InsertData inserts data into database
 	InsertData(data interface{}) (err error)
 
-	// Insert or update data into database
+	// InsertOrUpdateData inserts or updates data into database
 	InsertOrUpdateData(data interface{}, cols ...string) (err error)
 
-	// Read data from database
+	// ReadData reads data from database
 	ReadData(data interface{}, cols ...string) (err error)
 
-	// Delete data from database
+	// DeleteData deletes data from database
 	DeleteData(data interface{}, cols ...string) (err error)
 }

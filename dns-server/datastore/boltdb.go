@@ -13,41 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package data store
 package datastore
 
 import (
 	"dns-server/util"
 	"encoding/json"
 	"fmt"
+	"github.com/miekg/dns"
+	log "github.com/sirupsen/logrus"
+	bolt "go.etcd.io/bbolt"
 	"net"
 	"os"
 	"path"
 	"strings"
 	"time"
-
-	"github.com/miekg/dns"
-	log "github.com/sirupsen/logrus"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
+	// ZoneConfig Zone constant.
 	ZoneConfig  = "zone"
+	// DefaultZone default zone constant.
 	DefaultZone = "."
+	// DBPath DataBase Path.
 	DBPath      = "data"
 )
 
+// DNSConfigRRKey RR Config key.
 type DNSConfigRRKey struct {
 	Host   string `json:"host"`
 	RRType uint16 `json:"rrType"`
 }
 
+// DNSConfigRRValue RR config value.
 type DNSConfigRRValue struct {
 	RRClass uint16   `json:"rrClass"`
 	PointTo []string `json:"pointTo"`
-	Ttl     uint32   `json:"ttl"`
+	TTL     uint32   `json:"ttl"`
 }
 
+// rrTypeMap rr Type Map.
 var rrTypeMap = map[string]uint16{"A": dns.TypeA, "AAAA": dns.TypeAAAA}
+
+// rrClassMap rr Class Map.
 var rrClassMap = map[string]uint16{"IN": dns.ClassINET, "CS": dns.ClassCSNET, "CH": dns.ClassCHAOS,
 	"HS": dns.ClassHESIOD, "*": dns.ClassANY}
 
@@ -85,10 +94,12 @@ func (b *BoltDB) Open() error {
 			log.Error("Failed to create the default(.) zone bucket.", nil)
 			return fmt.Errorf("error creating default zone(.) bucket: %s", err)
 		}
+
 		return nil
 	})
 
 	log.Debugf("Initialize bolt db(%s) success.", b.FileName)
+
 	return err
 }
 
@@ -97,10 +108,12 @@ func (b *BoltDB) Close() error {
 		err := b.db.Close()
 		if err != nil {
 			log.Errorf( "Failed to close the bolt db(%s).", b.FileName)
+
 			return err
 		}
 	}
 	log.Debugf("Closed bolt db(%s) as part of shutdown service.", b.FileName)
+
 	return nil
 }
 
@@ -109,14 +122,14 @@ func (b *BoltDB) setOrCreateDBEntryGeneration(confValueBytes []byte, rr *Resourc
 	dnsCfgValue := &DNSConfigRRValue{}
 
 	// confValueBytes will have value only in case of an update
-	if confValueBytes != nil && len(confValueBytes) != 0 {
+	if len(confValueBytes) != 0 {
 		// Update if exists
 		if err = json.Unmarshal(confValueBytes, dnsCfgValue); err != nil {
 			return nil, fmt.Errorf("parsing failed on data retrieval")
 		}
 	} else {
-		if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Type) >= util.MaxDnsFQDNLength ||
-			len(rr.Class) == 0 || len(rr.Class) >= util.MaxDnsFQDNLength || len(rr.RData) == 0 {
+		if len(rr.Name) == 0 || len(rr.Type) == 0 || len(rr.Type) >= util.MaxDNSFQDNLength ||
+			len(rr.Class) == 0 || len(rr.Class) >= util.MaxDNSFQDNLength || len(rr.RData) == 0 {
 			log.Error("DNS create input not complete.", nil)
 			return nil, fmt.Errorf("input data error for create dns entry")
 		}
@@ -128,7 +141,7 @@ func (b *BoltDB) setOrCreateDBEntryGeneration(confValueBytes []byte, rr *Resourc
 		}
 		dnsCfgValue.RRClass = rrClass
 	}
-	dnsCfgValue.Ttl = rr.TTL
+	dnsCfgValue.TTL = rr.TTL
 	if len(rr.RData) != 0 {
 		dnsCfgValue.PointTo = rr.RData
 	}
@@ -193,12 +206,13 @@ func (b *BoltDB) getRRFromZoneBucket(zoneBkt *bolt.Bucket, dnsCfgKeyBytes []byte
 	for _, pointToIP := range dnsCfg.PointTo {
 		if question.Qtype == dns.TypeA {
 			records = append(records, &dns.A{Hdr: dns.RR_Header{Name: question.Name, Rrtype: question.Qtype,
-				Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, A: net.ParseIP(pointToIP)})
+				Class: dns.ClassINET, Ttl: dnsCfg.TTL}, A: net.ParseIP(pointToIP)})
 		} else if question.Qtype == dns.TypeAAAA {
 			records = append(records, &dns.AAAA{Hdr: dns.RR_Header{Name: question.Name, Rrtype: question.Qtype,
-				Class: dns.ClassINET, Ttl: dnsCfg.Ttl}, AAAA: net.ParseIP(pointToIP)})
+				Class: dns.ClassINET, Ttl: dnsCfg.TTL}, AAAA: net.ParseIP(pointToIP)})
 		}
 	}
+
 	return records
 }
 
@@ -230,7 +244,7 @@ func (b *BoltDB) GetResourceRecord(question *dns.Question) (*[]dns.RR, error) {
 
 	err = b.db.View(func(tx *bolt.Tx) error {
 		var zoneBkt *bolt.Bucket
-		for zone, _ := range zones {
+		for zone := range zones {
 			zoneBkt = tx.Bucket([]byte(ZoneConfig)).Bucket([]byte(zone))
 			if zoneBkt == nil {
 				// Zone not available in the db
@@ -241,6 +255,7 @@ func (b *BoltDB) GetResourceRecord(question *dns.Question) (*[]dns.RR, error) {
 				break
 			}
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -280,10 +295,13 @@ func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
 			}
 			if zoneBkt.Get(dnsCfgKeyBytes) != nil {
 				found = true
+
 				return zoneBkt.Delete(dnsCfgKeyBytes)
 			}
+
 			return nil
 		})
+
 		return err
 	})
 	if err != nil {
@@ -292,5 +310,6 @@ func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
 	if !found {
 		return fmt.Errorf("not found")
 	}
+
 	return nil
 }

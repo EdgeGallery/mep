@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package main
 package main
 
 import (
@@ -29,7 +31,7 @@ import (
 	"dns-server/util"
 )
 
-// DNS server configuration
+// Config DNS server configuration.
 type Config struct {
 	dbName            string // Database name, default zone
 	port              uint   // Port to listen to, default 53
@@ -53,9 +55,7 @@ func NewServer(config *Config, dataStore datastore.DataStore, mgmtCtl mgmt.Manag
 	return &Server{config: config, dataStore: dataStore, mgmtCtl: mgmtCtl}
 }
 
-func (s *Server) Run() error {
-
-	// Set dns query handler
+func (s *Server) Run() error { // Set dns query handler
 	dns.HandleFunc(".", s.handleDNS)
 
 	address := fmt.Sprintf("%s:%d", s.config.ipAdd.String(), s.config.port)
@@ -71,11 +71,13 @@ func (s *Server) Run() error {
 	err := s.dataStore.Open()
 	if err != nil {
 		log.Infof("Failed to open data store.")
+
 		return err
 	}
 
 	go s.mgmtCtl.StartController(&s.dataStore, s.config.ipMgmtAdd, s.config.mgmtPort)
 	go s.start(s.udpServer)
+
 	return nil
 }
 
@@ -108,7 +110,7 @@ func (s *Server) Stop() {
 	log.Info("Edge-Gallery DNS-Server stopped now.")
 }
 
-// forward request to external server
+// forward request to external server.
 func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
 	c := new(dns.Client)
 	forwarder := s.config.forwarder.String()
@@ -131,11 +133,11 @@ func (s *Server) forward(req *dns.Msg) (*dns.Msg, error) {
 	return nil, fmt.Errorf("forward of request %q was not accepted", req.Question[0].Name)
 }
 
-// Handle DNS Query matching
+// Handle DNS Query matching.
 func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
-
 	if !s.validateQuestion(req) {
 		s.writeErrorResponse(w, req, dns.RcodeFormatError)
+
 		return
 	}
 
@@ -154,6 +156,7 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 			if err != nil {
 				log.Errorf("Failed to send a response for query")
 			}
+
 			return
 		}
 		// Shuffle the response if load balancing is enabled
@@ -163,21 +166,20 @@ func (s *Server) handleDNS(w dns.ResponseWriter, req *dns.Msg) {
 			})
 		}
 		s.writeSuccessResponse(rrs, w, req)
-		return
 	} else {
 		s.writeErrorResponse(w, req, dns.RcodeRefused)
-		return
 	}
 }
 
-// Validate the input question
+// Validate the input question.
 func (s *Server) validateQuestion(req *dns.Msg) bool {
 	if len(req.Question) != 1 {
 		return false
 	}
-	if len(req.Question[0].Name) == 0 || len(req.Question[0].Name) > util.MaxDnsQuestionLength {
+	if len(req.Question[0].Name) == 0 || len(req.Question[0].Name) > util.MaxDNSQuestionLength {
 		return false
 	}
+
 	return true
 }
 

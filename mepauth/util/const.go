@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-// util package
+// Package util implements mep auth utility functions and contain constants
 package util
 
 // Validation related constants
 const (
-	PortRegex              string = `^([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$`
-	ServerNameRegex        string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
-	AkRegex                string = `^\w{20}$`
-	SkRegex                string = `^\w{64}$`
+	portRegex              string = `^([1-9]|[1-9]\d{1,3}|[1-5]\d{4}|6[0-4]\d{3}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$`
+	serverNameRegex        string = `^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`
+	akRegex                string = `^\w{20}$`
+	skRegex                string = `^\w{64}$`
 	AuthHeaderRegex        string = `^SDK-HMAC-SHA256 Access=([\w=+/]{20}), SignedHeaders=([^, ]{28}), Signature=([^, ]{64})$`
 	ValidationCounter      int64  = 3
 	ValidateListClearTimer int64  = 300
@@ -52,7 +52,6 @@ const (
 	ApigwHost            string = "apigw_host"
 	ApigwPort            string = "apigw_port"
 	UrlApplicationId     string = ":applicationId"
-	UrlRouteId           string = ":routeId"
 )
 
 // Plugin related constants
@@ -70,22 +69,13 @@ const (
 	JwtPlugin                       = "jwt"
 )
 
-// REST error response related constants
-const (
-	Success                = 200
-	BadRequest             = 400
-	Unauthorized           = 401
-	Forbidden              = 403
-	IntSerErr              = 500
-	ClientIpaddressInvalid = "clientIp address is invalid"
-)
-
 // Other
-const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
+const componentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
 const PgOkMsg string = "LastInsertId is not supported by this driver"
 const ContentType string = "Content-Type"
 const JsonUtf8 string = "application/json; charset=utf-8"
 const DevMode = "dev"
+const ClientIpaddressInvalid = "clientIp address is invalid"
 
 // Failure messages
 const (

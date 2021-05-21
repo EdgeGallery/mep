@@ -28,7 +28,6 @@ import (
 func TestGetSignature(t *testing.T) {
 	Convey("clear byte array", t, func() {
 		s := Sign{
-			AccessKey: "00000000",
 			SecretKey: []byte("00000000"),
 		}
 		host := "127.0.0.1:8080"

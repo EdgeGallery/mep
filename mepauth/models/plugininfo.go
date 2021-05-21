@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
+// Package model contains mep auth data model
 package models
 
-func GetHttpLogPluginData() string {
-	const pluginData = `{
-    "name": "http-log",
-    "config": {
-        "http_endpoint": "https://mep-mm5:80/mep/service_govern/v1/kong_log",
-        "method": "POST",
-        "timeout": 1000,
-        "keepalive": 1000
-    }
-}`
+// LogPluginInfo http log plugin information
+type LogPluginInfo struct {
+	Name   string `json:"name"`
+	Config ConfigInfo `json:"config"`
+}
 
-	return pluginData
+// ConfigInfo http log plugin configurations
+type ConfigInfo struct {
+	HTTPEndpoint string `json:"http_endpoint"`
+	Method       string `json:"method"`
+	Timeout      int    `json:"timeout"`
+	Keepalive    int    `json:"keepalive"`
 }

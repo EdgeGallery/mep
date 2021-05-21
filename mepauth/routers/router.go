@@ -31,7 +31,6 @@ import (
 func init() {
 
 	beego.Get("/health", func(ctx *context.Context) {
-		ctx.Output.Context.ResponseWriter.ResponseWriter.WriteHeader(200)
 		ctx.Output.Context.ResponseWriter.ResponseWriter.Write([]byte("ok"))
 	})
 	ns := beego.NewNamespace("/mep/",

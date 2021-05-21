@@ -61,7 +61,7 @@ func TestForward(t *testing.T) {
 	}()
 
 	var dbName = "test_db"
-	var port uint = util.DefaultDnsPort
+	var port uint = util.DefaultDNSPort
 	var mgmtPort uint = util.DefaultManagementPort
 	var connTimeOut uint = util.DefaultConnTimeout
 	var ipAddString = util.DefaultIP
@@ -190,7 +190,7 @@ func TestHandleDNS(t *testing.T) {
 	}()
 
 	var dbName = "test_db"
-	var port uint = util.DefaultDnsPort
+	var port uint = util.DefaultDNSPort
 	var mgmtPort uint = util.DefaultManagementPort
 	var connTimeOut uint = util.DefaultConnTimeout
 	var ipAddString = util.DefaultIP

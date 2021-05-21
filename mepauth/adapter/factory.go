@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dbAdapter
+
+// Package dbAdapter contains database interface and implements database adapter
+package adapter
 
 import (
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"mepauth/util"
 	"os"
 )
 
+// Db database
 var Db Database
 
-// Init Db adapter
 func getDbAdapter() (Database, error) {
 	dbAdapter := util.GetAppConfig("dbAdapter")
 	switch dbAdapter {
@@ -39,11 +42,12 @@ func getDbAdapter() (Database, error) {
 	}
 }
 
-// Init Db
-func InitDb() (pgDb Database) {
+// InitDb initializes database
+func InitDb() () {
 	db, err := getDbAdapter()
 	if err != nil {
+		log.Error("Unable to get DB adapter: " + err.Error())
 		os.Exit(1)
 	}
-	return db
+	Db = db
 }

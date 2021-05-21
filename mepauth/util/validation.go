@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// util package
+// Package util implements mep auth utility functions and contain constants
 package util
 
 import (
@@ -28,7 +28,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// Validate UUID
+// ValidateUUID validates UUID
 func ValidateUUID(id string) error {
 	if len(id) != 0 {
 		validate := validator.New()
@@ -42,18 +42,18 @@ func ValidateUUID(id string) error {
 	return nil
 }
 
-// Validate Ak
+// ValidateAk validates Ak
 func ValidateAk(ak string) error {
-	isMatch, errMatch := regexp.MatchString(AkRegex, ak)
+	isMatch, errMatch := regexp.MatchString(akRegex, ak)
 	if errMatch != nil || !isMatch {
 		return errors.New(AkFailMsg)
 	}
 	return nil
 }
 
-// Validate Sk
+// ValidateSk validates Sk
 func ValidateSk(sk *[]byte) error {
-	isMatch, errMatch := regexp.Match(SkRegex, *sk)
+	isMatch, errMatch := regexp.Match(skRegex, *sk)
 	if errMatch != nil || !isMatch {
 		return errors.New(SkFailMsg)
 	}
@@ -61,28 +61,30 @@ func ValidateSk(sk *[]byte) error {
 }
 
 // Validate Server Name
-func ValidateServerName(serverName string) (bool, error) {
+func validateServerName(serverName string) (bool, error) {
 	if len(serverName) > maxHostNameLen {
-		return false, errors.New("server or host name validation failed")
+		log.Error("Server name length validation failed")
+		return false, errors.New("server or host name length validation failed")
 	}
-	return regexp.MatchString(ServerNameRegex, serverName)
+	return regexp.MatchString(serverNameRegex, serverName)
 }
 
 // Validate Api gateway IP address and port
-func ValidateApiGwParams(apiGwHost string, apiGwPort string) (bool, error) {
-	apiGwHostIsValid, validateApiGwErr := ValidateServerName(apiGwHost)
+func validateApiGwParams(apiGwHost string, apiGwPort string) (bool, error) {
+	apiGwHostIsValid, validateApiGwErr := validateServerName(apiGwHost)
 	if validateApiGwErr != nil || !apiGwHostIsValid {
 		return apiGwHostIsValid, validateApiGwErr
 	}
-	apiGwPortIsValid, validateApiGwPortErr := regexp.MatchString(PortRegex, apiGwPort)
+	apiGwPortIsValid, validateApiGwPortErr := regexp.MatchString(portRegex, apiGwPort)
 	if validateApiGwPortErr != nil || !apiGwPortIsValid {
+		log.Error("API gateway port doesn't match the expected pattern")
 		return apiGwPortIsValid, validateApiGwPortErr
 	}
 	return true, nil
 }
 
 // Validate password
-func ValidatePassword(password *[]byte) (bool, error) {
+func validateJwtPassword(password *[]byte) (bool, error) {
 	if validateLength(password) {
 		pwdValidCount := validateRegex(password)
 		if pwdValidCount < maxPasswordCount {
@@ -123,7 +125,7 @@ func validateLength(password *[]byte) bool {
 	return len(*password) >= minPasswordSize && len(*password) <= maxPasswordSize
 }
 
-// Validate IP address adn CIDR
+// ValidateIpAndCidr validates IP address and CIDR
 func ValidateIpAndCidr(trustedNetworkList []string) (bool, error) {
 	for _, ipcidr := range trustedNetworkList {
 		isValidIp := true
@@ -143,7 +145,7 @@ func ValidateIpAndCidr(trustedNetworkList []string) (bool, error) {
 	return true, nil
 }
 
-// Validates application configurations related arguments
+// ValidateInputArgs validates application configurations related arguments
 func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	args := []string{"KEY_COMPONENT", "JWT_PRIVATE_KEY", "APP_INST_ID", "ACCESS_KEY", "SECRET_KEY"}
 	for _, s := range args {
@@ -161,10 +163,10 @@ func ValidateInputArgs(appConfig AppConfigProperties) bool {
 	return true
 }
 
-// Validates key component user string against minimum length
+// ValidateKeyComponentUserInput validates key component user string against minimum length
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
-	if len(*keyComponentUserStr) < ComponentSize {
-		log.Error("key component user string length is not valid")
+	if len(*keyComponentUserStr) < componentSize {
+		log.Error("Key component user string length is not valid")
 		return  fmt.Errorf("key component user string length is not valid")
 	}
 	return nil

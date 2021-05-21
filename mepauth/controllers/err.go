@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+// Package controllers implements mep auth controller
 package controllers
 
 import "github.com/astaxie/beego"
 
+// ErrorController error controller
 type ErrorController struct {
 	beego.Controller
 }
 
-// Error handling for invalid request
+// Error404 error handling for invalid request
 func (c *ErrorController) Error404() {
 	c.Data["content"] = "page not found"
 	c.TplName = "error/404.tpl"

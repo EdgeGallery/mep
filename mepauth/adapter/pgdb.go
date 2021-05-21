@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-// db controller
-package dbAdapter
+// Package dbAdapter contains database interface and implements database adapter
+package adapter
 
 import (
 	"errors"
@@ -28,10 +28,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const DEFAULT string = "default"
-const DRIVER string = "postgres"
+const Default string = "default"
+const driver string = "postgres"
 
-// Pg database
+// PgDb postgres database
 type PgDb struct {
 	ormer orm.Ormer
 }
@@ -45,7 +45,7 @@ func (db *PgDb) InitOrmer() (err1 error) {
 		}
 	}()
 	o := orm.NewOrm()
-	err1 = o.Using(DEFAULT)
+	err1 = o.Using(Default)
 	if err1 != nil {
 		return err1
 	}
@@ -54,31 +54,31 @@ func (db *PgDb) InitOrmer() (err1 error) {
 	return nil
 }
 
-// Insert data into pg database
+// InsertData inserts data into postgres database
 func (db *PgDb) InsertData(data interface{}) (err error) {
 	_, err = db.ormer.Insert(data)
 	return err
 }
 
-// Insert or update data into pg database
+// InsertOrUpdateData inserts or updates data into postgres database
 func (db *PgDb) InsertOrUpdateData(data interface{}, cols ...string) (err error) {
 	_, err = db.ormer.InsertOrUpdate(data, cols...)
 	return err
 }
 
-// Read data from pg database
+// ReadData reads data from postgres database
 func (db *PgDb) ReadData(data interface{}, cols ...string) (err error) {
 	err = db.ormer.Read(data, cols...)
 	return err
 }
 
-// Delete data from pg database
+// DeleteData deletes data from postgres database
 func (db *PgDb) DeleteData(data interface{}, cols ...string) (err error) {
 	_, err = db.ormer.Delete(data, cols...)
 	return err
 }
 
-// Init database
+// InitDatabase initializes database of type postgres
 func (db *PgDb) InitDatabase() error {
 
 	// Validate password
@@ -91,7 +91,7 @@ func (db *PgDb) InitDatabase() error {
 		return errors.New("failed to validate db parameters")
 	}
 
-	registerDriverErr := orm.RegisterDriver(DRIVER, orm.DRPostgres)
+	registerDriverErr := orm.RegisterDriver(driver, orm.DRPostgres)
 	if registerDriverErr != nil {
 		log.Error("Failed to register driver")
 		return registerDriverErr
@@ -105,7 +105,7 @@ func (db *PgDb) InitDatabase() error {
 		util.GetAppConfig("db_port"),
 		util.GetAppConfig("db_sslmode"))
 
-	registerDataBaseErr := orm.RegisterDataBase(DEFAULT, DRIVER, dataSource)
+	registerDataBaseErr := orm.RegisterDataBase(Default, driver, dataSource)
 	//clear bStr
 	bKey1 := *(*[]byte)(unsafe.Pointer(&dataSource))
 	util.ClearByteArray(bKey1)
@@ -118,7 +118,7 @@ func (db *PgDb) InitDatabase() error {
 		return registerDataBaseErr
 	}
 
-	errRunSyncdb := orm.RunSyncdb(DEFAULT, false, true)
+	errRunSyncdb := orm.RunSyncdb(Default, false, true)
 	if errRunSyncdb != nil {
 		log.Error("Failed to sync database.")
 		return errRunSyncdb

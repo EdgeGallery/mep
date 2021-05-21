@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
-	"mepauth/dbAdapter"
+	"mepauth/adapter"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -90,32 +90,32 @@ func TestValidateSignature(t *testing.T) {
 
 	Convey("validate signature", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(akSignatureIsValid, func(_ *http.Request, _ string, _ []byte, _ string, _ string) (bool, error) {
+			patches := ApplyFunc(isAkSignatureValid, func(_ *http.Request, _ []byte, _ string, _ string) (bool, error) {
 				return true, nil
 			})
 			defer patches.Reset()
-			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			clientIp := c.Ctx.Request.Header.Get(xRealIp)
 			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for fail - sig invalid", func() {
-			patches := ApplyFunc(akSignatureIsValid, func(_ *http.Request, _ string, _ []byte, _ string, _ string) (bool, error) {
+			patches := ApplyFunc(isAkSignatureValid, func(_ *http.Request, _ []byte, _ string, _ string) (bool, error) {
 				return true, errors.New("ak is invalid")
 			})
 			defer patches.Reset()
-			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			clientIp := c.Ctx.Request.Header.Get(xRealIp)
 			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for fail - sig invalid 2", func() {
-			patches := ApplyFunc(akSignatureIsValid, func(_ *http.Request, _ string, _ []byte, _ string, _ string) (bool, error) {
+			patches := ApplyFunc(isAkSignatureValid, func(_ *http.Request, _ []byte, _ string, _ string) (bool, error) {
 				return false, nil
 			})
-			patches.ApplyFunc(ProcessAkForBlockListing, func(_ string) {
+			patches.ApplyFunc(processAkForBlockListing, func(_ string) {
 				return
 			})
 			defer patches.Reset()
-			clientIp := c.Ctx.Request.Header.Get(XRealIp)
+			clientIp := c.Ctx.Request.Header.Get(xRealIp)
 			ok := c.isSignatureValid(ak, sk, signHeader, sig, clientIp)
 			So(ok, ShouldBeFalse)
 		})
@@ -162,13 +162,13 @@ func TestGetAppInsIdSk(t *testing.T) {
 	authInfo.Sk = "sk"
 	authInfo.AppInsId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
 	authInfo.Nonce = "nonce"
-	dbAdapter.Db = &dbAdapter.PgDb{}
+	adapter.Db = &adapter.PgDb{}
 
 	Convey("get app instance id and sk", t, func() {
 		Convey("for success", func() {
 
-			var pgdb *dbAdapter.PgDb
-			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
 
@@ -182,22 +182,22 @@ func TestGetAppInsIdSk(t *testing.T) {
 				return nil, nil
 			})
 			defer patches.Reset()
-			_, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
+			_, _, ok := getAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for read fail", func() {
-			var pgdb *dbAdapter.PgDb
-			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
 				return errors.New("read error")
 			})
 			defer patches.Reset()
-			_, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
+			_, _, ok := getAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(ok, ShouldBeFalse)
 		})
 		Convey("for decode fail", func() {
 
-			var pgdb *dbAdapter.PgDb
-			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
 
@@ -205,13 +205,13 @@ func TestGetAppInsIdSk(t *testing.T) {
 				return 0, errors.New("decode fail")
 			})
 			defer patches.Reset()
-			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
+			appInsId, _, ok := getAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(appInsId, ShouldEqual, "")
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for get work key fail", func() {
-			var pgdb *dbAdapter.PgDb
-			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
 
@@ -221,14 +221,14 @@ func TestGetAppInsIdSk(t *testing.T) {
 			patches.ApplyFunc(util.GetWorkKey, func() ([]byte, error) {
 				return []byte("validKey"), errors.New("get work key fail")
 			})
-			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
+			appInsId, _, ok := getAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(appInsId, ShouldEqual, "")
 			So(ok, ShouldBeTrue)
 		})
 		Convey("for decrypt fail", func() {
 
-			var pgdb *dbAdapter.PgDb
-			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*dbAdapter.PgDb, interface{}, ...string) error {
+			var pgdb *adapter.PgDb
+			patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
 				return nil
 			})
 
@@ -241,7 +241,7 @@ func TestGetAppInsIdSk(t *testing.T) {
 			patches.ApplyFunc(util.DecryptByAES256GCM, func(_, _, _ []byte) ([]byte, error) {
 				return nil, errors.New("for decrypt fail")
 			})
-			appInsId, _, ok := GetAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
+			appInsId, _, ok := getAppInsIdSk("QVUJMSUMgS0VZLS0tLS0")
 			So(appInsId, ShouldEqual, "")
 			So(ok, ShouldBeTrue)
 		})
@@ -250,7 +250,6 @@ func TestGetAppInsIdSk(t *testing.T) {
 
 func TestAkSignatureIsValid(t *testing.T) {
 
-	ak := "QVUJMSUMgS0VZLS0tLS0"
 	sk := []byte("sksksksk")
 	signHeader := "content-type;host;x-sdk-date"
 	sig := "signature"
@@ -269,7 +268,7 @@ func TestAkSignatureIsValid(t *testing.T) {
 				return "signature", nil
 			})
 			defer patches.Reset()
-			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
+			ok, err := isAkSignatureValid(r, sk, signHeader, sig)
 
 			So(ok, ShouldBeTrue)
 			So(err, ShouldBeNil)
@@ -280,7 +279,7 @@ func TestAkSignatureIsValid(t *testing.T) {
 				return "_signature", nil
 			})
 			defer patches.Reset()
-			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
+			ok, err := isAkSignatureValid(r, sk, signHeader, sig)
 
 			So(ok, ShouldBeFalse)
 			So(err, ShouldBeNil)
@@ -291,7 +290,7 @@ func TestAkSignatureIsValid(t *testing.T) {
 				return "signature", errors.New("get sig error")
 			})
 			defer patches.Reset()
-			ok, err := akSignatureIsValid(r, ak, sk, signHeader, sig)
+			ok, err := isAkSignatureValid(r, sk, signHeader, sig)
 
 			So(ok, ShouldBeFalse)
 			So(err, ShouldNotBeNil)
