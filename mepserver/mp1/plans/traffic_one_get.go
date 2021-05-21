@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -36,6 +37,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// DecodeTrafficRestReq step to decode the traffic request message
 type DecodeTrafficRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -45,20 +47,21 @@ type DecodeTrafficRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
+// OnRequest handles the decode request message
 func (t *DecodeTrafficRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
 		log.Error("Parameters validation failed on traffic request.", err)
 		return workspace.TaskFinish
 	}
-	err = t.ParseBody(t.R)
+	err = t.parseBody(t.R)
 	if err != nil {
 		log.Error("Parse rest body failed on traffic rule request.", err)
 	}
 	return workspace.TaskFinish
 }
 
-func (t *DecodeTrafficRestReq) ParseBody(r *http.Request) error {
+func (t *DecodeTrafficRestReq) parseBody(r *http.Request) error {
 	if t.RestBody == nil {
 		return nil
 	}
@@ -121,6 +124,7 @@ func (t *DecodeTrafficRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
+// WithBody initialize the traffic body message
 func (t *DecodeTrafficRestReq) WithBody(body interface{}) *DecodeTrafficRestReq {
 	t.RestBody = body
 	return t
@@ -156,6 +160,7 @@ func (t *DecodeTrafficRestReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// TrafficRuleGet steps to query the traffic rules
 type TrafficRuleGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -163,6 +168,7 @@ type TrafficRuleGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles the traffic rule query
 func (t *TrafficRuleGet) OnRequest(data string) workspace.TaskCode {
 
 	if len(t.AppInstanceId) == 0 || len(t.TrafficRuleId) == 0 {

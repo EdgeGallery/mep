@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package mm5 implements the mm5 interface apis
 package mm5
 
 import (
@@ -52,6 +53,7 @@ func initMm5Router() {
 	rest.RegisterServant(mm5)
 }
 
+// Mm5Service keeps the interface configurations
 type Mm5Service struct {
 	v4.MicroServiceService
 	config         *config.MepServerConfig
@@ -59,6 +61,7 @@ type Mm5Service struct {
 	mp2Worker      task.Worker
 }
 
+// Init initialize mm5 interface service
 func (m *Mm5Service) Init() error {
 	mepConfig, err := config.LoadMepServerConfig()
 	if err != nil {
@@ -90,6 +93,7 @@ func (m *Mm5Service) Init() error {
 	return nil
 }
 
+// ReadMepAuthEndpoint read mep auth ip and port
 func (m *Mm5Service) ReadMepAuthEndpoint() (string, error) {
 	mepAuthPort := os.Getenv(meputil.EnvMepAuthPort)
 	if len(mepAuthPort) <= 0 || len(mepAuthPort) > meputil.MaxPortLength {
@@ -110,6 +114,7 @@ func (m *Mm5Service) ReadMepAuthEndpoint() (string, error) {
 	return fmt.Sprintf(meputil.MepAuthBaseUrlFormat, mepAuthIp, mepAuthPort), nil
 }
 
+// URLPatterns resisters url patterns
 func (m *Mm5Service) URLPatterns() []rest.Route {
 
 	return []rest.Route{

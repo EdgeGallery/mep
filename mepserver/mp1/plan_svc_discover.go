@@ -34,6 +34,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DiscoverDecode step to handle the service discovery request
 type DiscoverDecode struct {
 	workspace.TaskBase
 	R           *http.Request   `json:"r,in"`

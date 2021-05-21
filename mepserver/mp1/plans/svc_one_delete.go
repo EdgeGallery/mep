@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api
 package plans
 
 import (
@@ -29,6 +29,7 @@ import (
 	"mepserver/common/util"
 )
 
+// DeleteService step to delete a service registration
 type DeleteService struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase

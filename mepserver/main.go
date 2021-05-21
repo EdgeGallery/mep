@@ -19,7 +19,6 @@ package main
 
 import (
 	"errors"
-	"mepserver/mp1/plans"
 	"os"
 
 	_ "mepserver/common/tls"
@@ -54,7 +53,7 @@ func main() {
 		}
 
 	}
-	go plans.HeartbeatProcess()
+	go heartbeatProcess()
 	util.ApiGWInterface = util.NewApiGwIf()
 	server.Run()
 }

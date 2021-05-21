@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -29,6 +30,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// TrafficRulesGet step to query the traffic rule
 type TrafficRulesGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -36,6 +38,7 @@ type TrafficRulesGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles the traffic rule query
 func (t *TrafficRulesGet) OnRequest(data string) workspace.TaskCode {
 
 	if len(t.AppInstanceId) == 0 {

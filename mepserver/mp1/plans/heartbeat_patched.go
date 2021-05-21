@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements heartbeat interfaces
 package plans
 
 import (
@@ -34,6 +35,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// DecodeHeartbeatRestReq step to decode the heartbeat request
 type DecodeHeartbeatRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`

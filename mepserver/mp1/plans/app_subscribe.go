@@ -39,6 +39,7 @@ import (
 	"mepserver/common/util"
 )
 
+// SubscribeIst step to handle subscribe requests
 type SubscribeIst struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -58,7 +59,7 @@ func (t *SubscribeIst) WithType(subType string) *SubscribeIst {
 	return t
 }
 
-// OnRequest
+// OnRequest handles app subscribe request
 func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	mp1SubscribeInfo := t.getMp1SubscribeInfo()
 	if mp1SubscribeInfo == nil {
@@ -95,7 +96,7 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-// ValidateCallbackUri Validate Callback Uri
+// ValidateCallbackUri validate callback Uri
 func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 	var callBack string
 	if t.SubscribeType == util.SerAvailabilityNotificationSubscription {
@@ -222,6 +223,7 @@ func checkSerInstanceExist(r *http.Request, serInstanceId string) error {
 	return nil
 }
 
+// AppSubscribeLimit steps to check application subscription limit
 type AppSubscribeLimit struct {
 	workspace.TaskBase
 	Ctx           context.Context `json:"ctx,in"`
@@ -230,13 +232,13 @@ type AppSubscribeLimit struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// set type and return AppSubscribeLimit
+// WithType set subscription type and return AppSubscribeLimit
 func (t *AppSubscribeLimit) WithType(subType string) *AppSubscribeLimit {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles the limit check for subscription
 func (t *AppSubscribeLimit) OnRequest(data string) workspace.TaskCode {
 	subscribeKeyPath := util.GetSubscribeKeyPath(t.SubscribeType)
 	appInstanceId := t.AppInstanceId

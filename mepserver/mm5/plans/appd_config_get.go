@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -25,6 +26,7 @@ import (
 	"mepserver/common/util"
 )
 
+// AppDConfigGet step to get the appd config
 type AppDConfigGet struct {
 	workspace.TaskBase
 	AppDCommon
@@ -32,6 +34,7 @@ type AppDConfigGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles appd config retrieval
 func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
 	log.Debugf("Query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
 

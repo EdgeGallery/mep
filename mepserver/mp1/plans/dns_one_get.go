@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -29,6 +29,7 @@ import (
 	"mepserver/common/util"
 )
 
+// DNSRuleGet step to read a single dns rule
 type DNSRuleGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -36,6 +37,7 @@ type DNSRuleGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles dns rule query
 func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 	log.Debugf("query request arrived to fetch dns rule %s for appId %s.", t.DNSRuleId, t.AppInstanceId)
 

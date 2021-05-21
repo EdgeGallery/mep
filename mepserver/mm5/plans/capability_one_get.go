@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -34,6 +34,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// CapabilityGet step to query capability
 type CapabilityGet struct {
 	workspace.TaskBase
 	R                      *http.Request   `json:"r,in"`
@@ -47,6 +48,7 @@ type CapabilityGet struct {
 	serviceCategoryMapping map[models.CategoryRef]string
 }
 
+// OnRequest handles capability query
 func (t *CapabilityGet) OnRequest(dataInput string) workspace.TaskCode {
 	log.Debug("query request arrived to fetch a capability.")
 

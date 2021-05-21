@@ -116,7 +116,7 @@ func (h *InstanceEtsiEventHandler) OnEvent(evt discovery.KvEvent) {
 	h.sendRestMessageToApp(instance, string(action))
 }
 
-// SendRestMessageToApp sendRestMessageToApp
+// sendRestMessageToApp send messages to application
 func (h *InstanceEtsiEventHandler) sendRestMessageToApp(instance *proto.MicroServiceInstance, action string) {
 	instanceID := instance.ServiceId + instance.InstanceId
 	serName := instance.Properties["serName"]
@@ -162,7 +162,7 @@ func (h *InstanceEtsiEventHandler) doSend(action string, instance *proto.MicroSe
 	}
 }
 
-//SendMsg send message
+// sendMsg send message
 func (h *InstanceEtsiEventHandler) sendMsg(notificationInfo models.ServiceAvailabilityNotification,
 	callBackURI string, subscription string) {
 	log.Infof("Send subscription notify(key: %s, uri: %s).", subscription, callBackURI)
@@ -246,7 +246,7 @@ func isServiceCategoryMatched(serCategories []models.CategoryRef, serCategory mo
 	return false
 }
 
-//GetAllSubscriberInfoFromDB GetAllSubscriberInfoFromDB
+// GetAllSubscriberInfoFromDB reads subscriber information from db
 func GetAllSubscriberInfoFromDB() map[string]*models.SerAvailabilityNotificationSubscription {
 	subscribeKeyPath := util2.GetSubscribeKeyPath(util2.SerAvailabilityNotificationSubscription)
 	notifyInfos := make(map[string]*models.SerAvailabilityNotificationSubscription, 1000)

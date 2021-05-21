@@ -36,6 +36,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DecodeRestReq step to decode the service registration request
 type DecodeRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -169,6 +170,7 @@ func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	return nil
 }
 
+// RegisterServiceId step to create new service id
 type RegisterServiceId struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
@@ -177,7 +179,7 @@ type RegisterServiceId struct {
 	RestBody  interface{}     `json:"restBody,in"`
 }
 
-// OnRequest handles service registration id generations
+// OnRequest handles service registration id generation
 func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
@@ -210,6 +212,7 @@ func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
+// RegisterServiceInst step to register new service instance
 type RegisterServiceInst struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
@@ -287,6 +290,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
+// RegisterLimit step to check the service registration limit
 type RegisterLimit struct {
 	workspace.TaskBase
 	Ctx           context.Context `json:"ctx,in"`

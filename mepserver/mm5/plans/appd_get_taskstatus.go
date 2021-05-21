@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -29,6 +30,7 @@ import (
 	"strconv"
 )
 
+// DecodeTaskRestReq step to decode status task request
 type DecodeTaskRestReq struct {
 	workspace.TaskBase
 	R      *http.Request   `json:"r,in"`
@@ -36,6 +38,7 @@ type DecodeTaskRestReq struct {
 	TaskId string          `json:"taskId,out"`
 }
 
+// OnRequest handle task status request decoding
 func (t *DecodeTaskRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
@@ -60,6 +63,7 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// TaskStatusGet step to get the task status
 type TaskStatusGet struct {
 	workspace.TaskBase
 	AppDCommon
@@ -69,6 +73,7 @@ type TaskStatusGet struct {
 	HttpRsp interface{}         `json:"httpRsp,out"`
 }
 
+// OnRequest handle task status query
 func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 	log.Debugf("Query request arrived to fetch task status for taskId %s.", t.TaskId)
 

@@ -124,6 +124,7 @@ func (s *statusDB) setFailureReason(reason string) {
 	}
 }
 
+// CheckForStatusDBError checks for any error in status db
 func CheckForStatusDBError(appInstanceId string, taskId string) error {
 	path := util.AppDLCMTaskStatusPath + appInstanceId + "/" + taskId
 

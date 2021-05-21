@@ -35,6 +35,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DecodeCapabilityQueryReq step tp decode the capability query request
 type DecodeCapabilityQueryReq struct {
 	workspace.TaskBase
 	R            *http.Request   `json:"r,in"`
@@ -43,6 +44,7 @@ type DecodeCapabilityQueryReq struct {
 	QueryParam   url.Values      `json:"queryParam,out"`
 }
 
+// OnRequest handles the capability request decode functionality
 func (t *DecodeCapabilityQueryReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
@@ -62,6 +64,7 @@ func (t *DecodeCapabilityQueryReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// CapabilitiesGet step to get the capabilities
 type CapabilitiesGet struct {
 	workspace.TaskBase
 	Ctx                    context.Context `json:"ctx,in"`
@@ -73,6 +76,7 @@ type CapabilitiesGet struct {
 	serviceCategoryMapping map[models.CategoryRef]string
 }
 
+// OnRequest handles capability query request
 func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
 	log.Debug("Query request arrived to fetch all capabilities.")
 

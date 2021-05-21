@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -31,6 +31,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// UpdateInstance step to handle update request
 type UpdateInstance struct {
 	workspace.TaskBase
 	HttpErrInf    *proto.Response `json:"httpErrInf,out"`

@@ -31,6 +31,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
+// Worker keeps the asynchronous task parameters
 type Worker struct {
 	waitWorkerFinish sync.WaitGroup
 	dnsTypeConfig    string
@@ -41,6 +42,7 @@ type Worker struct {
 const dataInconsistentError = "Failed to revert the data, this will lead to data inconsistency."
 const ExistRuleError = "existing rule expected"
 
+// InitializeWorker initialize worker instance
 func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DNSAgent, dnsType string) *Worker {
 	w.dataPlane = dataPlane
 	w.dnsAgent = dnsAgent
@@ -48,14 +50,16 @@ func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DN
 	return w
 }
 
+// StartNewTask start new task for sync
 func (w *Worker) StartNewTask(appName, appInstanceId, taskId string) {
 	log.Infof("New appd sync task created(app-name: %s, app-id: %s, task-id: %s).", appName, appInstanceId, taskId)
 	w.waitWorkerFinish.Add(1)
-	go w.ProcessDataPlane(appName, appInstanceId, taskId)
+	go w.ProcessAppDConfigSync(appName, appInstanceId, taskId)
 	return
 }
 
-func (w *Worker) ProcessDataPlane(appName, appInstanceId, taskId string) {
+// ProcessAppDConfigSync handles appd config sync
+func (w *Worker) ProcessAppDConfigSync(appName, appInstanceId, taskId string) {
 	defer w.waitWorkerFinish.Done()
 	defer func() {
 		if r := recover(); r != nil {

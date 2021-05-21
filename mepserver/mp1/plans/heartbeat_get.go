@@ -14,21 +14,14 @@
  * limitations under the License.
  */
 
+// Package plans implements heartbeat interfaces
 package plans
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"mepserver/common/models"
-	"strconv"
-	"time"
-
 	"github.com/apache/servicecomb-service-center/server/core"
-	"github.com/apache/servicecomb-service-center/server/core/backend"
-	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
-
 	"mepserver/common/arch/workspace"
+	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"net/http"
 
@@ -37,6 +30,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 )
 
+// GetOneDecodeHeartbeat step to decode heart beat request
 type GetOneDecodeHeartbeat struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -45,6 +39,7 @@ type GetOneDecodeHeartbeat struct {
 	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
+// OnRequest handles heart beat message decode
 func (t *GetOneDecodeHeartbeat) OnRequest(data string) workspace.TaskCode {
 	var err error
 	log.Infof("Received message of get heartbeat from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
@@ -91,6 +86,7 @@ func (t *GetOneDecodeHeartbeat) getFindParam(r *http.Request) (context.Context, 
 	return ctx, req, nil
 }
 
+// GetOneInstanceHeartbeat step to retrieve service hart beat info
 type GetOneInstanceHeartbeat struct {
 	workspace.TaskBase
 	HttpErrInf    *proto.Response `json:"httpErrInf,out"`
@@ -100,6 +96,7 @@ type GetOneInstanceHeartbeat struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
+// OnRequest handles heart beat query
 func (t *GetOneInstanceHeartbeat) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {
@@ -143,83 +140,5 @@ func (t *GetOneInstanceHeartbeat) filterAppInstanceId(inst *proto.MicroServiceIn
 	}
 	if t.AppInstanceId != inst.Properties["appInstanceId"] {
 		inst = nil
-	}
-}
-
-func AvailableServiceForHeartbeat() ([]*proto.MicroServiceInstance, error) {
-	opts := []registry.PluginOp{
-		registry.OpGet(registry.WithStrKey("/cse-sr/inst/files///"), registry.WithPrefix()),
-	}
-	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
-	if err != nil {
-		log.Errorf(nil, "Query error from etcd.")
-		return nil, fmt.Errorf("query from etcd error")
-	}
-	var findResp []*proto.MicroServiceInstance
-	for _, value := range resp.Kvs {
-		var instances map[string]interface{}
-		err = json.Unmarshal(value.Value, &instances)
-		if err != nil {
-			return nil, fmt.Errorf("string convert to instance get failed in heartbeat process")
-		}
-		dci := &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""}
-		instances[meputil.ServiceInfoDataCenter] = dci
-		message, err := json.Marshal(&instances)
-		if err != nil {
-			log.Errorf(nil, "Instance convert to string failed in heartbeat process.")
-			return nil, err
-		}
-		var ins *proto.MicroServiceInstance
-		err = json.Unmarshal(message, &ins)
-		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed in heartbeat process.")
-			return nil, err
-		}
-		property := ins.Properties
-		liveInterval, err := strconv.Atoi(property["livenessInterval"])
-		if err != nil {
-			log.Errorf(nil, "Failed to parse liveness interval.")
-			return nil, err
-		}
-		mecState := property["mecState"]
-		if liveInterval > 0 && mecState == meputil.ActiveState {
-			findResp = append(findResp, ins)
-		}
-	}
-	if len(findResp) == 0 {
-		return nil, fmt.Errorf("null")
-	}
-	return findResp, nil
-}
-
-func HeartbeatProcess() {
-	ticker := time.NewTicker(1 * time.Second)
-	for range ticker.C {
-		services, _ := AvailableServiceForHeartbeat()
-		var seconds int64
-		var timeInterval int
-		var err1, err2 error
-		for _, svc := range services {
-			seconds, err1 = strconv.ParseInt(svc.Properties["timestamp/seconds"], meputil.FormatIntBase, meputil.BitSize)
-			timeInterval, err2 = strconv.Atoi(svc.Properties["livenessInterval"])
-			if err1 != nil && err2 != nil {
-				log.Warn("Time Interval or timestamp parse failed.")
-			}
-			sec := time.Now().UTC().Unix() - seconds
-			if sec > int64(meputil.BufferHeartbeatInterval(timeInterval)) {
-				property := svc.Properties
-				property["mecState"] = meputil.SuspendedState
-				req := &proto.UpdateInstancePropsRequest{
-					ServiceId:  svc.ServiceId,
-					InstanceId: svc.InstanceId,
-					Properties: property,
-				}
-				_, err := core.InstanceAPI.UpdateInstanceProperties(context.Background(), req)
-				log.Infof("Service(%s) send to suspended state.", svc.ServiceId)
-				if err != nil {
-					log.Error("Updating service properties for heartbeat failed.", nil)
-				}
-			}
-		}
 	}
 }

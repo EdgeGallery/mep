@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// uuid util package
+// Package uuid util package
 package uuid
 
 import (
@@ -33,7 +33,7 @@ func init() {
 
 }
 
-// new plugin instance
+// New plugin instance
 func New() mgr.PluginInstance {
 	return &Mp1ContextUUID{}
 }
@@ -50,7 +50,7 @@ func (cu *Mp1ContextUUID) fromContext(ctx context.Context) string {
 	return key
 }
 
-// get serviceId
+// GetServiceId to get service id
 func (cu *Mp1ContextUUID) GetServiceId(ctx context.Context) string {
 	content := cu.fromContext(ctx)
 	if len(content) == 0 {
@@ -62,7 +62,7 @@ func (cu *Mp1ContextUUID) GetServiceId(ctx context.Context) string {
 	return fmt.Sprintf("%x", shaHalf)
 }
 
-// get instanceId
+// GetInstanceId to get instanceId
 func (cu *Mp1ContextUUID) GetInstanceId(_ context.Context) string {
 	shaSum := sha256.Sum256([]byte(util.GenerateUuid()))
 	shaHalf := shaSum[0:8]

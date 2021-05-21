@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -38,6 +39,7 @@ import (
 	"os"
 )
 
+// DecodeAppTerminationReq decodes application termination request
 type DecodeAppTerminationReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -74,6 +76,7 @@ func (t *DecodeAppTerminationReq) GetFindParam(r *http.Request) (context.Context
 	return Ctx, nil
 }
 
+// DeleteService handles service delete
 type DeleteService struct {
 	workspace.TaskBase
 	Ctx           context.Context `json:"ctx,in"`
@@ -156,12 +159,14 @@ func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, strin
 	return 0, ""
 }
 
+// DeleteFromMepauth handles delete from mep-atuh
 type DeleteFromMepauth struct {
 	workspace.TaskBase
 	AppInstanceId string `json:"appInstanceId,in"`
 	authBaseUrl   string
 }
 
+// WithEndPoint adds mep auth base url endpoint
 func (t *DeleteFromMepauth) WithEndPoint(baseUrl string) *DeleteFromMepauth {
 	t.authBaseUrl = baseUrl
 	return t
@@ -224,6 +229,7 @@ func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 	}, nil
 }
 
+// DeleteAppDConfigWithSync step to delete the appd config asynchronously
 type DeleteAppDConfigWithSync struct {
 	workspace.TaskBase
 	AppDCommon
@@ -233,11 +239,13 @@ type DeleteAppDConfigWithSync struct {
 	Worker        *task.Worker
 }
 
+// WithWorker inputs worker instance
 func (t *DeleteAppDConfigWithSync) WithWorker(w *task.Worker) *DeleteAppDConfigWithSync {
 	t.Worker = w
 	return t
 }
 
+// OnRequest handle the appd task to asynchronously
 func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 
 	log.Info("Deleting the DNS and traffic rule.")
@@ -247,7 +255,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	if !t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		return workspace.TaskFinish
 	}

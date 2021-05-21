@@ -31,10 +31,12 @@ import (
 
 const DBFailure = "put app config rule to data-store failed"
 
+// AppDCommon appd common functions
 type AppDCommon struct {
 }
 
-func (a *AppDCommon) IsAppInstanceIdAlreadyExists(appInstanceId string) (isExists bool) {
+// IsAppInstanceAlreadyCreated checks the app instance already configured or not
+func (a *AppDCommon) IsAppInstanceAlreadyCreated(appInstanceId string) (isExists bool) {
 
 	/* This Database maintains local cache of all the Dataplane configurations. If record exist here means that
 	   operation is completed and this APP has an existing rule configured*/
@@ -45,7 +47,8 @@ func (a *AppDCommon) IsAppInstanceIdAlreadyExists(appInstanceId string) (isExist
 	return true
 }
 
-func (a *AppDCommon) IsAppNameAlreadyExists(appName string) (isExists bool) {
+// IsDuplicateAppNameExists checks if duplicate app name exists
+func (a *AppDCommon) IsDuplicateAppNameExists(appName string) (isExists bool) {
 
 	records, errCode := backend.GetRecords(meputil.AppDConfigKeyPath)
 	if errCode != 0 || records == nil || len(records) == 0 {
@@ -64,6 +67,7 @@ func (a *AppDCommon) IsAppNameAlreadyExists(appName string) (isExists bool) {
 	return false
 }
 
+// IsAnyOngoingOperationExist checks any on-going operation exists for the application instance
 func (a *AppDCommon) IsAnyOngoingOperationExist(appInstanceId string) (isExists bool) {
 
 	/* Jobs DB temporarily holds the ongoing operation of this APPInstanceId. If entry exist in this DB mean the operation
@@ -86,6 +90,7 @@ func (a *AppDCommon) generateTaskResponse(taskId string, appInstanceId string, r
 	}
 }
 
+// StageNewTask stages new tasks for operation
 func (a *AppDCommon) StageNewTask(appInstanceId string, taskId string,
 	appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
 	appDInStore := &models.AppDConfig{}
@@ -146,18 +151,17 @@ func (a *AppDCommon) StageNewTask(appInstanceId string, taskId string,
 		return meputil.SubscriptionNotFound, "no modification data found in the input"
 	}
 
-	return a.putInDB(taskStatus, appInstanceId, taskId, appDConfigInput)
-}
-
-func (a *AppDCommon) putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
-	appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
 	// Check any duplicate dns entry exists
-	if a.isDuplicateDomainNameForCreateExists(appInstanceId, appDConfigInput, taskStatus) {
+	if a.isDNSDomainNameExists(appInstanceId, appDConfigInput, taskStatus) {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
 		log.Errorf(nil, "Duplicate dns entry found in the request.")
 		return meputil.DuplicateOperation, "duplicate dns entry"
 	}
+	return a.writeStatusToStore(taskStatus, appInstanceId, taskId)
+}
+
+func (a *AppDCommon) writeStatusToStore(taskStatus *models.TaskStatus, appInstanceId string, taskId string) (code workspace.ErrCode, msg string) {
 
 	statusBytes, err := json.Marshal(taskStatus)
 	if err != nil {
@@ -216,7 +220,7 @@ func (a *AppDCommon) fillDnsDomainNameMap(appInstanceId string, path string, dns
 	}
 }
 
-func (a *AppDCommon) isDuplicateDomainNameForCreateExists(appInstanceId string, appDConfigInput *models.AppDConfig,
+func (a *AppDCommon) isDNSDomainNameExists(appInstanceId string, appDConfigInput *models.AppDConfig,
 	taskStatus *models.TaskStatus) bool {
 
 	dnsInStoreDomainNameMap := make(map[string]bool)

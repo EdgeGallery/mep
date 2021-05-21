@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -35,6 +36,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 )
 
+// DecodeAppDRestReq handles appd config decode request
 type DecodeAppDRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -43,6 +45,7 @@ type DecodeAppDRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
+// OnRequest handles the appd request decoding
 func (t *DecodeAppDRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
@@ -56,6 +59,7 @@ func (t *DecodeAppDRestReq) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
+// WithBody handle input body initialization
 func (t *DecodeAppDRestReq) WithBody(body interface{}) *DecodeAppDRestReq {
 	t.RestBody = body
 	return t
@@ -150,6 +154,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
+// CreateAppDConfig handle appd config create
 type CreateAppDConfig struct {
 	workspace.TaskBase
 	AppDCommon
@@ -161,11 +166,13 @@ type CreateAppDConfig struct {
 	worker        *task.Worker
 }
 
+// WithWorker input worker instance
 func (t *CreateAppDConfig) WithWorker(w *task.Worker) *CreateAppDConfig {
 	t.worker = w
 	return t
 }
 
+// OnRequest handles appd configuration create
 func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	appDConfigInput, ok := t.RestBody.(*models.AppDConfig)
@@ -180,13 +187,13 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Also check if any other ongoing operation for this AppInstanceId
 			2. Add the this request to DB (job, task and task status)
 	*/
-	if t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
 		log.Errorf(nil, "Duplicate app instance.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app instance")
 		return workspace.TaskFinish
 	}
 
-	if t.IsAppNameAlreadyExists(appDConfigInput.AppName) {
+	if t.IsDuplicateAppNameExists(appDConfigInput.AppName) {
 		log.Errorf(nil, "Duplicate app name.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app name")
 		return workspace.TaskFinish

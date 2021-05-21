@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -37,6 +37,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DecodeDnsRestReq decode the dns request message
 type DecodeDnsRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -46,6 +47,7 @@ type DecodeDnsRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
+// OnRequest handles dns request decode
 func (t *DecodeDnsRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
@@ -112,6 +114,7 @@ func (t *DecodeDnsRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
+// WithBody initialize input request body
 func (t *DecodeDnsRestReq) WithBody(body interface{}) *DecodeDnsRestReq {
 	t.RestBody = body
 	return t
@@ -149,6 +152,7 @@ func (t *DecodeDnsRestReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// DNSRuleUpdate step to handle dns rule update
 type DNSRuleUpdate struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -162,16 +166,19 @@ type DNSRuleUpdate struct {
 	AppName       string
 }
 
+// WithDNSAgent inputs dns agent
 func (t *DNSRuleUpdate) WithDNSAgent(dnsAgent dns.DNSAgent) *DNSRuleUpdate {
 	t.dnsAgent = dnsAgent
 	return t
 }
 
+// WithDataPlane inputs data plane instance
 func (t *DNSRuleUpdate) WithDataPlane(dataPlane dataplane.DataPlane) *DNSRuleUpdate {
 	t.dataPlane = dataPlane
 	return t
 }
 
+// OnRequest handles dns rule update
 func (t *DNSRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	log.Debugf("update request arrived for dns rule %s and appId %s.", t.DNSRuleId, t.AppInstanceId)

@@ -404,7 +404,7 @@ func TestDeleteConfigRules(t *testing.T) {
 	})
 
 	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -495,7 +495,7 @@ func TestDeleteConfigRulesOperationInProgress(t *testing.T) {
 	mockWriter.On("WriteHeader", 403)
 
 	var appDComm *plans.AppDCommon
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+	patches := gomonkey.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -1912,7 +1912,7 @@ func TestAppInstanceTermination(t *testing.T) {
 	})
 
 	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -2000,7 +2000,7 @@ func TestAppInstanceTermination1(t *testing.T) {
 	})
 
 	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -2088,7 +2088,7 @@ func TestAppInstanceTermination2(t *testing.T) {
 	})
 
 	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceIdAlreadyExists", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true

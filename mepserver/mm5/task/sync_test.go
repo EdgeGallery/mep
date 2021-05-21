@@ -74,7 +74,7 @@ func TestProcessDataPlaneSync(t *testing.T) {
 	worker := Worker{dataPlane: noneDataPlane, dnsAgent: dnsRules}
 	worker.waitWorkerFinish.Add(1)
 	taskId := uuid.NewV4().String()
-	worker.ProcessDataPlane("AppName", defaultAppInstanceId, taskId)
+	worker.ProcessAppDConfigSync("AppName", defaultAppInstanceId, taskId)
 }
 
 func TestProcessDataPlaneSyncForError(t *testing.T) {
@@ -104,7 +104,7 @@ func TestProcessDataPlaneSyncForError(t *testing.T) {
 	worker := Worker{}
 	worker.waitWorkerFinish.Add(1)
 	taskId := uuid.NewV4().String()
-	worker.ProcessDataPlane("AppName", defaultAppInstanceId, taskId)
+	worker.ProcessAppDConfigSync("AppName", defaultAppInstanceId, taskId)
 
 }
 

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -25,12 +26,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SubscriptionInfoReq steps to query subscription details
 type SubscriptionInfoReq struct {
 	workspace.TaskBase
 	R       *http.Request `json:"r,in"`
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
+// SubRelation subscription data type
 type SubRelation struct {
 	SubscribeAppId string   `json:"subscribeAppId"`
 	ServiceList    []string `json:"serviceList"`

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -32,6 +33,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// TrafficRuleUpdate step to update the traffic rule
 type TrafficRuleUpdate struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -43,11 +45,13 @@ type TrafficRuleUpdate struct {
 	dataPlane     dataplane.DataPlane
 }
 
+// WithDataPlane inputs the data plane instance
 func (t *TrafficRuleUpdate) WithDataPlane(dataPlane dataplane.DataPlane) *TrafficRuleUpdate {
 	t.dataPlane = dataPlane
 	return t
 }
 
+// OnRequest handles the traffic rule update
 func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	trafficInPut, ok := t.RestBody.(*dataplane.TrafficRule)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -34,6 +34,7 @@ import (
 	"mepserver/common/util"
 )
 
+// GetSubscribes step to query all subscription infor
 type GetSubscribes struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -45,13 +46,13 @@ type GetSubscribes struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return GetSubscribes
+// WithType set type and return GetSubscribes
 func (t *GetSubscribes) WithType(subType string) *GetSubscribes {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles the subscription query
 func (t *GetSubscribes) OnRequest(data string) workspace.TaskCode {
 
 	subscribeKeyPath := util.GetSubscribeKeyPath(t.SubscribeType)

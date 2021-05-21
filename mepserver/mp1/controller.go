@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements rest api route controller
+// Package mp1 implements rest api route controller
 package mp1
 
 import (
@@ -44,7 +44,7 @@ type APIGwHook struct {
 
 var apihook APIGwHook
 
-// set api gw hook
+// SetAPIHook set api gw hook
 func SetAPIHook(hook APIGwHook) {
 	apihook = hook
 }
@@ -62,6 +62,7 @@ func initRouter() {
 	rest.RegisterServant(mp1)
 }
 
+// Mp1Service represents the mp1 service object
 type Mp1Service struct {
 	v4.MicroServiceService
 	config    *config.MepServerConfig
@@ -69,6 +70,7 @@ type Mp1Service struct {
 	dataPlane dataplane.DataPlane
 }
 
+// Init initialize mp1 service
 func (m *Mp1Service) Init() error {
 	mepConfig, err := config.LoadMepServerConfig()
 	if err != nil {
@@ -97,7 +99,7 @@ func (m *Mp1Service) Init() error {
 	return nil
 }
 
-// url patterns
+// URLPatterns handles url mappings
 func (m *Mp1Service) URLPatterns() []rest.Route {
 	return []rest.Route{
 		// appSubscriptions

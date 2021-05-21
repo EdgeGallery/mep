@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -27,6 +28,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// DeleteAppDConfig steps to delete appd cpnfig
 type DeleteAppDConfig struct {
 	workspace.TaskBase
 	AppDCommon
@@ -38,11 +40,13 @@ type DeleteAppDConfig struct {
 	worker        *task.Worker
 }
 
+// WithWorker inputs worker instance
 func (t *DeleteAppDConfig) WithWorker(w *task.Worker) *DeleteAppDConfig {
 	t.worker = w
 	return t
 }
 
+// OnRequest handles the appd config delete
 func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	/*
@@ -50,7 +54,7 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Check if any other ongoing operation for this AppInstance Id in the system.
 			3. update the this request to DB (job, task and task status)
 	*/
-	if !t.IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
+	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
 		return workspace.TaskFinish

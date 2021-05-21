@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -73,6 +74,7 @@ func createEsClient() *es.Client {
 	return esClient
 }
 
+// CreateKongHttpLog step to create kong http log request
 type CreateKongHttpLog struct {
 	workspace.TaskBase
 	R       *http.Request `json:"r,in"`

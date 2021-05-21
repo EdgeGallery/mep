@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -32,6 +32,7 @@ import (
 	"mepserver/common/util"
 )
 
+// GetOneSubscribe step to get one subscription info
 type GetOneSubscribe struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -44,13 +45,13 @@ type GetOneSubscribe struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return GetOneSubscribe
+// WithType set type and return GetOneSubscribe
 func (t *GetOneSubscribe) WithType(subType string) *GetOneSubscribe {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles subscription query
 func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId

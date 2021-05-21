@@ -33,6 +33,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// GetOneDecode step to decode the service request query
 type GetOneDecode struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -41,7 +42,7 @@ type GetOneDecode struct {
 	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
-// OnRequest
+// OnRequest handles the service query decode
 func (t *GetOneDecode) OnRequest(data string) workspace.TaskCode {
 	var err error
 	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
@@ -94,6 +95,7 @@ func (t *GetOneDecode) getFindParam(r *http.Request) (context.Context, *proto.Ge
 	return ctx, req, nil
 }
 
+// GetOneInstance step to retrieve service entry
 type GetOneInstance struct {
 	workspace.TaskBase
 	HttpErrInf    *proto.Response `json:"httpErrInf,out"`
@@ -103,7 +105,7 @@ type GetOneInstance struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handle the service query
 func (t *GetOneInstance) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {

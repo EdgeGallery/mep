@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -30,6 +30,7 @@ import (
 	"mepserver/common/util"
 )
 
+// DelOneSubscribe steps to delete a subscription
 type DelOneSubscribe struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -42,13 +43,13 @@ type DelOneSubscribe struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return DelOneSubscribe
+// WithType set type and return DelOneSubscribe
 func (t *DelOneSubscribe) WithType(subType string) *DelOneSubscribe {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles subscription update
 func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId
