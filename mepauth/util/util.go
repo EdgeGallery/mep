@@ -168,13 +168,13 @@ func GetAPIGwURL() (string, error) {
 func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Error("failed to create aes cipher")
+		log.Error("Failed to create aes cipher")
 		return nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Error("failed to wrap cipher")
+		log.Error("Failed to wrap cipher")
 		return nil, err
 	}
 

@@ -162,7 +162,7 @@ func (c *ConfController) Get() {
 // ConfigureAkAndSk save Ak and Sk configuration into file
 func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 
-	log.Infof("ak/sk configuration is received, the corresponding app is " + appInsID)
+	log.Infof("AK/SK configuration is received, the corresponding app is " + appInsID)
 
 	if validateErr := util.ValidateUUID(appInsID); validateErr != nil {
 		log.Error("AppInstanceId: " + appInsID + " is invalid.")
