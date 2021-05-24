@@ -104,7 +104,7 @@ func main() {
 	err = controllers.ConfigureAkAndSk(string(*appConfig["APP_INST_ID"]),
 		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"])
 	if err != nil {
-		log.Error("failed to configure ak sk values")
+		log.Error("Failed to configure ak sk values")
 		return
 	}
 	tlsConf, err := util.TLSConfig("HTTPSCertFile")

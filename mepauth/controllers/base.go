@@ -86,7 +86,8 @@ func (c *BaseController) handleLoggingForSuccess(clientIp string, msg string) {
 // Validate source address
 func (c *BaseController) validateSrcAddress(id string) error {
 	if id == "" {
-		return errors.New("require ip address")
+		log.Error("Source IP address validation failed as input is nil")
+		return errors.New("source IP address validation failed as input is nil")
 	}
 
 	validate := validator.New()
