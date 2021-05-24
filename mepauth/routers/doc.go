@@ -54,7 +54,7 @@ func init() {
 			Params:           nil})
 	beego.GlobalControllerRouter[confController] = append(beego.GlobalControllerRouter[confController],
 		beego.ControllerComments{
-			Method:           "deleteOp",
+			Method:           "Delete",
 			Router:           confControllerRoute,
 			AllowHTTPMethods: []string{deleteOp},
 			MethodParams:     param.Make(),
