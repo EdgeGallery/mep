@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	deleteOp = "deleteOp"
+	deleteOp = "delete"
 	get      = "get"
 	put      = "put"
 	post     = "post"
