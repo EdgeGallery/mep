@@ -80,7 +80,7 @@ func (c *BaseController) handleLoggingForSuccess(clientIp string, msg string) {
 	c.ServeJSON()
 	c.Data["json"] = "Success."
 	log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
-		resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + ".]")
+		resource + c.Ctx.Input.URL() + "] Result [Success " + msg + "]")
 }
 
 // Validate source address

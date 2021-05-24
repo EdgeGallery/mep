@@ -29,7 +29,7 @@ import (
 	"mepauth/util"
 )
 
-const appInsId string = "app_ins_id"
+const appInstanceID string = "app_ins_id"
 
 // ConfController configuration controller
 type ConfController struct {
@@ -112,7 +112,7 @@ func (c *ConfController) Delete() {
 		AppInsId: appInsId,
 	}
 
-	err = adapter.Db.DeleteData(authInfoRecord, appInsId)
+	err = adapter.Db.DeleteData(authInfoRecord, appInstanceID)
 	if err != nil {
 		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
@@ -148,7 +148,7 @@ func (c *ConfController) Get() {
 		AppInsId: appInsId,
 	}
 
-	err = adapter.Db.ReadData(authInfoRecord, appInsId)
+	err = adapter.Db.ReadData(authInfoRecord, appInstanceID)
 	if err != nil && err.Error() != util.PgOkMsg {
 		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
@@ -201,7 +201,7 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		Nonce:    string(nonceBytes),
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
-	err = adapter.Db.InsertOrUpdateData(authInfoRecord, appInsId)
+	err = adapter.Db.InsertOrUpdateData(authInfoRecord, appInstanceID)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
 		log.Error("Failed to save ak and sk to file.")
