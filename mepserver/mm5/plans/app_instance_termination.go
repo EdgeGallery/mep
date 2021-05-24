@@ -136,9 +136,9 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 				return workspace.TaskFinish
 			}
 
-			uri := ins.Endpoints[0]
-			if uri != "" {
-				arr := strings.Split(uri, "/")
+			uris := ins.Endpoints
+			if len(uris) > 0 {
+				arr := strings.Split(uris[0], "/")
 				kongSerName := arr[len(arr)-1]
 				deleteKongDate(kongSerName)
 			}
