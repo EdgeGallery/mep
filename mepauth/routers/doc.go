@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	confController  = "mepauth/controllers:confController"
-	tokenController = "mepauth/controllers:tokenController"
+	confController  = "mepauth/controllers:ConfController"
+	tokenController = "mepauth/controllers:TokenController"
 )
 
 const (
