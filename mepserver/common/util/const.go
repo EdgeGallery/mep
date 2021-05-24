@@ -100,6 +100,7 @@ const (
 )
 
 const (
+	GetMethod   = "GET"
 	PostMethod   = "POST"
 	PutMethod   = "PUT"
 	DeleteMethod = "DELETE"

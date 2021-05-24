@@ -307,8 +307,8 @@ func GetResourceInfo(r *http.Request) string {
 	return resource
 }
 
-// GetMethod get method from request
-func GetMethod(r *http.Request) string {
+// GetMethodFromReq get method from request
+func GetMethodFromReq(r *http.Request) string {
 	method := r.Method
 	if method == "" {
 		return "GET"
