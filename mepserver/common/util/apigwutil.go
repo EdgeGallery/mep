@@ -75,8 +75,8 @@ func (a *ApiGwIf) getApiGwUrl() string {
 		log.Error("Get app config failed.", err)
 		return ""
 	}
-	kongUrl := fmt.Sprintf("https://%s:%s", appConfig["apigw_host"], appConfig["apigw_port"])
-	return kongUrl
+	apiGwUrl := fmt.Sprintf("https://%s:%s", appConfig["apigw_host"], appConfig["apigw_port"])
+	return apiGwUrl
 
 }
 
@@ -85,8 +85,8 @@ func (a *ApiGwIf) AddOrUpdateApiGwService(serInfo SerInfo) {
 	serName := serInfo.SerName
 	serUrl := serInfo.Uri
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	kongServiceUrl := a.baseURL + "/services/" + serName
-	_, err := SendPutRequest(kongServiceUrl, jsonStr, a.tlsCfg)
+	apiGwServiceUrl := a.baseURL + "/services/" + serName
+	_, err := SendPutRequest(apiGwServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to add or update API gateway service", err)
 	}
@@ -94,8 +94,8 @@ func (a *ApiGwIf) AddOrUpdateApiGwService(serInfo SerInfo) {
 
 //DeleteApiGwService delete service from api  gateway
 func (a *ApiGwIf) DeleteApiGwService(serviceName string) {
-	kongServiceUrl := a.baseURL + "/services/" + serviceName
-	_, err := SendDelRequest(kongServiceUrl, a.tlsCfg)
+	apiGwServiceUrl := a.baseURL + "/services/" + serviceName
+	_, err := SendDelRequest(apiGwServiceUrl, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to delete API gateway service.", err)
 	}
@@ -104,9 +104,9 @@ func (a *ApiGwIf) DeleteApiGwService(serviceName string) {
 // AddOrUpdateApiGwRoute add/update new route in the api gateway for application
 func (a *ApiGwIf) AddOrUpdateApiGwRoute(serInfo SerInfo) {
 	serName := serInfo.SerName
-	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
+	apiGwRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
-	_, err := SendPutRequest(kongRouteUrl, jsonStr, a.tlsCfg)
+	_, err := SendPutRequest(apiGwRouteUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to add or update API gateway route", err)
 	}
@@ -114,8 +114,8 @@ func (a *ApiGwIf) AddOrUpdateApiGwRoute(serInfo SerInfo) {
 
 // DeleteApiGwRoute delete API gateway route
 func (a *ApiGwIf) DeleteApiGwRoute(serviceName string) {
-	kongRouteUrl := a.baseURL + serviceUrl + serviceName + "/routes/" + serviceName
-	_, err := SendDelRequest(kongRouteUrl, a.tlsCfg)
+	apiGwRouteUrl := a.baseURL + serviceUrl + serviceName + "/routes/" + serviceName
+	_, err := SendDelRequest(apiGwRouteUrl, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to delete API gateway route.", err)
 	}
@@ -124,20 +124,20 @@ func (a *ApiGwIf) DeleteApiGwRoute(serviceName string) {
 // EnableJwtPlugin enables kong jwt plugin
 func (a *ApiGwIf) EnableJwtPlugin(serInfo SerInfo) {
 	serName := serInfo.SerName
-	kongPluginUrl := a.baseURL + serviceUrl + serName + "/plugins"
+	apiGwPluginUrl := a.baseURL + serviceUrl + serName + "/plugins"
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	_, err := SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)
+	_, err := SendPostRequest(apiGwPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
-		log.Error("Enable kong jwt plugin failed", err)
+		log.Error("Enable apiGw jwt plugin failed", err)
 	}
 }
 
 func (a *ApiGwIf) DeleteJwtPlugin(serviceName string) {
-	kongPluginUrl := a.baseURL + serviceUrl + serviceName + "/plugins"
-	response, err := SendGetRequest(kongPluginUrl, a.tlsCfg)
+	apiGwPluginUrl := a.baseURL + serviceUrl + serviceName + "/plugins"
+	response, err := SendGetRequest(apiGwPluginUrl, a.tlsCfg)
 	log.Infof("response: %s", response)
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	_, err = SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)
+	_, err = SendPostRequest(apiGwPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
 		log.Error("Register API GW jwt plugin failed.", err)
 	}
@@ -145,8 +145,8 @@ func (a *ApiGwIf) DeleteJwtPlugin(serviceName string) {
 
 // ApiGwDelRoute delete application route from api gateway
 func (a *ApiGwIf) ApiGwDelRoute(serName string) {
-	kongRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
-	req := httplib.Delete(kongRouteUrl)
+	apiGwRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
+	req := httplib.Delete(apiGwRouteUrl)
 	str, err := req.String()
 	if err != nil {
 		log.Error("Failed to delete API gateway route.", err)

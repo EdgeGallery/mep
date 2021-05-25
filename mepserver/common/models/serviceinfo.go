@@ -80,7 +80,7 @@ func (s *ServiceInfo) GenerateServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // GenerateRegisterInstance transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool) {
+func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool, apiGwSerName string) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -113,7 +113,7 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 		meputil.UpdatePropertiesMap(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.registerEndpoints(isUpdateReq)
+		req.Instance.Endpoints, epType = s.registerEndpoints(isUpdateReq, apiGwSerName)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -130,13 +130,17 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 	}
 }
 
-func (s *ServiceInfo) registerEndpoints(isUpdateReq bool) ([]string, string) {
+func (s *ServiceInfo) registerEndpoints(isUpdateReq bool, apiGwSerName string) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		var serviceUris []string
-		_, kongServiceName := s.generateServiceIdAndName()
+		_, apiGwServiceName := s.generateServiceIdAndName()
+		if isUpdateReq && apiGwSerName != "" {
+			apiGwServiceName = apiGwSerName
+		}
+
 		for _, uri := range s.TransportInfo.Endpoint.Uris {
-			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, kongServiceName))
-			s.registerToApiGw(uri, kongServiceName, isUpdateReq)
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
+			s.registerToApiGw(uri, apiGwServiceName, isUpdateReq)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -144,10 +148,13 @@ func (s *ServiceInfo) registerEndpoints(isUpdateReq bool) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
 		var serviceUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			_, kongServiceName := s.generateServiceIdAndName()
+			_, apiGwServiceName := s.generateServiceIdAndName()
 			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
-			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, kongServiceName))
-			s.registerToApiGw(gwUri, kongServiceName, isUpdateReq)
+			if isUpdateReq && apiGwSerName != "" {
+				apiGwServiceName = apiGwSerName
+			}
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
+			s.registerToApiGw(gwUri, apiGwServiceName, isUpdateReq)
 		}
 		return serviceUris, meputil.Uris
 	}

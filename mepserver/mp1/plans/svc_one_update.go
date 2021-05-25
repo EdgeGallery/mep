@@ -20,12 +20,11 @@ package plans
 import (
 	"context"
 	"fmt"
-	"mepserver/common/models"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
+	"mepserver/common/models"
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
@@ -62,11 +61,13 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	apiGwSerName := meputil.GetApiGwSerName(instance)
+
 	copyInstanceRef := *instance
 	req := proto.RegisterInstanceRequest{
 		Instance: &copyInstanceRef,
 	}
-	mp1Ser.GenerateRegisterInstance(&req,true)
+	mp1Ser.GenerateRegisterInstance(&req, true, apiGwSerName)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	if mp1Ser.LivenessInterval != 0 {
 		mp1Ser.Links.Self.Href = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,
@@ -92,3 +93,5 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	t.HttpRsp = mp1Ser
 	return workspace.TaskFinish
 }
+
+
