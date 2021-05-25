@@ -60,13 +60,13 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	kongSerName := meputil.GetKongSerName(instance)
+	apiGwSerName := meputil.GetApiGwSerName(instance)
 
 	copyInstanceRef := *instance
 	req := proto.RegisterInstanceRequest{
 		Instance: &copyInstanceRef,
 	}
-	mp1Ser.ToRegisterInstance(&req, true, kongSerName)
+	mp1Ser.ToRegisterInstance(&req, true, apiGwSerName)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	if mp1Ser.LivenessInterval != 0 {
 		mp1Ser.Links.Self.Href = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,

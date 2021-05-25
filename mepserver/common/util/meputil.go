@@ -733,14 +733,14 @@ func ValidateDomainName(name string) error {
 	return ValidateRegexp(name, DomainPattern, "validate domain name failed")
 }
 
-// GetKongSerName query endpoint info from MicroServiceInstance
-func GetKongSerName(instance *proto.MicroServiceInstance) string {
+// GetApiGwSerName query endpoint info from MicroServiceInstance
+func GetApiGwSerName(instance *proto.MicroServiceInstance) string {
 	// only support one endpoint now
 	endpoints := instance.Endpoints
-	var kongSerName string
+	var apiGwSerName string
 	if len(endpoints) > 0 {
 		arr := strings.Split(endpoints[0], "/")
-		kongSerName = arr[len(arr)-1]
+		apiGwSerName = arr[len(arr)-1]
 	}
-	return kongSerName
+	return apiGwSerName
 }
