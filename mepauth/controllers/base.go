@@ -78,9 +78,14 @@ func (c *BaseController) writeResponse(msg string, code int) {
 // Handled logging for success case
 func (c *BaseController) handleLoggingForSuccess(clientIp string, msg string) {
 	c.ServeJSON()
-	c.Data["json"] = "Success."
-	log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
-		resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + ".]")
+	c.Data["json"] = "Success"
+	if msg != "" {
+		log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
+			resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + "]")
+	} else {
+		log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
+			resource + c.Ctx.Input.URL() + "] Result [Success]")
+	}
 }
 
 // Validate source address
