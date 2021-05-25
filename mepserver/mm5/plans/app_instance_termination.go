@@ -23,6 +23,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
+	"github.com/apache/servicecomb-service-center/server/core"
+	"github.com/apache/servicecomb-service-center/server/core/proto"
+	scerr "github.com/apache/servicecomb-service-center/server/error"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
@@ -33,13 +38,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/util"
-	"github.com/apache/servicecomb-service-center/server/core"
-	"github.com/apache/servicecomb-service-center/server/core/proto"
-	scerr "github.com/apache/servicecomb-service-center/server/error"
 )
 
 type DecodeAppTerminationReq struct {
@@ -136,11 +134,9 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 				return workspace.TaskFinish
 			}
 
-			uris := ins.Endpoints
-			if len(uris) > 0 {
-				arr := strings.Split(uris[0], "/")
-				kongSerName := arr[len(arr)-1]
-				deleteKongDate(kongSerName)
+			apiGwSerName := meputil.GetApiGwSerName(ins)
+			if apiGwSerName != "" {
+				deleteApiGwDate(apiGwSerName)
 			}
 		}
 	}
@@ -154,13 +150,13 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-func deleteKongDate(kongServiceName string) {
-	// delete service route from kong
-	meputil.ApiGWInterface.DeleteApiGwRoute(kongServiceName)
-	// delete service plugin from kong
-	meputil.ApiGWInterface.DeleteJwtPlugin(kongServiceName)
-	// delete service from kong
-	meputil.ApiGWInterface.DeleteApiGwService(kongServiceName)
+func deleteApiGwDate(apiGwServiceName string) {
+	// delete service route from apiGw
+	meputil.ApiGWInterface.DeleteApiGwRoute(apiGwServiceName)
+	// delete service plugin from apiGw
+	meputil.ApiGWInterface.DeleteJwtPlugin(apiGwServiceName)
+	// delete service from apiGw
+	meputil.ApiGWInterface.DeleteApiGwService(apiGwServiceName)
 }
 
 func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, string) {

@@ -53,12 +53,12 @@ func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 	if err != nil {
 		return err
 	}
-	err = i.SetupKongMepServer(apiGwUrl)
+	err = i.SetupApiGwMepServer(apiGwUrl)
 	if err != nil {
 		return err
 	}
 
-	err = i.SetupKongMepAuth(apiGwUrl, trustedNetworks)
+	err = i.SetupApiGwMepAuth(apiGwUrl, trustedNetworks)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (i *apiGwInitializer) SetupHttpLogPlugin(apiGwUrl string) error {
 }
 
 func (i *apiGwInitializer) SetApiGwConsumer(apiGwUrl string) error {
-	// add mepauth consumer to kong
+	// add mepauth consumer to ApiGw
 	consumerUrl := apiGwUrl + "/consumers"
 	jsonConsumerByte := []byte(fmt.Sprintf(`{ "username": "%s" }`, util.MepAppJwtName))
 	err := i.SendPostRequest(consumerUrl, jsonConsumerByte)
@@ -105,14 +105,14 @@ func (i *apiGwInitializer) SetApiGwConsumer(apiGwUrl string) error {
 		return errors.New(msg)
 	}
 	// add jwt plugin to mepauth consumer
-	kongJwtUrl := consumerUrl + "/" + util.MepAppJwtName + "/jwt"
+	apiGwJwtUrl := consumerUrl + "/" + util.MepAppJwtName + "/jwt"
 	jwtPublicKey, err := util.GetPublicKey()
 	if err != nil {
 		return err
 	}
-	kongJwtByte := []byte(fmt.Sprintf(`{ "algorithm": "RS512", "key": "%s", "rsa_public_key": "%s" }`,
+	apiGwJwtByte := []byte(fmt.Sprintf(`{ "algorithm": "RS512", "key": "%s", "rsa_public_key": "%s" }`,
 		mepAuthKey, string(jwtPublicKey)))
-	err = i.SendPostRequest(kongJwtUrl, kongJwtByte)
+	err = i.SendPostRequest(apiGwJwtUrl, apiGwJwtByte)
 	if err != nil {
 		log.Error("Failed while adding consumer token.")
 		return err
@@ -120,8 +120,8 @@ func (i *apiGwInitializer) SetApiGwConsumer(apiGwUrl string) error {
 	return nil
 }
 
-func (i *apiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
-	// add mep server service and route to kong.
+func (i *apiGwInitializer) SetupApiGwMepServer(apiGwUrl string) error {
+	// add mep server service and route to apiGw.
 	// since mep is also in the same pos, same ip address will work
 	mepServerHost := util.GetAppConfig("mepserver_host")
 	if len(mepServerHost) == 0 {
@@ -138,7 +138,7 @@ func (i *apiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
 	err := i.AddServiceRoute(util.MepserverName, []string{util.MepServerServiceMgmt, util.MepServerAppSupport},
 		"https://"+mepServerHost+":"+mepServerPort, false)
 	if err != nil {
-		log.Error("Add mep server route to kong failed")
+		log.Error("Add mep server route to apiGw failed")
 		return err
 	}
 	// enable mep server jwt plugin
@@ -180,15 +180,15 @@ func (i *apiGwInitializer) SetupKongMepServer(apiGwUrl string) error {
 	return nil
 }
 
-func (i *apiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
-	// add mep auth service and route to kong
+func (i *apiGwInitializer) SetupApiGwMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
+	// add mep auth service and route to apiGw
 	httpsPort := util.GetAppConfig("HttpsPort")
 	if len(httpsPort) == 0 {
 		msg := "HTTPS port configuration is not set"
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	// Since kong is also deployed in same pod, it can reach by the ip address
+	// Since apiGw is also deployed in same pod, it can reach by the ip address
 	mepAuthHost := util.GetAppConfig("HTTPSAddr")
 	if len(mepAuthHost) == 0 {
 		msg := "MEP auth host configuration is not set"
@@ -198,7 +198,7 @@ func (i *apiGwInitializer) SetupKongMepAuth(apiGwURL string, trustedNetworks *[]
 	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
 	err := i.AddServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
 	if err != nil {
-		log.Error("Addition of mep server route to kong failed.")
+		log.Error("Addition of mep server route to apiGw failed.")
 		return err
 	}
 	// enable mep auth rate-limiting plugin
@@ -258,16 +258,16 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 
 	paths := strings.Join(servicePaths, `", "`)
 
-	kongServiceURL := apiGwURL + servicesPath
+	apiGwServiceURL := apiGwURL + servicesPath
 	serviceReq := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`,
 		targetURL, serviceName))
-	errMepService := i.SendPostRequest(kongServiceURL, serviceReq)
+	errMepService := i.SendPostRequest(apiGwServiceURL, serviceReq)
 	if errMepService != nil {
-		log.Error("Addition of " + serviceName + " service to kong failed.")
+		log.Error("Addition of " + serviceName + " service to apiGw failed.")
 		return errMepService
 	}
 
-	kongRouteURL := apiGwURL + servicesPath + "/" + serviceName + "/routes"
+	apiGwRouteURL := apiGwURL + servicesPath + "/" + serviceName + "/routes"
 
 	preserveHost := ""
 	if serviceName == util.MepauthName {
@@ -281,9 +281,9 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 	reqStr := `{ "paths": ["%s"], "name": "%s"` + preserveHost + stripPath + `}`
 	routeReq := []byte(fmt.Sprintf(reqStr, paths, serviceName))
 
-	err := i.SendPostRequest(kongRouteURL, routeReq)
+	err := i.SendPostRequest(apiGwRouteURL, routeReq)
 	if err != nil {
-		log.Error("Addition of " + serviceName + " route to kong failed.")
+		log.Error("Addition of " + serviceName + " route to apiGw failed.")
 		return err
 	}
 	return nil

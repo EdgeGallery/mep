@@ -160,8 +160,8 @@ func GetAPIGwURL() (string, error) {
 		log.Error("Validation of consumer URL failed")
 		return "", validateApiGwParamsErr
 	}
-	kongConsumerUrl := fmt.Sprintf("https://%s:%s", apiGwHost, apiGwPort)
-	return kongConsumerUrl, nil
+	apiGwConsumerUrl := fmt.Sprintf("https://%s:%s", apiGwHost, apiGwPort)
+	return apiGwConsumerUrl, nil
 }
 
 // EncryptByAES256GCM encrypts secret key using aes 256 gcm algo
