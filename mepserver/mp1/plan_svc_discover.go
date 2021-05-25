@@ -46,7 +46,7 @@ type DiscoverDecode struct {
 // OnRequest discover decode request
 func (t *DiscoverDecode) OnRequest(data string) workspace.TaskCode {
 	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetHttpResourceInfo(t.R))
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetHttpResourceInfo(t.R))
 	err := t.GetFindParam(t.R)
 	if err != nil {
 		log.Error("Validate service discovery message error.", nil)

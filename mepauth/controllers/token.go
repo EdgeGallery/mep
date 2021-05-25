@@ -145,7 +145,7 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 		privateKeyBits[i] = 0
 	}
 	if err != nil || token == "" {
-		log.Error("Failed to sign the token for App InstanceId [" + appInsId + "]")
+		log.Error("Failed to sign the token for application Instance ID [" + appInsId + "]")
 		return nil, err
 	}
 	return &token, nil
@@ -159,28 +159,28 @@ func getAppInsIdSk(ak string) (string, []byte, bool) {
 	}
 	readErr := adapter.Db.ReadData(authInfoRecord, "ak")
 	if readErr != nil && readErr.Error() != util.PgOkMsg {
-		log.Error("auth info record does not exist")
+		log.Error("Auth info record does not exist")
 		return "", nil, false
 	}
 	encodedSk := []byte(authInfoRecord.Sk)
 	cipherSkBytes := make([]byte, hex.DecodedLen(len(encodedSk)), http.StatusOK)
 	_, errDecodeSk := hex.Decode(cipherSkBytes, encodedSk)
 	if errDecodeSk != nil {
-		log.Error("decode secret key failed")
+		log.Error("Decode of secret key failed")
 		return "", nil, true
 	}
 	encodedNonce := []byte(authInfoRecord.Nonce)
 	nonceBytes := make([]byte, hex.DecodedLen(len(encodedNonce)), 30)
 	_, errDecodeNonce := hex.Decode(nonceBytes, encodedNonce)
 	if errDecodeNonce != nil {
-		log.Error("decode nonce failed")
+		log.Error("Decode nonce failed")
 		// clear nonce
 		util.ClearByteArray(nonceBytes)
 		return "", nil, true
 	}
 	workKey, genKeyErr := util.GetWorkKey()
 	if genKeyErr != nil {
-		log.Error("generate work key failed")
+		log.Error("Generate work key failed")
 		// clear nonce
 		util.ClearByteArray(nonceBytes)
 		return "", nil, true
@@ -191,7 +191,7 @@ func getAppInsIdSk(ak string) (string, []byte, bool) {
 	// clear nonce
 	util.ClearByteArray(nonceBytes)
 	if errDecryptSk != nil {
-		log.Error("decrypt secret key failed")
+		log.Error("Decrypt secret key failed")
 		return "", nil, true
 	}
 	return authInfoRecord.AppInsId, sk, true
@@ -206,7 +206,7 @@ func isAkSignatureValid(r *http.Request, sk []byte, signHeader string, sig strin
 	reqUrl := "https://" + r.Host + r.URL.String()
 	reqToBeSigned, errNewRequest := http.NewRequest("POST", reqUrl, strings.NewReader(""))
 	if errNewRequest != nil {
-		log.Error("prepare http request to generate signature is failed")
+		log.Error("Preparation of http request to generate signature failed")
 		return false, errors.New("create new request fail")
 	}
 
@@ -217,7 +217,7 @@ func isAkSignatureValid(r *http.Request, sk []byte, signHeader string, sig strin
 
 	signature, err := s.GetSignature(reqToBeSigned)
 	if err != nil {
-		log.Error("failed to generate signature")
+		log.Error("Failed to generate signature")
 		return false, err
 	}
 
@@ -228,7 +228,7 @@ func parseAuthHeader(header string) (ak string, signHeader string, sig string) {
 
 	defer func() {
 		if err1 := recover(); err1 != nil {
-			log.Error("panic handled:", err1)
+			log.Error("Panic handled:", err1)
 		}
 	}()
 	authRegexp := regexp.MustCompile(util.AuthHeaderRegex)
@@ -246,7 +246,7 @@ func isDateTimeFormatValid(req *http.Request) bool {
 	}
 	_, err := time.Parse(util.DateFormat, stringXSdkTime)
 	if err != nil {
-		log.Error("validate datetimeformat failed")
+		log.Error("Validation of date & time format failed")
 		return false
 	}
 	return true

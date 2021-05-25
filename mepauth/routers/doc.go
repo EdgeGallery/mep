@@ -23,12 +23,12 @@ import (
 )
 
 const (
-	confController  = "mepauth/controllers:confController"
-	tokenController = "mepauth/controllers:tokenController"
+	confController  = "mepauth/controllers:ConfController"
+	tokenController = "mepauth/controllers:TokenController"
 )
 
 const (
-	deleteOp = "deleteOp"
+	deleteOp = "delete"
 	get      = "get"
 	put      = "put"
 	post     = "post"
@@ -54,7 +54,7 @@ func init() {
 			Params:           nil})
 	beego.GlobalControllerRouter[confController] = append(beego.GlobalControllerRouter[confController],
 		beego.ControllerComments{
-			Method:           "deleteOp",
+			Method:           "Delete",
 			Router:           confControllerRoute,
 			AllowHTTPMethods: []string{deleteOp},
 			MethodParams:     param.Make(),

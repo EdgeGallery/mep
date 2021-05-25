@@ -117,23 +117,37 @@ func GetAppConfig() (AppConfigProperties, error) {
 }
 
 // SendPostRequest sends post request
-func SendPostRequest(url string, jsonStr []byte, tlsCfg *tls.Config) error {
+func SendPostRequest(url string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
 	return SendRequest(url, PostMethod, jsonStr, tlsCfg)
 }
 
+// SendPutRequest sends put request
+func SendPutRequest(url string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
+	return SendRequest(url, PutMethod, jsonStr, tlsCfg)
+}
+
 // SendDelRequest Sends delete request
-func SendDelRequest(url string, tlsCfg *tls.Config) error {
+func SendDelRequest(url string, tlsCfg *tls.Config) (string, error) {
 	return SendRequest(url, DeleteMethod, nil, tlsCfg)
 }
 
+// SendDelRequest Sends get request
+func SendGetRequest(url string, tlsCfg *tls.Config) (string, error) {
+	return SendRequest(url, GetMethod, nil, tlsCfg)
+}
+
 //SendRequest rest request
-func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) error {
+func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
 	log.Infof("New rest request url: %s, method: %s.", url, method)
 	log.Debugf("Rest body: %s.", string(jsonStr))
 	var req *httplib.BeegoHTTPRequest
 	switch method {
 	case PostMethod:
 		req = httplib.Post(url)
+		req.Header("Content-Type", "application/json; charset=utf-8")
+		req.Body(jsonStr)
+	case PutMethod:
+		req = httplib.Put(url)
 		req.Header("Content-Type", "application/json; charset=utf-8")
 		req.Body(jsonStr)
 	case DeleteMethod:
@@ -147,8 +161,8 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 	res, err := req.String()
 	if err != nil {
 		log.Errorf(nil, "Rest request failed on server(result: %s).", res)
-		return err
+		return res, err
 	}
 	log.Infof("Rest request completed(result: %s).", res)
-	return nil
+	return res, nil
 }

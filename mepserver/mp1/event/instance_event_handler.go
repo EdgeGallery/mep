@@ -177,7 +177,7 @@ func (h *InstanceEtsiEventHandler) sendMsg(notificationInfo models.ServiceAvaila
 		return
 	}
 
-	err = util2.SendPostRequest(callBackURI, notificationInfoJSON, h.tlsCfg)
+	_, err = util2.SendPostRequest(callBackURI, notificationInfoJSON, h.tlsCfg)
 	if err != nil {
 		log.Error("Failed to send notification.", nil)
 	}

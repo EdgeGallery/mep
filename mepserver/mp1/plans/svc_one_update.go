@@ -66,7 +66,7 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	req := proto.RegisterInstanceRequest{
 		Instance: &copyInstanceRef,
 	}
-	mp1Ser.GenerateRegisterInstance(&req)
+	mp1Ser.GenerateRegisterInstance(&req,true)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	if mp1Ser.LivenessInterval != 0 {
 		mp1Ser.Links.Self.Href = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,

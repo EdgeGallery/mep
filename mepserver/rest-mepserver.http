@@ -9,7 +9,96 @@ Host: 119.8.47.5:30443
  client.global.set("AUTH_TOKEN",response.body.access_token)
  %}
 
-### get service by instance id
+### app service register api
+POST https://{{MEP_HOST}}:{{MEP_PORT}}/mep/mec_service_mgmt/v1/applications/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/services
+Authorization: Bearer {{AUTH_TOKEN}}
+
+{
+  "serName": "locationService",
+  "serCategory": {
+    "href": "/what/is/href",
+	"id": "id9999",
+	"name": "location_service",
+	"version": "1.0.1"
+  },
+  "version": "1.0.0",
+  "state": "ACTIVE",
+  "transportId": "Rest1",
+	"transportInfo": {
+		"id": "dc96e9d5-6dd3-4d0e-8a24-462956cd1a7f",
+		"name": "dc96e9d5-6dd3-4d0e-8a24-462956cd1a7f",
+		"description": "it is transportInfo",
+		"type": "REST_HTTP",
+		"protocol": "HTTP",
+		"version": "1.1",
+		"endpoint": {
+			"uris": [
+				"http://19.6.90.9:8080/mep-adapter/v1/service/5d8783f9-b050-4ad1-b02d-dfeec05c58ba"
+			],
+			"addresses": [],
+			"alternative": null
+		},
+		"security": {
+			"oAuth2Info": {
+				"grantTypes": [
+					"OAUTH2_CLIENT_CREDENTIALS"
+				],
+				"tokenEndpoint": "http://apigw.mep.com/token"
+			}
+		}
+	},
+  "serializer": "JSON",
+  "scopeOfLocality": "MEC_SYSTEM",
+  "consumedLocalOnly": false,
+  "isLocal": true
+}
+
+### app service register api
+PUT https://{{MEP_HOST}}:{{MEP_PORT}}/mep/mec_service_mgmt/v1/applications/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/services
+Authorization: Bearer {{AUTH_TOKEN}}
+
+{
+  "serName": "locationService",
+  "serCategory": {
+    "href": "/what/is/href",
+	"id": "id9999",
+	"name": "location_service",
+	"version": "1.0.1"
+  },
+  "version": "1.0.0",
+  "state": "ACTIVE",
+  "transportId": "Rest1",
+	"transportInfo": {
+		"id": "dc96e9d5-6dd3-4d0e-8a24-462956cd1a7f",
+		"name": "dc96e9d5-6dd3-4d0e-8a24-462956cd1a7f",
+		"description": "it is transportInfo",
+		"type": "REST_HTTP",
+		"protocol": "HTTP",
+		"version": "1.1",
+		"endpoint": {
+			"uris": [
+				"http://19.6.90.9:8080/mep-adapter/v1/service/5d8783f9-b050-4ad1-b02d-dfeec05c58ba"
+			],
+			"addresses": [],
+			"alternative": null
+		},
+		"security": {
+			"oAuth2Info": {
+				"grantTypes": [
+					"OAUTH2_CLIENT_CREDENTIALS"
+				],
+				"tokenEndpoint": "http://apigw.mep.com/token"
+			}
+		}
+	},
+  "serializer": "JSON",
+  "scopeOfLocality": "MEC_SYSTEM",
+  "consumedLocalOnly": false,
+  "isLocal": true
+}
+
+### get service by instance id api
 GET https://{{MEP_HOST}}:{{MEP_PORT}}/mep/mec_service_mgmt/v1/applications/5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f/services
 X-AppinstanceID: 5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f
 Authorization: Bearer {{AUTH_TOKEN}}
+

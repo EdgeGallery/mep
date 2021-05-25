@@ -50,7 +50,7 @@ type DecodeRestReq struct {
 // OnRequest decodes the service request messages
 func (t *DecodeRestReq) OnRequest(data string) workspace.TaskCode {
 	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethod(t.R), meputil.GetHttpResourceInfo(t.R))
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetHttpResourceInfo(t.R))
 
 	err := t.GetParam(t.R)
 	if err != nil {
@@ -234,7 +234,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}
-	serviceInfo.GenerateRegisterInstance(req)
+	serviceInfo.GenerateRegisterInstance(req,false)
 	req.Instance.ServiceId = t.ServiceId
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	resp, err := core.InstanceAPI.Register(t.Ctx, req)
