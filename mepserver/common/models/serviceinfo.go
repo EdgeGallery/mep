@@ -78,7 +78,7 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool) {
+func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool, kongSerName string) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -111,7 +111,7 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isU
 		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints(isUpdateReq)
+		req.Instance.Endpoints, epType = s.toEndpoints(isUpdateReq, kongSerName)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -128,11 +128,14 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isU
 	}
 }
 
-func (s *ServiceInfo) toEndpoints(isUpdateReq bool) ([]string, string) {
+func (s *ServiceInfo) toEndpoints(isUpdateReq bool, kongSerName string) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		var serviceUris []string
 		serviceId := util.GenerateUuid()[0:20]
 		kongServiceName := s.SerName + serviceId
+		if isUpdateReq && kongSerName != "" {
+			kongServiceName = kongSerName
+		}
 		for _, uri := range s.TransportInfo.Endpoint.Uris {
 			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", kongServiceName))
 			registerToApiGw(uri, kongServiceName, isUpdateReq)
@@ -146,6 +149,9 @@ func (s *ServiceInfo) toEndpoints(isUpdateReq bool) ([]string, string) {
 			serviceId := util.GenerateUuid()[0:20]
 			kongServiceName := s.SerName + serviceId
 			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
+			if isUpdateReq && kongSerName != "" {
+				kongServiceName = kongSerName
+			}
 			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", kongServiceName))
 			registerToApiGw(gwUri, kongServiceName, isUpdateReq)
 		}

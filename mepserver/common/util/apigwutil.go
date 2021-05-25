@@ -129,7 +129,7 @@ func (a *ApiGwIf) DeleteJwtPlugin(serviceName string) {
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
 	_, err = SendPostRequest(kongPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
-		log.Error("Enable kong jwt plugin failed", err)
+		log.Error("Delete kong jwt plugin failed", err)
 	}
 }
 
