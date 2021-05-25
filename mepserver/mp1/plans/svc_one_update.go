@@ -20,13 +20,11 @@ package plans
 import (
 	"context"
 	"fmt"
-	"mepserver/common/models"
-	"strings"
-
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	svcutil "github.com/apache/servicecomb-service-center/server/service/util"
+	"mepserver/common/models"
 
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
@@ -62,20 +60,13 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	endpoints :=instance.Endpoints
-	var kongSerName string
-	if len(endpoints)>0 {
-		arr := strings.Split(endpoints[0], "/")
-		kongSerName = arr[len(arr)-1]
-		log.Info(kongSerName)
-	}
-
+	kongSerName := meputil.GetKongSerName(instance)
 
 	copyInstanceRef := *instance
 	req := proto.RegisterInstanceRequest{
 		Instance: &copyInstanceRef,
 	}
-	mp1Ser.ToRegisterInstance(&req,true, kongSerName)
+	mp1Ser.ToRegisterInstance(&req, true, kongSerName)
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	if mp1Ser.LivenessInterval != 0 {
 		mp1Ser.Links.Self.Href = fmt.Sprintf(meputil.LivenessPath, t.AppInstanceId,
@@ -101,3 +92,5 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	t.HttpRsp = mp1Ser
 	return workspace.TaskFinish
 }
+
+
