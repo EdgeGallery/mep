@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -39,6 +39,7 @@ import (
 	"mepserver/common/util"
 )
 
+// SubscribeIst step to handle subscribe requests
 type SubscribeIst struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -52,13 +53,13 @@ type SubscribeIst struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return SubscribeIst
+// WithType set type and return SubscribeIst
 func (t *SubscribeIst) WithType(subType string) *SubscribeIst {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles app subscribe request
 func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	mp1SubscribeInfo := t.getMp1SubscribeInfo()
 	if mp1SubscribeInfo == nil {
@@ -67,18 +68,18 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 
 	subscribeJSON, err := json.Marshal(mp1SubscribeInfo)
 	if err != nil {
-		log.Errorf(nil, "can not marshal subscribe info")
+		log.Errorf(nil, "Can not marshal subscribe info.")
 		t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscribe info error")
 		return workspace.TaskFinish
 	}
 
 	callbackUriNotValid := t.ValidateCallbackUri(subscribeJSON)
 	if callbackUriNotValid {
-		log.Error("url validation failed", nil)
+		log.Error("Call back URI validation failed.", nil)
 		t.SetFirstErrorCode(util.RequestParamErr, util.ErrorRequestBodyMessage)
 		return workspace.TaskFinish
 	}
-	log.Debugf("request received for app subscription with appId %s", t.AppInstanceId)
+	log.Debugf("Request received for app subscription with appId %s.", t.AppInstanceId)
 	t.SubscribeId = uuid.NewV4().String()
 	err = t.insertOrUpdateData(subscribeJSON)
 	if err != nil {
@@ -90,12 +91,12 @@ func (t *SubscribeIst) OnRequest(data string) workspace.TaskCode {
 	if err != nil {
 		return t.marshalError(t.AppInstanceId)
 	}
-	log.Debugf("response sent for app subscription with appId %s ", t.AppInstanceId)
+	log.Debugf("Response sent for app subscription with appId %s.", t.AppInstanceId)
 
 	return workspace.TaskFinish
 }
 
-// Validate Callback Uri
+// ValidateCallbackUri validate callback Uri
 func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 	var callBack string
 	if t.SubscribeType == util.SerAvailabilityNotificationSubscription {
@@ -120,7 +121,7 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 	if callBack != "" {
 		isValid := isValidCallbackURI(callBack)
 		if !isValid {
-			log.Error("Invalid CallbackReference uri", nil)
+			log.Error("Invalid CallbackReference uri.", nil)
 			t.SetFirstErrorCode(util.RequestParamErr, "Invalid CallbackReference uri")
 			return true
 		}
@@ -130,7 +131,7 @@ func (t *SubscribeIst) ValidateCallbackUri(subscribeJSON []byte) bool {
 func isValidCallbackURI(reference string) bool {
 	_, err := url.ParseRequestURI(reference)
 	if err != nil {
-		log.Info("not a valid url " + reference)
+		log.Infof("Callback URI(%s) parse failed.", reference)
 		return false
 	}
 	return true
@@ -143,12 +144,12 @@ func (t *SubscribeIst) marshalError(appInstanceId string) workspace.TaskCode {
 	}
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(errors.New("delete operation failed"), "deleting app subscription from etcd failed on error. "+
+		log.Errorf(errors.New("delete operation failed"), "Deleting app subscription from etcd failed on error. "+
 			"This might lead to data inconsistency.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etcd failed on marshal error")
 		return workspace.TaskFinish
 	}
-	log.Error("marshal subscription info failed", nil)
+	log.Error("Marshal subscription info failed.", nil)
 	t.SetFirstErrorCode(util.ParseInfoErr, "marshal subscription info failed")
 	return workspace.TaskFinish
 }
@@ -171,7 +172,7 @@ func (t *SubscribeIst) buildResponse(sub interface{}) {
 		t.W.Header().Set("Location", location)
 		t.HttpRsp = sub
 	default:
-		log.Warn("sub type not match")
+		log.Warn("Subscription type doesn't match.")
 	}
 
 }
@@ -222,6 +223,7 @@ func checkSerInstanceExist(r *http.Request, serInstanceId string) error {
 	return nil
 }
 
+// AppSubscribeLimit steps to check application subscription limit
 type AppSubscribeLimit struct {
 	workspace.TaskBase
 	Ctx           context.Context `json:"ctx,in"`
@@ -230,13 +232,13 @@ type AppSubscribeLimit struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// set type and return AppSubscribeLimit
+// WithType set subscription type and return AppSubscribeLimit
 func (t *AppSubscribeLimit) WithType(subType string) *AppSubscribeLimit {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles the limit check for subscription
 func (t *AppSubscribeLimit) OnRequest(data string) workspace.TaskCode {
 	subscribeKeyPath := util.GetSubscribeKeyPath(t.SubscribeType)
 	appInstanceId := t.AppInstanceId
@@ -246,12 +248,12 @@ func (t *AppSubscribeLimit) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etcd failed")
 		return workspace.TaskFinish
 	}
 	if resp.Count >= util.AppSubscriptionCount {
-		log.Errorf(nil, "subscription limit has been reached")
+		log.Errorf(nil, "Subscription limit has been reached.")
 		t.SetFirstErrorCode(util.SubscriptionErr, "subscription has over the limit")
 	}
 	return workspace.TaskFinish
@@ -281,7 +283,7 @@ func (t *SubscribeIst) insertOrUpdateData(subscribeJSON []byte) error {
 	}
 	_, resultErr := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if resultErr != nil {
-		log.Errorf(nil, "subscription to etcd failed")
+		log.Errorf(nil, "Subscription to etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "put subscription to etcd failed")
 		return resultErr
 	}

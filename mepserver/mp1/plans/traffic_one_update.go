@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -32,6 +33,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// TrafficRuleUpdate step to update the traffic rule
 type TrafficRuleUpdate struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -43,11 +45,13 @@ type TrafficRuleUpdate struct {
 	dataPlane     dataplane.DataPlane
 }
 
+// WithDataPlane inputs the data plane instance
 func (t *TrafficRuleUpdate) WithDataPlane(dataPlane dataplane.DataPlane) *TrafficRuleUpdate {
 	t.dataPlane = dataPlane
 	return t
 }
 
+// OnRequest handles the traffic rule update
 func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	trafficInPut, ok := t.RestBody.(*dataplane.TrafficRule)
@@ -57,14 +61,14 @@ func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 	}
 
 	if len(t.TrafficRuleId) == 0 {
-		log.Errorf(nil, "invalid app/traffic id on update request")
+		log.Errorf(nil, "Invalid app/traffic id on update request.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "invalid update request")
 		return workspace.TaskFinish
 	}
 
 	appDConfigDB, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "Update traffic rules failed")
+		log.Errorf(nil, "Update traffic rules failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "update rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -100,7 +104,7 @@ func (t *TrafficRuleUpdate) OnRequest(data string) workspace.TaskCode {
 
 	dataStoreEntryBytes, err := json.Marshal(trafficRule)
 	if err != nil {
-		log.Errorf(err, "Traffic rule parse failed")
+		log.Errorf(err, "Traffic rule parse failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "internal error on data parsing")
 		return workspace.TaskFinish
 	}
@@ -136,7 +140,7 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	appDConfig.AppTrafficRule[ruleIndex] = *trafficInPut
 	updateJSON, err := json.Marshal(appDConfig)
 	if err != nil {
-		log.Errorf(err, "Can not marshal the input traffic body")
+		log.Errorf(err, "Can not marshal the input traffic body.")
 		return meputil.ParseInfoErr, "can not marshal traffic info"
 	}
 
@@ -149,8 +153,8 @@ func (t *TrafficRuleUpdate) applyTrafficRule(trafficRule *dataplane.TrafficRule,
 	}
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.AppInstanceId,
-		ApplicationName: appDConfig.AppName,
+		Id:   t.AppInstanceId,
+		Name: appDConfig.AppName,
 	}
 	if trafficInPut.State != trafficRule.State {
 		if trafficInPut.State == "ACTIVE" {

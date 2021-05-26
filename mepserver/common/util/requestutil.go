@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package util methods
+// Package util implements mep server utility functions and constants
 package util
 
 import (
@@ -34,35 +34,35 @@ import (
 func TLSConfig(crtName string, skipInsecureVerify bool) (*tls.Config, error) {
 	appConfig, err := GetAppConfig()
 	if err != nil {
-		log.Error("get app config error", nil)
+		log.Error("Get app config error.", nil)
 		return nil, err
 	}
-	certNameConfig := string(appConfig[crtName])
+	certNameConfig := appConfig[crtName]
 	if len(certNameConfig) == 0 {
-		log.Error(crtName+" configuration is not set", nil)
+		log.Errorf(nil, "Certificate(%s) path doesn't available in the app config.", crtName)
 		return nil, errors.New("cert name configuration is not set")
 	}
 
 	crt, err := ioutil.ReadFile(certNameConfig)
 	if err != nil {
-		log.Error("unable to read certificate", nil)
+		log.Error("Unable to read certificate.", nil)
 		return nil, err
 	}
 
 	rootCAs := x509.NewCertPool()
 	ok := rootCAs.AppendCertsFromPEM(crt)
 	if !ok {
-		log.Error("failed to decode cert file", nil)
+		log.Error("Failed to decode the certificate file.", nil)
 		return nil, errors.New("failed to decode cert file")
 	}
 
-	serverName := string(appConfig["server_name"])
+	serverName := appConfig["server_name"]
 	serverNameIsValid, validateServerNameErr := validateServerName(serverName)
 	if validateServerNameErr != nil || !serverNameIsValid {
-		log.Error("validate server name error", nil)
+		log.Error("Validate server name error.", nil)
 		return nil, validateServerNameErr
 	}
-	sslCiphers := string(appConfig["ssl_ciphers"])
+	sslCiphers := appConfig["ssl_ciphers"]
 	if len(sslCiphers) == 0 {
 		return nil, errors.New("TLS cipher configuration is not recommended or invalid")
 	}
@@ -97,7 +97,7 @@ func getCipherSuites(sslCiphers string) []uint16 {
 		}
 		mapValue, ok := cipherSuiteMap[cipherName]
 		if !ok {
-			log.Error("not recommended cipher suite", nil)
+			log.Error("Not a recommended cipher suite.", nil)
 			return nil
 		}
 		cipherSuiteArr = append(cipherSuiteArr, mapValue)
@@ -138,7 +138,8 @@ func SendGetRequest(url string, tlsCfg *tls.Config) (string, error) {
 
 //SendRequest rest request
 func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
-	log.Infof("SendRequest url: %s, method: %s, jsonStr: %s", url, method, jsonStr)
+	log.Infof("New rest request url: %s, method: %s.", url, method)
+	log.Debugf("Rest body: %s.", string(jsonStr))
 	var req *httplib.BeegoHTTPRequest
 	switch method {
 	case PostMethod:
@@ -159,9 +160,9 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 
 	res, err := req.String()
 	if err != nil {
-		log.Error("send request failed", nil)
+		log.Errorf(nil, "Rest request failed on server(result: %s).", res)
 		return res, err
 	}
-	log.Infof("res=%s", res)
+	log.Infof("Rest request completed(result: %s).", res)
 	return res, nil
 }

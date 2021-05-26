@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements rest api route controller
+// Package mp1 implements rest api route controller
 package mp1
 
 import (
@@ -27,6 +27,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// MepSpace base mep bus structure
 type MepSpace struct {
 	workspace.SpaceBase
 	R *http.Request       `json:"r"`
@@ -49,7 +50,7 @@ type MepSpace struct {
 	HttPRsp     interface{}     `json:"httpRsp"`
 }
 
-// new a work space
+// NewWorkSpace new a work space
 func NewWorkSpace(w http.ResponseWriter, r *http.Request) *MepSpace {
 	var plan = MepSpace{
 		W: w,

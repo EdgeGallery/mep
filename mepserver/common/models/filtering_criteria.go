@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// Filtering criteria to match services for which events are requested to be reported. If absent, matches all services. All child attributes are combined with the logical  \"AND\" operation.
+// FilteringCriteria to match services for which events are requested to be reported. If absent, matches all services. All child attributes are combined with the logical  \"AND\" operation.
 type FilteringCriteria struct {
 	SerInstanceIds []string      `json:"serInstanceIds" validate:"omitempty,min=0,dive,max=32,validateId"`
 	SerNames       []string      `json:"serNames"  validate:"omitempty,min=0,dive,max=128,validateName"`
-	SerCategories  []CategoryRef `json:"serCategories" validate:"omitempty,dive"`
+	SerCategories  []CategoryRef `json:"serCategories" validate:"omitempty"`
 	States         []string      `json:"states" validate:"omitempty,min=0,dive,oneof=ACTIVE INACTIVE SUSPENDED"`
 	IsLocal        bool          `json:"isLocal,omitempty"`
 }

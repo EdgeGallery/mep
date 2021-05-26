@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -32,6 +32,7 @@ import (
 	"mepserver/common/util"
 )
 
+// GetOneSubscribe step to get one subscription info
 type GetOneSubscribe struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -44,19 +45,19 @@ type GetOneSubscribe struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return GetOneSubscribe
+// WithType set type and return GetOneSubscribe
 func (t *GetOneSubscribe) WithType(subType string) *GetOneSubscribe {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles subscription query
 func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId
 	subscribeId := t.SubscribeId
 	log.Debugf("Query request arrived to fetch the subscription information with  "+
-		"appId %s and subscriptionId %s", appInstanceId, subscribeId)
+		"appId %s and subscriptionId %s.", appInstanceId, subscribeId)
 
 	opts := []registry.PluginOp{
 		registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(t.SubscribeType) +
@@ -64,13 +65,13 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etch failed")
 		return workspace.TaskFinish
 	}
 
 	if len(resp.Kvs) == 0 {
-		log.Errorf(nil, "subscription doesn't exist")
+		log.Errorf(nil, "Subscription doesn't exist.")
 		t.SetFirstErrorCode(util.SubscriptionNotFound, "subscription not exist")
 		return workspace.TaskFinish
 	}
@@ -89,11 +90,11 @@ func (t *GetOneSubscribe) OnRequest(data string) workspace.TaskCode {
 		t.HttpRsp = sub
 	}
 	if jsonErr != nil {
-		log.Error("subscription parsed fail", nil)
+		log.Error("Subscription parsed failed.", nil)
 		t.SetFirstErrorCode(util.ParseInfoErr, "subscription parsed fail")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Response for app subscription information with appId %s and subscriptionId %s",
+	log.Debugf("Response for app subscription information with appId %s and subscriptionId %s.",
 		appInstanceId, subscribeId)
 	return workspace.TaskFinish
 }

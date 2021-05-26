@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package common implements mep server common functionalities
 package common
 
 import (
@@ -36,6 +36,7 @@ import (
 	"mepserver/common/util"
 )
 
+// SendHttpRsp holds the http response building parameters
 type SendHttpRsp struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,in"`
 	R          *http.Request   `json:"r,in"`
@@ -45,15 +46,15 @@ type SendHttpRsp struct {
 	StatusCode int
 }
 
-// OnRequest
+// OnRequest builds an http response based on the input provided
 func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 	// remove service-center server header
 	t.W.Header().Del(util.ServerHeader)
 
 	failureEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
-		"[%s] Result [Failure : %s]"
+		"[%s] Result [Failure : %s]."
 	successEventLogFormat := "Response Message for ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource " +
-		"[%s] Result [Success]"
+		"[%s] Result [Success]."
 
 	errInfo := t.GetSerErrInfo()
 	if errInfo == nil {
@@ -63,7 +64,7 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 			Detail: "server internal function failed",
 		}
 		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethodFromReq(t.R),
-			util.GetResourceInfo(t.R), body.Detail)
+			util.GetHttpResourceInfo(t.R), body.Detail)
 		util.HttpErrResponse(t.W, util.RemoteServerErr, body)
 		return workspace.TaskFinish
 	}
@@ -77,11 +78,11 @@ func (t *SendHttpRsp) OnRequest(data string) workspace.TaskCode {
 		statusCode, httpBody := t.cvtHttpErrInfo(errInfo)
 		util.HttpErrResponse(t.W, statusCode, httpBody)
 		log.Infof(failureEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethodFromReq(t.R),
-			util.GetResourceInfo(t.R), errInfo.Message)
+			util.GetHttpResourceInfo(t.R), errInfo.Message)
 		return workspace.TaskFinish
 	}
 	log.Infof(successEventLogFormat, util.GetClientIp(t.R), util.GetAppInstanceId(t.R), util.GetMethodFromReq(t.R),
-		util.GetResourceInfo(t.R))
+		util.GetHttpResourceInfo(t.R))
 	t.writeResponse(t.W, t.HttpErrInf, t.HttpRsp)
 	return workspace.TaskFinish
 }

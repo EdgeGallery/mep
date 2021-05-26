@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements new workspace for Mm5
+// Package mm5 implements new workspace for mm5
 package mm5
 
 import (

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements architecture data bus
+// Package bus implements architecture data bus
 package bus
 
 import (

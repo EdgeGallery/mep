@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements dns client
+// Package dns implements dns client
 package dns
 
 import (
@@ -33,10 +33,45 @@ import (
 	meputil "mepserver/common/util"
 )
 
-var remoteServerHost = meputil.DefaultDnsHost
-var remoteServerPort = meputil.DefaultDnsManagementPort
+const ServerURLFormat = "http://%s:%d/mep/dns_server_mgmt/v1/"
 
-func init() {
+// ResourceRecord represents the dns resource record
+type ResourceRecord struct {
+	Name  string   `json:"name"`
+	Type  string   `json:"type"`
+	Class string   `json:"class"`
+	TTL   uint32   `json:"ttl"`
+	RData []string `json:"rData"`
+}
+
+// ZoneEntry represents the dns zone
+type ZoneEntry struct {
+	Zone string            `json:"zone"`
+	RR   *[]ResourceRecord `json:"rr"`
+}
+
+// RestDNSAgent dns agent
+type RestDNSAgent struct {
+	DNSAgent
+	ServerEndPoint *url.URL `json:"serverEndPoint"`
+	client         http.Client
+}
+
+// NewRestDNSAgent creates and initialize a dns agent
+func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
+	log.Info("New DNS agent initialization.")
+	agent := RestDNSAgent{}
+	err := agent.initDnsAgent()
+	if err != nil {
+		return &agent
+	}
+	return &agent
+}
+
+func (d *RestDNSAgent) initDnsAgent() error {
+	var remoteServerHost = meputil.DefaultDnsHost
+	var remoteServerPort = meputil.DefaultDnsManagementPort
+
 	host := os.Getenv("DNS_SERVER_HOST")
 	if len(host) > meputil.MaxFQDNLength {
 		log.Warn("invalid dns remote server host configured, reset back to default")
@@ -46,52 +81,33 @@ func init() {
 
 	port := os.Getenv("DNS_SERVER_PORT")
 	if len(port) > meputil.MaxPortLength {
-		log.Warn("invalid dns remote server port configured, reset back to default")
+		log.Warn("Invalid dns remote server port configured, reset back to default.")
 	} else if num, err := strconv.Atoi(port); err == nil {
 		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Warn("invalid dns remote server port range, reset back to default")
+			log.Warn("Invalid dns remote server port range, reset back to default.")
 		} else {
 			remoteServerPort = num
 		}
 	}
-}
 
-type ResourceRecord struct {
-	Name  string   `json:"name"`
-	Type  string   `json:"type"`
-	Class string   `json:"class"`
-	TTL   uint32   `json:"ttl"`
-	RData []string `json:"rData"`
-}
-
-type ZoneEntry struct {
-	Zone string            `json:"zone"`
-	RR   *[]ResourceRecord `json:"rr"`
-}
-
-type RestDNSAgent struct {
-	DNSAgent
-	ServerEndPoint *url.URL `json:"serverEndPoint"`
-	client         http.Client
-}
-
-func NewRestDNSAgent(*config.MepServerConfig) *RestDNSAgent {
-	u, err := url.Parse(fmt.Sprintf("http://%s:%d/mep/dns_server_mgmt/v1/", remoteServerHost, remoteServerPort))
+	u, err := url.Parse(fmt.Sprintf(ServerURLFormat, remoteServerHost, remoteServerPort))
 	if err != nil {
-		log.Errorf(nil, "could not parse the DNS server endpoint.")
-		return &RestDNSAgent{}
+		log.Errorf(nil, "Could not parse the DNS server endpoint.")
+		return err
 	}
-	agent := RestDNSAgent{ServerEndPoint: u}
-	return &agent
+	d.ServerEndPoint = u
+	return nil
 }
 
-func (d *RestDNSAgent) GetEndpoint(paths ...string) string {
+// BuildDNSEndpoint generates the dns server endpoint
+func (d *RestDNSAgent) BuildDNSEndpoint(paths ...string) string {
 	return meputil.JoinURL(d.ServerEndPoint.String(), paths...)
 }
 
-func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) error {
+// SetResourceRecordTypeA update a dns entry in dns server
+func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrType, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
-		log.Errorf(nil, "invalid dns remote end point")
+		log.Errorf(nil, "Invalid DNS remote end point.")
 		return fmt.Errorf("invalid dns server endpoint")
 	}
 
@@ -101,37 +117,38 @@ func (d *RestDNSAgent) SetResourceRecordTypeA(host, rrtype, class string, pointT
 	}
 
 	zones := []ZoneEntry{{Zone: ".", RR: &[]ResourceRecord{
-		{Name: hostName, Type: rrtype, Class: class, TTL: ttl, RData: pointTo}}}}
+		{Name: hostName, Type: rrType, Class: class, TTL: ttl, RData: pointTo}}}}
 	zoneJSON, err := json.Marshal(zones)
 	if err != nil {
-		log.Errorf(nil, "marshal dns info failed")
+		log.Errorf(nil, "Marshal DNS info failed.")
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, d.GetEndpoint("rrecord"),
+	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord"),
 		bytes.NewBuffer(zoneJSON))
 	if err != nil {
-		log.Errorf(nil, "http request creation for dns update failed.")
+		log.Errorf(nil, "Http request creation for DNS update failed.")
 		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
-		log.Errorf(nil, "request to dns server failed in update")
+		log.Errorf(nil, "Request to DNS server failed in update.")
 		return err
 	}
 	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
-		log.Errorf(nil, "dns rule update failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
+		log.Errorf(nil, "DNS rule update failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
 		return fmt.Errorf("update request to dns server failed")
 	}
 	return nil
 
 }
 
+// DeleteResourceRecordTypeA deletes an entry from dns server
 func (d *RestDNSAgent) DeleteResourceRecordTypeA(host, rrtype string) error {
 	if d.ServerEndPoint == nil {
-		log.Errorf(nil, "invalid dns remote end point")
+		log.Errorf(nil, "Invalid DNS remote end point.")
 		return fmt.Errorf("invalid dns server endpoint")
 	}
 	hostName := host
@@ -139,21 +156,21 @@ func (d *RestDNSAgent) DeleteResourceRecordTypeA(host, rrtype string) error {
 		hostName = host + "."
 	}
 
-	httpReq, err := http.NewRequest(http.MethodDelete, d.GetEndpoint("rrecord", hostName, rrtype),
+	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype),
 		bytes.NewBuffer([]byte("{}")))
 	if err != nil {
-		log.Errorf(nil, "http request creation for dns delete failed")
+		log.Errorf(nil, "Http request creation for DNS delete failed.")
 		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
-		log.Errorf(nil, "request to dns server failed in delete")
+		log.Errorf(nil, "Request to DNS server failed in delete.")
 		return err
 	}
 	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
-		log.Errorf(nil, "dns rule delete failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
+		log.Errorf(nil, "DNS rule delete failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
 		return fmt.Errorf("delete request to dns server failed")
 	}
 	return nil

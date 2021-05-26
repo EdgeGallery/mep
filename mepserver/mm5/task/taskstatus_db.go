@@ -35,13 +35,13 @@ func newStatusDB(appInstanceId string, taskId string) *statusDB {
 	path := util.AppDLCMTaskStatusPath + appInstanceId + "/" + taskId
 	statusEntry, errCode := backend.GetRecord(path)
 	if errCode != 0 {
-		log.Errorf(nil, "retrieve task statusDb from temp-cache on data-store failed")
+		log.Errorf(nil, "Retrieve task status from temp-cache on data-store failed.")
 		return nil
 	}
 	status := &models.TaskStatus{}
 	err := json.Unmarshal(statusEntry, status)
 	if err != nil {
-		log.Errorf(nil, "failed to parse the task statusDb from data-store")
+		log.Errorf(nil, "Failed to parse the task status from data-store.")
 		return nil
 	}
 
@@ -95,7 +95,7 @@ func (s *statusDB) setStateAndProgress(ruleType util.AppDRuleType, ruleId string
 		}
 	}
 
-	log.Debugf("Updated state as %v for rule %v", state, ruleId)
+	log.Debugf("Updated state as %v for rule %v.", state, ruleId)
 
 	return err
 }
@@ -105,13 +105,13 @@ func (s *statusDB) pushDB() error {
 
 	statusBytes, err := json.Marshal(s.status)
 	if err != nil {
-		log.Errorf(nil, "can not marshal task statusDb info")
+		log.Errorf(nil, "Can not marshal task status info.")
 		return fmt.Errorf("error: failed to marshal task statusDb while writing to cache")
 	}
 
 	errCode := backend.PutRecord(path, statusBytes)
 	if errCode != 0 {
-		log.Errorf(nil, "update task statusDb on cache failed")
+		log.Errorf(nil, "Update task status on cache failed.")
 		return fmt.Errorf("error: update task statusDb on cache failed")
 	}
 	return nil
@@ -124,19 +124,20 @@ func (s *statusDB) setFailureReason(reason string) {
 	}
 }
 
-func CheckErrorInDB(appInstanceId string, taskId string) error {
+// CheckForStatusDBError checks for any error in status db
+func CheckForStatusDBError(appInstanceId string, taskId string) error {
 	path := util.AppDLCMTaskStatusPath + appInstanceId + "/" + taskId
 
 	statusBytes, errCode := backend.GetRecord(path)
 	if errCode != 0 {
-		log.Errorf(nil, "update task statusDb on cache failed")
+		log.Errorf(nil, "Update task status on cache failed.")
 		return fmt.Errorf("error: update task statusDb on cache failed")
 	}
 
 	var statusDB *models.TaskStatus
 	err := json.Unmarshal(statusBytes, &statusDB)
 	if err != nil {
-		log.Errorf(nil, "can not unmarshal task statusDb info")
+		log.Errorf(nil, "Can not unmarshal task status info.")
 		return fmt.Errorf("error: failed to unmarshal task statusDb while writing to cache")
 	}
 

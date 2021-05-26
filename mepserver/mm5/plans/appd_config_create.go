@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -35,6 +36,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/util"
 )
 
+// DecodeAppDRestReq handles appd config decode request
 type DecodeAppDRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -43,19 +45,21 @@ type DecodeAppDRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
+// OnRequest handles the appd request decoding
 func (t *DecodeAppDRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed for appd request.", nil)
 		return workspace.TaskFinish
 	}
 	err = t.parseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", nil)
+		log.Error("Parse rest body failed.", nil)
 	}
 	return workspace.TaskFinish
 }
 
+// WithBody handle input body initialization
 func (t *DecodeAppDRestReq) WithBody(body interface{}) *DecodeAppDRestReq {
 	t.RestBody = body
 	return t
@@ -65,9 +69,9 @@ func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
 	t.AppInstanceId = queryReq.Get(":appInstanceId")
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("Validate X-AppInstanceId failed", err)
+		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
-		return nil	
+		return nil
 	}
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil
@@ -79,7 +83,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read failed", nil)
+		log.Error("Input body read failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return err
 	}
@@ -87,21 +91,21 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 	/* We can have the total of 32 traffic Rule and 64 DNS Rules so need sufficient length*/
 	if len(msg) > (meputil.RequestBodyLength * 8) {
 		err = errors.New("request body too large")
-		log.Errorf(nil, "request body too large %d", len(msg))
+		log.Errorf(nil, "Request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
 
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check param failed", nil)
+		log.Error("Check param failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "check Param failed")
 		return err
 	}
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(nil, "json unmarshalling failed")
+		log.Errorf(nil, "Request body unmarshalling failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
 		return errors.New("json unmarshalling failed")
 	}
@@ -114,7 +118,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 		errorString := "Invalid value for input on: "
 		for _, verr := range verrs.(validator.ValidationErrors) {
 			log.Errorf(err, "Validation Error(namespace: %v, field: %v, struct namespace:%v, struct field: %v, "+
-				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v)", verr.Namespace(), verr.Field(),
+				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v).", verr.Namespace(), verr.Field(),
 				verr.StructNamespace(), verr.StructField(), verr.Tag(), verr.ActualTag(), verr.Kind(), verr.Type(),
 				verr.Value(), verr.Param())
 			errorString += fmt.Sprintf(" %v", verr.Field())
@@ -122,7 +126,7 @@ func (t *DecodeAppDRestReq) parseBody(r *http.Request) error {
 		t.SetFirstErrorCode(meputil.SerErrFailBase, errorString)
 		return verrs
 	}
-	log.Infof("AppD config received(Method: %s, Body:%s)", r.Method, string(msg))
+	log.Infof("AppD config received(method: %s, body:%s).", r.Method, string(msg))
 	return nil
 }
 
@@ -131,7 +135,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 	var temp map[string]interface{}
 	err := json.Unmarshal(msg, &temp)
 	if err != nil {
-		log.Errorf(err, "invalid json to map: %s", util.BytesToStringWithNoCopy(msg))
+		log.Errorf(err, "Invalid json to map: %s.", util.BytesToStringWithNoCopy(msg))
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
@@ -142,7 +146,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 
 	msg, err = json.Marshal(&temp)
 	if err != nil {
-		log.Errorf(err, "invalid map to json")
+		log.Errorf(err, "Invalid map to json.")
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
@@ -150,8 +154,10 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
+// CreateAppDConfig handle appd config create
 type CreateAppDConfig struct {
 	workspace.TaskBase
+	AppDCommon
 	Ctx           context.Context     `json:"ctx,in"`
 	W             http.ResponseWriter `json:"w,in"`
 	AppInstanceId string              `json:"appInstanceId,in"`
@@ -160,11 +166,13 @@ type CreateAppDConfig struct {
 	worker        *task.Worker
 }
 
+// WithWorker input worker instance
 func (t *CreateAppDConfig) WithWorker(w *task.Worker) *CreateAppDConfig {
 	t.worker = w
 	return t
 }
 
+// OnRequest handles appd configuration create
 func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	appDConfigInput, ok := t.RestBody.(*models.AppDConfig)
@@ -179,21 +187,21 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		    2. Also check if any other ongoing operation for this AppInstanceId
 			2. Add the this request to DB (job, task and task status)
 	*/
-	if IsAppInstanceIdAlreadyExists(t.AppInstanceId) {
-		log.Errorf(nil, "duplicate app instance")
+	if t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
+		log.Errorf(nil, "Duplicate app instance.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app instance")
 		return workspace.TaskFinish
 	}
 
-	if IsAppNameAlreadyExists(appDConfigInput.AppName) {
-		log.Errorf(nil, "duplicate app name")
+	if t.IsDuplicateAppNameExists(appDConfigInput.AppName) {
+		log.Errorf(nil, "Duplicate app name.")
 		t.SetFirstErrorCode(meputil.DuplicateOperation, "duplicate app name")
 		return workspace.TaskFinish
 	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
-	if IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf(nil, "app instance has other operation in progress")
+	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
+		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}
@@ -212,7 +220,7 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	// Add to Task InstanceID mapping DB
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := UpdateProcessingDatabase(t.AppInstanceId, taskId, appDConfigInput)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput)
 
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
@@ -221,6 +229,6 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	t.worker.StartNewTask(appDConfigInput.AppName, t.AppInstanceId, taskId)
 
-	t.HttpRsp = GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
+	t.HttpRsp = t.generateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

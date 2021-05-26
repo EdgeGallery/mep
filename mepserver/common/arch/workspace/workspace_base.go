@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements architecture work space
+// Package workspace implements architecture work space
 package workspace
 
 import (
@@ -77,32 +77,32 @@ type PlanBase struct {
 	WtPlan    sync.WaitGroup
 }
 
-// set error step
+// SetErrorStep set error step
 func (b *PlanBase) SetErrorStep(stepName string) {
 	b.ErrStep = stepName
 }
 
-// set space name
+// UsingSpace set space name
 func (b *PlanBase) UsingSpace(spaceName string) {
 	b.SpaceName = spaceName
 }
 
-// run task in background
+// RunBackground run task in background
 func (b *PlanBase) RunBackground(task ...interface{}) {
 	b.loadTask(GoBackground, task)
 }
 
-// run task in parallel
+// RunParallel run task in parallel
 func (b *PlanBase) RunParallel(task ...interface{}) {
 	b.loadTask(GoParallel, task)
 }
 
-// run task in serial
+// RunSerial run task in serial
 func (b *PlanBase) RunSerial(task ...interface{}) {
 	b.loadTask(GoSerial, task)
 }
 
-// run task in serial with name
+// RunSerialName run task in serial with name
 func (b *PlanBase) RunSerialName(task interface{}, name string) {
 	var subGrp SubGrp
 	subGrp.Policy = GoSerial
@@ -112,13 +112,13 @@ func (b *PlanBase) RunSerialName(task interface{}, name string) {
 	b.PlanGrp = append(b.PlanGrp, subGrp)
 }
 
-// run a task group
+// Try run a task group
 func (b *PlanBase) Try(task ...interface{}) {
 	b.SetErrorStep(FINALLY)
 	b.loadTask(GoSerial, task)
 }
 
-// finally handle exception
+// Finally handle exception
 func (b *PlanBase) Finally(task interface{}) {
 	var subGrp SubGrp
 	subGrp.Policy = GoSerial
@@ -154,7 +154,7 @@ type SpaceBase struct {
 	PlanBase
 }
 
-// init space base
+// Init space base
 func (s *SpaceBase) Init() {
 	s.SerError = &SerErrInfo{}
 }
@@ -163,7 +163,7 @@ func (s *SpaceBase) getPlan() *PlanBase {
 	return &s.PlanBase
 }
 
-// go to error handling step
+// GotoErrorStep handling step
 func GotoErrorStep(curPlan *PlanBase, grpNum int) bool {
 	if grpNum >= len(curPlan.PlanGrp) {
 		return false
@@ -183,7 +183,7 @@ func GotoErrorStep(curPlan *PlanBase, grpNum int) bool {
 	return false
 }
 
-// record error info
+// RecordErrInfo record error info
 func RecordErrInfo(curPlan *PlanBase, stepIdx int) {
 	if curPlan.CurGrpIdx >= len(curPlan.PlanGrp) {
 		return
@@ -205,7 +205,7 @@ func RecordErrInfo(curPlan *PlanBase, stepIdx int) {
 	curPlan.SerError.Message = msg
 }
 
-// go to error handling process
+// GotoErrorProc go to error handling process
 func GotoErrorProc(curPlan *PlanBase) {
 	curPlan.CurGrpIdx++
 	for grpNum := 0; grpNum < len(curPlan.PlanGrp); grpNum++ {

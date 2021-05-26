@@ -46,6 +46,7 @@ const (
 	ForbiddenOperation                            = 20
 )
 
+// Mep server api paths
 const (
 	RootPath              = "/mep"
 	Mm5RootPath           = "/mepcfg"
@@ -78,12 +79,14 @@ const (
 	Liveness           = "/liveness"
 )
 
+// Resource state
 const (
 	ActiveState    = "ACTIVE"
 	InactiveState  = "INACTIVE"
 	SuspendedState = "SUSPENDED"
 )
 
+// Address type
 const (
 	IPv4Type = "IP_V4"
 	IPv6Type = "IP_V6"
@@ -106,7 +109,11 @@ const (
 	DeleteMethod = "DELETE"
 )
 
-const Uris string = "uris"
+const (
+	Uris         = "uris"
+	Addresses    = "addresses"
+	Alternatives = "alternative"
+)
 
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
@@ -239,3 +246,9 @@ const (
 )
 
 const LivenessPath = "/mep/mec_service_mgmt/v1/applications/%s/services/%s/liveness"
+
+const (
+	EnvMepAuthPort = "MEPAUTH_SERVICE_PORT"
+	EnvMepAuthHost = "MEPAUTH_PORT_10443_TCP_ADDR"
+)
+const MepAuthBaseUrlFormat = "https://%s:%s/mepauth/v1/applications"

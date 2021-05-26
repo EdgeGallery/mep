@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package works for event handling
+// Package event works for event handling
 package event
 
 import (
@@ -35,10 +35,10 @@ func init() {
 	discovery.AddEventHandler(handler)
 }
 
-// service center plugin
+// New service center plugin
 func New() mgr.PluginInstance {
 	buildin.InitConfigs()
-	log.Infof("quota init, service: %d, instance: %d, schema: %d/service, tag: %d/service, rule: %d/service",
+	log.Infof("Quota init, service: %d, instance: %d, schema: %d/service, tag: %d/service, rule: %d/service.",
 		quota.DefaultServiceQuota, quota.DefaultInstanceQuota, quota.DefaultSchemaQuota, quota.DefaultTagQuota,
 		quota.DefaultRuleQuota)
 	return &buildin.BuildInQuota{}

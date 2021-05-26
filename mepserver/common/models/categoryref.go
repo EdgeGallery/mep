@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// This type represents the category reference
+// CategoryRef represents the category reference
 type CategoryRef struct {
 	Href    string `json:"href"  validate:"omitempty,uri"`
 	ID      string `json:"id" validate:"omitempty,max=64,validateId"`

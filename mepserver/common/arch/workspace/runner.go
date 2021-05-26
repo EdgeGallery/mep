@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements architecture work space
+// Package workspace implements architecture work space
 package workspace
 
 import (
@@ -35,7 +35,7 @@ const (
 const DataIn string = "in"
 const DataOut string = "out"
 
-// run plans in workspace
+// WkRun run plans in workspace
 func WkRun(plan SpaceIf) ErrCode {
 	curPlan := plan.getPlan()
 	for {

@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-// Package interface for data-plane
+// Package dataplane defines the data-plane interfaces
 package dataplane
 
 import (
 	"mepserver/common/config"
 )
 
+// TunnelInfo represents the traffic tunnel configurations
 type TunnelInfo struct {
 	TunnelType       string `json:"tunnelType" validate:"omitempty,oneof=GTP_U GRE"`
 	TunnelDstAddress string `json:"tunnelDstAddress" validate:"omitempty,ip"`
 	TunnelSrcAddress string `json:"tunnelSrcAddress" validate:"omitempty,ip"`
 }
+
+// DstInterface holds the traffic destination interface configurations
 type DstInterface struct {
 	InterfaceType string     `json:"interfaceType" validate:"omitempty,oneof=TUNNEL MAC IP"`
 	TunnelInfo    TunnelInfo `json:"tunnelInfo"`
@@ -34,6 +37,7 @@ type DstInterface struct {
 	DstIPAddress  string     `json:"dstIpAddress" validate:"omitempty,ip"`
 }
 
+// TrafficFilter Keeps traffic filtering configurations
 type TrafficFilter struct {
 	SrcAddress       []string `json:"srcAddress" validate:"omitempty,dive,max=64"`
 	DstAddress       []string `json:"dstAddress" validate:"omitempty,dive,max=64"`
@@ -50,7 +54,7 @@ type TrafficFilter struct {
 	TC               int      `json:"tC" validate:"omitempty"`
 }
 
-// Traffic Rule Data structure
+// TrafficRule Keeps traffic rule related configurations
 type TrafficRule struct {
 	TrafficRuleID string          `json:"trafficRuleId" validate:"required,min=1,max=63"`
 	FilterType    string          `json:"filterType" validate:"required,oneof=FLOW PACKET"`
@@ -61,7 +65,7 @@ type TrafficRule struct {
 	State         string          `json:"state" validate:"omitempty,oneof=ACTIVE INACTIVE"`
 }
 
-// DNS Rule Data structure
+// DNSRule Keeps all configurations related to dns
 type DNSRule struct {
 	DNSRuleID     string `json:"dnsRuleId" validate:"required,min=1,max=63"`
 	DomainName    string `json:"domainName" validate:"required,min=1,max=255"`
@@ -71,31 +75,34 @@ type DNSRule struct {
 	State         string `json:"state" validate:"omitempty,oneof=ACTIVE INACTIVE"`
 }
 
+// ApplicationInfo Application info struct
 type ApplicationInfo struct {
-	ApplicationId   string
-	ApplicationName string
+	Id   string
+	Name string
 }
 
+// DataPlane interface functions
 type DataPlane interface {
-	// Initialize the data-plane
+
+	// InitDataPlane Initialize the data-plane
 	InitDataPlane(config *config.MepServerConfig) (err error)
 
-	// Add new Traffic Rule
+	// AddTrafficRule Add new Traffic Rule
 	AddTrafficRule(appInfo ApplicationInfo, trafficRuleId, filterType, action string, priority int,
 		filter []TrafficFilter) (err error)
 
-	// Set rule
+	// SetTrafficRule Set rule
 	SetTrafficRule(appInfo ApplicationInfo, trafficRuleId, filterType, action string, priority int, filter []TrafficFilter) (err error)
 
-	// Delete Traffic rule
+	// DeleteTrafficRule Delete Traffic rule
 	DeleteTrafficRule(appInfo ApplicationInfo, trafficRuleId string) (err error)
 
-	// Add new DNS redirect rule
+	// AddDNSRule Add new DNS redirect rule
 	AddDNSRule(appInfo ApplicationInfo, dnsRuleId, domainName, ipAddressType, ipAddress string, ttl uint32) (err error)
 
-	// Set DNS redirect rule
+	// SetDNSRule Set DNS redirect rule
 	SetDNSRule(appInfo ApplicationInfo, dnsRuleId, domainName, ipAddressType, ipAddress string, ttl uint32) (err error)
 
-	// Delete DNS rule from data-plane
+	// DeleteDNSRule Delete DNS rule from data-plane
 	DeleteDNSRule(appInfo ApplicationInfo, dnsRuleId string) (err error)
 }

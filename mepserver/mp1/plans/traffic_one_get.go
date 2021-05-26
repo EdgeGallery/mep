@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -36,6 +37,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// DecodeTrafficRestReq step to decode the traffic request message
 type DecodeTrafficRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -45,40 +47,41 @@ type DecodeTrafficRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
+// OnRequest handles the decode request message
 func (t *DecodeTrafficRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("Parameters validation failed on traffic request.", err)
 		return workspace.TaskFinish
 	}
-	err = t.ParseBody(t.R)
+	err = t.parseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", err)
+		log.Error("Parse rest body failed on traffic rule request.", err)
 	}
 	return workspace.TaskFinish
 }
 
-func (t *DecodeTrafficRestReq) ParseBody(r *http.Request) error {
+func (t *DecodeTrafficRestReq) parseBody(r *http.Request) error {
 	if t.RestBody == nil {
 		return nil
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read body failed", err)
+		log.Error("Traffic rule request body failed.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return err
 	}
 
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check Param failed", err)
+		log.Error("Traffic rule param check failed.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return err
 	}
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(err, "invalid json: %s", util.BytesToStringWithNoCopy(newMsg))
+		log.Errorf(err, "Traffic request marshall failed: %s.", util.BytesToStringWithNoCopy(newMsg))
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return err
 	}
@@ -90,7 +93,7 @@ func (t *DecodeTrafficRestReq) ParseBody(r *http.Request) error {
 	if verrs != nil {
 		for _, verr := range verrs.(validator.ValidationErrors) {
 			log.Errorf(err, "Validation Error(namespace: %v, field: %v, struct namespace:%v, struct field: %v, "+
-				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v)", verr.Namespace(), verr.Field(),
+				"tag: %v, actual tag: %v, kind: %v, type: %v, value: %v, param: %v).", verr.Namespace(), verr.Field(),
 				verr.StructNamespace(), verr.StructField(), verr.Tag(), verr.ActualTag(), verr.Kind(), verr.Type(),
 				verr.Value(), verr.Param())
 		}
@@ -106,14 +109,14 @@ func (t *DecodeTrafficRestReq) checkParam(msg []byte) ([]byte, error) {
 	var temp map[string]interface{}
 	err := json.Unmarshal(msg, &temp)
 	if err != nil {
-		log.Errorf(err, "invalid json to map: %s", util.BytesToStringWithNoCopy(msg))
+		log.Errorf(err, "Invalid traffic request body: %s.", util.BytesToStringWithNoCopy(msg))
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
 
 	msg, err = json.Marshal(&temp)
 	if err != nil {
-		log.Errorf(err, "invalid map to json")
+		log.Errorf(err, "Traffic request encoding failed.")
 		t.SetFirstErrorCode(meputil.SerErrFailBase, err.Error())
 		return nil, err
 	}
@@ -121,6 +124,7 @@ func (t *DecodeTrafficRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
+// WithBody initialize the traffic body message
 func (t *DecodeTrafficRestReq) WithBody(body interface{}) *DecodeTrafficRestReq {
 	t.RestBody = body
 	return t
@@ -137,7 +141,7 @@ func (t *DecodeTrafficRestReq) getParam(r *http.Request) error {
 		return err
 	}
 	if err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("validate X-AppinstanceId failed", err)
+		log.Error("Validate X-AppinstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return err
 	}
@@ -156,6 +160,7 @@ func (t *DecodeTrafficRestReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// TrafficRuleGet steps to query the traffic rules
 type TrafficRuleGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -163,17 +168,18 @@ type TrafficRuleGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles the traffic rule query
 func (t *TrafficRuleGet) OnRequest(data string) workspace.TaskCode {
 
 	if len(t.AppInstanceId) == 0 || len(t.TrafficRuleId) == 0 {
-		log.Errorf(nil, "invalid app/traffic id on query request")
+		log.Errorf(nil, "Invalid app/traffic id on query request.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "invalid query request")
 		return workspace.TaskFinish
 	}
 
 	appDEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "Get traffic rules from etcd failed")
+		log.Errorf(nil, "Get traffic rules from etcd failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "traffic rule retrieval failed")
 		return workspace.TaskFinish
 	}

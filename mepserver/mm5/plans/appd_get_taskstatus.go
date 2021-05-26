@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -29,6 +30,7 @@ import (
 	"strconv"
 )
 
+// DecodeTaskRestReq step to decode status task request
 type DecodeTaskRestReq struct {
 	workspace.TaskBase
 	R      *http.Request   `json:"r,in"`
@@ -36,10 +38,11 @@ type DecodeTaskRestReq struct {
 	TaskId string          `json:"taskId,out"`
 }
 
+// OnRequest handle task status request decoding
 func (t *DecodeTaskRestReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed.", nil)
 		return workspace.TaskFinish
 	}
 	return workspace.TaskFinish
@@ -51,7 +54,7 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 	t.TaskId = queryReq.Get(":taskId")
 	err := meputil.ValidateUUID(t.TaskId)
 	if err != nil {
-		log.Error("taskId validation failed", err)
+		log.Error("TaskId validation failed.", err)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "taskId validation failed, invalid uuid")
 		return err
 	}
@@ -60,20 +63,23 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// TaskStatusGet step to get the task status
 type TaskStatusGet struct {
 	workspace.TaskBase
+	AppDCommon
 	R       *http.Request       `json:"r,in"`
 	W       http.ResponseWriter `json:"w,in"`
 	TaskId  string              `json:"taskId,in"`
 	HttpRsp interface{}         `json:"httpRsp,out"`
 }
 
+// OnRequest handle task status query
 func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
-	log.Debugf("query request arrived to fetch task status for taskId %s.", t.TaskId)
+	log.Debugf("Query request arrived to fetch task status for taskId %s.", t.TaskId)
 
 	taskEntry, err := backend.GetRecord(meputil.AppDLCMTasksPath + t.TaskId)
 	if err != 0 {
-		log.Errorf(nil, "get task rule from data-store failed")
+		log.Errorf(nil, "Get task rule from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "task rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -82,7 +88,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 
 	taskStatus, err := backend.GetRecord(meputil.AppDLCMTaskStatusPath + appInstInStore + "/" + t.TaskId)
 	if err != 0 {
-		log.Errorf(nil, "get task status rule from data-store failed")
+		log.Errorf(nil, "Get task status rule from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "task status rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -90,7 +96,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 	taskStatusInStore := &models.TaskStatus{}
 	jsonErr := json.Unmarshal(taskStatus, taskStatusInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the task status from data-store")
+		log.Errorf(nil, "Failed to parse the task status from data-store.")
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "parse task status from data-store failed")
 		return workspace.TaskFinish
 	}
@@ -107,7 +113,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 		progress = 0
 	}
 
-	t.HttpRsp = GenerateTaskResponse(t.TaskId, appInstInStore, state,
+	t.HttpRsp = t.generateTaskResponse(t.TaskId, appInstInStore, state,
 		strconv.Itoa(progress), taskStatusInStore.Details)
 
 	return workspace.TaskFinish

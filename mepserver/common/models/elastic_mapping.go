@@ -16,16 +16,30 @@
 
 package models
 
-func GetHttpLogMapping() string {
-	const mapping = `{
-    "mappings": {
-        "properties": {
-            "started_at": {
-                "type": "date"
-            }
-        }
-    }
-}`
+import (
+	"encoding/json"
+)
 
-	return mapping
+// ElasticLogMapping model holds the elastic request
+type ElasticLogMapping struct {
+	Mappings Mappings `json:"mappings"`
+}
+type StartedAt struct {
+	Type string `json:"type"`
+}
+type Properties struct {
+	StartedAt StartedAt `json:"started_at"`
+}
+type Mappings struct {
+	Properties Properties `json:"properties"`
+}
+
+// GetHttpLogMapping generates elastic search http log mapping request body
+func GetHttpLogMapping() string {
+	esMap := ElasticLogMapping{}
+	esMap.Mappings.Properties.StartedAt.Type = "date"
+	if esMapData, err := json.Marshal(&esMap); err == nil {
+		return string(esMapData)
+	}
+	return ""
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
 import (
@@ -35,7 +35,9 @@ import (
 const PropertiesMapSize = 5
 const FormatIntBase = 10
 const serviceLivenessInterval = "livenessInterval"
+const serviceGatewayURIFormatString = "https://mep-api-gw.mep:8443/%s"
 
+// ServiceInfo holds the service info response/request body
 type ServiceInfo struct {
 	SerInstanceId     string        `json:"serInstanceId,omitempty"`
 	SerName           string        `json:"serName" validate:"required,max=128,validateName"`
@@ -59,8 +61,8 @@ type Selves struct {
 	Href string `json:"liveness,omitempty"`
 }
 
-// transform ServiceInfo to CreateServiceRequest
-func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
+// GenerateServiceRequest transform ServiceInfo to CreateServiceRequest
+func (s *ServiceInfo) GenerateServiceRequest(req *proto.CreateServiceRequest) {
 	if req != nil {
 		if req.Service == nil {
 			req.Service = &proto.MicroService{}
@@ -77,8 +79,8 @@ func (s *ServiceInfo) ToServiceRequest(req *proto.CreateServiceRequest) {
 	}
 }
 
-// transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool, apiGwSerName string) {
+// GenerateRegisterInstance transform ServiceInfo to RegisterInstanceRequest
+func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool, apiGwSerName string) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
@@ -95,23 +97,23 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isU
 			req.Instance.Status = "DOWN"
 		}
 		properties := req.Instance.Properties
-		meputil.InfoToProperties(properties, "transportId", s.TransportID)
-		meputil.InfoToProperties(properties, "serializer", s.Serializer)
-		meputil.InfoToProperties(properties, "ScopeOfLocality", s.ScopeOfLocality)
-		meputil.InfoToProperties(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
-		meputil.InfoToProperties(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
-		meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(0))
+		meputil.UpdatePropertiesMap(properties, "transportId", s.TransportID)
+		meputil.UpdatePropertiesMap(properties, "serializer", s.Serializer)
+		meputil.UpdatePropertiesMap(properties, "ScopeOfLocality", s.ScopeOfLocality)
+		meputil.UpdatePropertiesMap(properties, "ConsumedLocalOnly", strconv.FormatBool(s.ConsumedLocalOnly))
+		meputil.UpdatePropertiesMap(properties, "IsLocal", strconv.FormatBool(s.IsLocal))
+		meputil.UpdatePropertiesMap(properties, serviceLivenessInterval, strconv.Itoa(0))
 		if s.LivenessInterval != 0 {
-			meputil.InfoToProperties(properties, serviceLivenessInterval, strconv.Itoa(meputil.DefaultHeartbeatInterval))
+			meputil.UpdatePropertiesMap(properties, serviceLivenessInterval, strconv.Itoa(meputil.DefaultHeartbeatInterval))
 			s.LivenessInterval = meputil.DefaultHeartbeatInterval
 		}
-		meputil.InfoToProperties(properties, "mecState", s.State)
+		meputil.UpdatePropertiesMap(properties, "mecState", s.State)
 		secNanoSec := strconv.FormatInt(time.Now().UTC().UnixNano(), FormatIntBase)
-		meputil.InfoToProperties(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
-		meputil.InfoToProperties(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
+		meputil.UpdatePropertiesMap(properties, "timestamp/seconds", secNanoSec[:len(secNanoSec)/2+1])
+		meputil.UpdatePropertiesMap(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.toEndpoints(isUpdateReq, apiGwSerName)
+		req.Instance.Endpoints, epType = s.registerEndpoints(isUpdateReq, apiGwSerName)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -128,17 +130,17 @@ func (s *ServiceInfo) ToRegisterInstance(req *proto.RegisterInstanceRequest, isU
 	}
 }
 
-func (s *ServiceInfo) toEndpoints(isUpdateReq bool, apiGwSerName string) ([]string, string) {
+func (s *ServiceInfo) registerEndpoints(isUpdateReq bool, apiGwSerName string) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
 		var serviceUris []string
-		serviceId := util.GenerateUuid()[0:20]
-		apiGwServiceName := s.SerName + serviceId
+		_, apiGwServiceName := s.generateServiceIdAndName()
 		if isUpdateReq && apiGwSerName != "" {
 			apiGwServiceName = apiGwSerName
 		}
+
 		for _, uri := range s.TransportInfo.Endpoint.Uris {
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", apiGwServiceName))
-			registerToApiGw(uri, apiGwServiceName, isUpdateReq)
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
+			s.registerToApiGw(uri, apiGwServiceName, isUpdateReq)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -146,14 +148,13 @@ func (s *ServiceInfo) toEndpoints(isUpdateReq bool, apiGwSerName string) ([]stri
 	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
 		var serviceUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			serviceId := util.GenerateUuid()[0:20]
-			apiGwServiceName := s.SerName + serviceId
+			_, apiGwServiceName := s.generateServiceIdAndName()
 			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
 			if isUpdateReq && apiGwSerName != "" {
 				apiGwServiceName = apiGwSerName
 			}
-			serviceUris = append(serviceUris, fmt.Sprintf("https://mep-api-gw.mep:8443/%s", apiGwServiceName))
-			registerToApiGw(gwUri, apiGwServiceName, isUpdateReq)
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
+			s.registerToApiGw(gwUri, apiGwServiceName, isUpdateReq)
 		}
 		return serviceUris, meputil.Uris
 	}
@@ -165,24 +166,28 @@ func (s *ServiceInfo) toEndpoints(isUpdateReq bool, apiGwSerName string) ([]stri
 		}
 		jsonText := string(jsonBytes)
 		endPoints = append(endPoints, jsonText)
-		return endPoints, "alternative"
+		return endPoints, meputil.Alternatives
 	}
 	return nil, ""
+}
+func (s *ServiceInfo) generateServiceIdAndName() (string, string) {
+	serviceId := util.GenerateUuid()[0:20]
+	return serviceId, s.SerName + serviceId
 }
 
 func (s *ServiceInfo) transportInfoToProperties(properties map[string]string) {
 	if properties == nil {
 		return
 	}
-	meputil.InfoToProperties(properties, "transportInfo/id", s.TransportInfo.ID)
-	meputil.InfoToProperties(properties, "transportInfo/name", s.TransportInfo.Name)
-	meputil.InfoToProperties(properties, "transportInfo/description", s.TransportInfo.Description)
-	meputil.InfoToProperties(properties, "transportInfo/type", string(s.TransportInfo.TransType))
-	meputil.InfoToProperties(properties, "transportInfo/protocol", s.TransportInfo.Protocol)
-	meputil.InfoToProperties(properties, "transportInfo/version", s.TransportInfo.Version)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/id", s.TransportInfo.ID)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/name", s.TransportInfo.Name)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/description", s.TransportInfo.Description)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/type", string(s.TransportInfo.TransType))
+	meputil.UpdatePropertiesMap(properties, "transportInfo/protocol", s.TransportInfo.Protocol)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/version", s.TransportInfo.Version)
 	grantTypes := strings.Join(s.TransportInfo.Security.OAuth2Info.GrantTypes, "，")
-	meputil.InfoToProperties(properties, "transportInfo/security/oAuth2Info/grantTypes", grantTypes)
-	meputil.InfoToProperties(properties, "transportInfo/security/oAuth2Info/tokenEndpoint",
+	meputil.UpdatePropertiesMap(properties, "transportInfo/security/oAuth2Info/grantTypes", grantTypes)
+	meputil.UpdatePropertiesMap(properties, "transportInfo/security/oAuth2Info/tokenEndpoint",
 		s.TransportInfo.Security.OAuth2Info.TokenEndpoint)
 
 }
@@ -191,13 +196,13 @@ func (s *ServiceInfo) serCategoryToProperties(properties map[string]string) {
 	if properties == nil {
 		return
 	}
-	meputil.InfoToProperties(properties, "serCategory/href", s.SerCategory.Href)
-	meputil.InfoToProperties(properties, "serCategory/id", s.SerCategory.ID)
-	meputil.InfoToProperties(properties, "serCategory/name", s.SerCategory.Name)
-	meputil.InfoToProperties(properties, "serCategory/version", s.SerCategory.Version)
+	meputil.UpdatePropertiesMap(properties, "serCategory/href", s.SerCategory.Href)
+	meputil.UpdatePropertiesMap(properties, "serCategory/id", s.SerCategory.ID)
+	meputil.UpdatePropertiesMap(properties, "serCategory/name", s.SerCategory.Name)
+	meputil.UpdatePropertiesMap(properties, "serCategory/version", s.SerCategory.Version)
 }
 
-// transform MicroServiceInstance to ServiceInfo
+// FromServiceInstance transform MicroServiceInstance to ServiceInfo
 func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	if inst == nil || inst.Properties == nil {
 		return
@@ -213,7 +218,6 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.SerName = inst.Properties["serName"]
 	s.TransportID = inst.Properties["transportId"]
 	s.Serializer = inst.Properties["serializer"]
-	epType := inst.Properties["endPointType"]
 	s.ScopeOfLocality = inst.Properties["ScopeOfLocality"]
 	var err error
 	s.LivenessInterval, err = strconv.Atoi(inst.Properties[serviceLivenessInterval])
@@ -231,17 +235,16 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	if err != nil {
 		log.Warn("parse bool IsLocal fail")
 	}
-	s.fromEndpoints(inst.Endpoints, epType)
+	s.fromEndpoints(inst.Endpoints, inst.Properties["endPointType"])
 	s.transportInfoFromProperties(inst.Properties)
 }
 
-func registerToApiGw(uri string, serviceName string, isUpdateReq bool) {
-	log.Infof("SerName: %s, uri: %v", serviceName, uri)
+func (s *ServiceInfo) registerToApiGw(uri string, serviceName string, isUpdateReq bool) {
+	log.Infof("API gateway registration for new service(name: %s, uri: %s).", serviceName, uri)
 	serInfo := meputil.SerInfo{
 		SerName: serviceName,
 		Uri:     uri,
 	}
-	log.Infof("serInfo: %s, routeInfo: %s", serviceName, serInfo)
 	meputil.ApiGWInterface.AddOrUpdateApiGwService(serInfo)
 	meputil.ApiGWInterface.AddOrUpdateApiGwRoute(serInfo)
 	if !isUpdateReq {
@@ -260,11 +263,11 @@ func (s *ServiceInfo) serCategoryFromProperties(properties map[string]string) {
 }
 
 func (s *ServiceInfo) fromEndpoints(uris []string, epType string) {
-	if epType == "uris" {
+	if epType == meputil.Uris {
 		s.TransportInfo.Endpoint.Uris = uris
 		return
 	}
-	if epType == "addresses" {
+	if epType == meputil.Addresses {
 
 		s.TransportInfo.Endpoint.Addresses = make([]EndPointInfoAddress, 0, 1)
 		for _, v := range uris {
@@ -279,7 +282,10 @@ func (s *ServiceInfo) fromEndpoints(uris []string, epType string) {
 			s.TransportInfo.Endpoint.Addresses = append(s.TransportInfo.Endpoint.Addresses, tmp)
 		}
 	}
-	if epType == "alternative" {
+	if epType == meputil.Alternatives {
+		if len(uris) == 0 {
+			return
+		}
 		jsonObj, err := meputil.JsonTextToObj(uris[0])
 		if err != nil {
 			s.TransportInfo.Endpoint.Alternative = jsonObj

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements rest api route controller
+// Package mp1 implements rest api route controller
 package mp1
 
 import (
@@ -34,6 +34,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DiscoverDecode step to handle the service discovery request
 type DiscoverDecode struct {
 	workspace.TaskBase
 	R           *http.Request   `json:"r,in"`
@@ -42,18 +43,18 @@ type DiscoverDecode struct {
 	CoreRequest interface{}     `json:"coreRequest,out"`
 }
 
-// discover decode request
+// OnRequest discover decode request
 func (t *DiscoverDecode) OnRequest(data string) workspace.TaskCode {
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetResourceInfo(t.R))
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetHttpResourceInfo(t.R))
 	err := t.GetFindParam(t.R)
 	if err != nil {
-		log.Error("validate authorization error ", nil)
+		log.Error("Validate service discovery message error.", nil)
 	}
 	return workspace.TaskFinish
 }
 
-// get find param by request
+// GetFindParam get find param by request
 func (t *DiscoverDecode) GetFindParam(r *http.Request) error {
 
 	query, ids := meputil.GetHTTPTags(r)
@@ -96,7 +97,7 @@ func (t *DiscoverService) checkInstanceId(req *proto.FindInstancesRequest) bool 
 	if instanceId != "default" {
 		value, ok := t.CoreRsp.(*proto.FindInstancesResponse)
 		if !ok {
-			log.Error("interface cast is failed", nil)
+			log.Error("Interface cast is failed in service discovery.", nil)
 			return false
 		}
 		instances := value.Instances
@@ -118,7 +119,7 @@ func (t *DiscoverService) filterAppInstanceId() {
 
 	value, ok := t.CoreRsp.(*proto.FindInstancesResponse)
 	if !ok {
-		log.Error("interface cast is failed", nil)
+		log.Error("Interface cast failed.", nil)
 		return
 	}
 
@@ -133,30 +134,30 @@ func (t *DiscoverService) filterAppInstanceId() {
 	value.Instances = result
 }
 
-// service discover request
+// OnRequest service discover request
 func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.FindInstancesRequest)
 	if !ok {
-		log.Error("cast input to find-instance-request failed", nil)
+		log.Error("Cast input to find-instance-request failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance request failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("query request arrived to fetch all the service information with appId %s.", req.AppId)
+	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
 	if req.ServiceName == "" {
 		var errFindByKey error
 		t.CoreRsp, errFindByKey = meputil.FindInstanceByKey(t.QueryParam)
 		if errFindByKey != nil {
-			log.Error("failed to find instance", nil)
+			log.Error("Failed to find instance.", nil)
 			t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find the instance")
 			return workspace.TaskFinish
 		}
 		if t.CoreRsp == nil {
-			log.Error("failed to find instance", nil)
+			log.Error("Failed to find any instance.", nil)
 			t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "could not find any instance")
 			return workspace.TaskFinish
 		}
 		if !t.checkInstanceId(req) {
-			log.Error("instance id not found", nil)
+			log.Error("Instance id not found.", nil)
 			t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "instance id not found")
 		}
 		t.filterAppInstanceId()
@@ -165,7 +166,7 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 
 	findInstance, err := core.InstanceAPI.Find(t.Ctx, req)
 	if err != nil {
-		log.Error("failed to find instance request", nil)
+		log.Error("Failed to find instance request.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find instance request")
 		return workspace.TaskFinish
 	}
@@ -182,11 +183,11 @@ type ToStrDiscover struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-// to string discover request
+// OnRequest to string discover request
 func (t *ToStrDiscover) OnRequest(data string) workspace.TaskCode {
 	value, ok := t.CoreRsp.(*proto.FindInstancesResponse)
 	if !ok {
-		log.Error("cast input to find-instance-response failed", nil)
+		log.Error("Cast input to find-instance-response failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance response failed")
 		return workspace.TaskFinish
 	}
@@ -202,12 +203,12 @@ type RspHook struct {
 	HookRsp interface{}     `json:"hookRsp,out"`
 }
 
-// resp hook request
+// OnRequest resp hook request
 func (t *RspHook) OnRequest(data string) workspace.TaskCode {
 	t.HookRsp = instanceHook(t.R, t.HttpRsp)
 	_, err := json.Marshal(t.HttpRsp)
 	if err != nil {
-		log.Error("http response marshal fail", nil)
+		log.Error("Http response marshal fail.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "http response marshal fail")
 	}
 	return workspace.TaskFinish
@@ -239,7 +240,7 @@ func instanceHook(r *http.Request, rspData interface{}) interface{} {
 	return rspBody
 }
 
-// mp1 cvt service discover
+// Mp1CvtSrvDiscover mp1 cvt service discover
 func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse) (*proto.Response, []*models.ServiceInfo) {
 	resp := findInsResp.Response
 	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {

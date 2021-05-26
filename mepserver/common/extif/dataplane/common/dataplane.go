@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package common implements data-plane common functionalities
 package common
 
 import (
@@ -23,6 +24,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// CreateDataPlane factory to create data-plane
 func CreateDataPlane(config *config.MepServerConfig) dataplane.DataPlane {
 	if config.DataPlane.Type == meputil.DataPlaneNone {
 		return &none.NoneDataPlane{}

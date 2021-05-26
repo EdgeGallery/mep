@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package util implements mep server utility functions and constants
 package util
 
 import (
@@ -112,7 +113,7 @@ func ValidateRestBody(body interface{}) error {
 	verrs = validate.Struct(body)
 	if verrs != nil {
 		for _, verr := range verrs.(validator.ValidationErrors) {
-			log.Debugf("Namespace=%s, Field=%s, StructField=%s, Tag=%s, Kind =%s, Type=%s, Value=%s",
+			log.Debugf("Namespace=%s, Field=%s, StructField=%s, Tag=%s, Kind =%s, Type=%s, Value=%s.",
 				verr.Namespace(), verr.Field(), verr.StructField(), verr.Tag(), verr.Kind(), verr.Type(),
 				verr.Value())
 		}

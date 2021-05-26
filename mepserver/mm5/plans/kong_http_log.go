@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -42,57 +43,58 @@ func init() {
 }
 
 func createEsClient() *es.Client {
-	log.Info("Create Es Client")
+	log.Info("Create es client.")
 	esClient, err := es.NewClient(es.SetSniff(false), es.SetURL(esHost))
 	if err != nil {
 		log.Error("Connect to es fail.", err)
 		return EsClient
 	}
-	log.Info("Connect to es success")
+	log.Info("Connect to es success.")
 
 	exists, err := esClient.IndexExists(meputil.KongHttpLogIndex).Do(context.Background())
 	if err != nil {
-		log.Error("Index exists", err)
+		log.Error("Failed to check the index existence on es client.", err)
 		return esClient
 	}
 
 	if exists {
-		log.Info("Index exists")
+		log.Info("Index already exists in the es client.")
 	} else {
 		mapping := models.GetHttpLogMapping()
 		createIndex, err := esClient.CreateIndex(meputil.KongHttpLogIndex).BodyString(mapping).Do(context.Background())
 		if err != nil {
-			log.Error("CreateIndex fail.", err)
+			log.Error("Create index failed.", err)
 			return esClient
 		}
 		if !createIndex.Acknowledged {
-			log.Error("CreateIndex fail, not Acknowledged.", err)
+			log.Error("Create index fail, not acknowledged.", err)
 			return esClient
 		}
 	}
 	return esClient
 }
 
+// CreateKongHttpLog step to create kong http log request
 type CreateKongHttpLog struct {
 	workspace.TaskBase
 	R       *http.Request `json:"r,in"`
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
-// When call the api through kong api gateway, the kong http-log plugin will send message to this interface.
+// OnRequest When call the api through kong api gateway, the kong http-log plugin will send message to this interface.
 // The interface will store the data to elasticsearch for search by other api.
 func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
-	log.Info("CreateKongHttpLog")
+	log.Info("Request to create api gw http log.")
 	msg, err := ioutil.ReadAll(t.R.Body)
 	if err != nil {
-		log.Error("read failed", nil)
-		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
+		log.Error("Read request body failed.", nil)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "Read request body error.")
 		return workspace.TaskFinish
 	}
 
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
 	if err != nil {
-		log.Error("Create doc fail.", err)
+		log.Error("Create doc fail in es.", err)
 	}
 	t.HttpRsp = resp
 
@@ -105,9 +107,9 @@ type GetKongHttpLog struct {
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
-// The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
+// OnRequest The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
 func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
-	log.Info("GetKongHttpLog")
+	log.Info("New request to get api gw http log.")
 	// 3rd app services list
 	// registered services name list
 	serviceNames := getAllServiceNames()
@@ -241,19 +243,19 @@ func getAllServiceNames() []string {
 	serviceNames := make([]string, 0)
 	findInstancesResponse, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {
-		log.Errorf(nil, "FindInstanceByKey failed.")
+		log.Errorf(nil, "Find service instance failed for retrieving the service names.")
 		return serviceNames
 	}
 
 	_, serviceInfos := mp1.Mp1CvtSrvDiscover(findInstancesResponse)
 	if serviceInfos == nil {
-		log.Errorf(nil, "Mp1CvtSrvDiscover failed.")
+		log.Errorf(nil, "Service discovery failed.")
 		return serviceNames
 	}
 
 	for _, service := range serviceInfos {
 		serviceNames = append(serviceNames, service.SerName)
 	}
-	log.Infof("serviceNames: %s", serviceNames)
+	log.Debugf("Service instances list: %s.", serviceNames)
 	return serviceNames
 }

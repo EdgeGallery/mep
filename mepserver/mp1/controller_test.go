@@ -2302,6 +2302,8 @@ func TestGetHeartbeat(t *testing.T) {
 		nil)
 	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndServiceIdQueryFormat, defaultAppInstanceId, sampleServiceId)
 	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+	seconds := time.Now().UTC().Unix()
+	nSeconds := time.Now().UTC().UnixNano() - (seconds * 1000000000)
 	var resp = &pb.GetOneInstanceResponse{
 		Response: &pb.Response{Code: pb.Response_SUCCESS},
 		Instance: &pb.MicroServiceInstance{
@@ -2310,8 +2312,8 @@ func TestGetHeartbeat(t *testing.T) {
 			Properties: map[string]string{
 				"mecState":         "ACTIVE",
 				"livenessInterval": "60",
-				secString:          strconv.FormatInt(time.Now().UTC().Unix(), formatIntBase),
-				nanosecString:      strconv.FormatInt(time.Now().UTC().UnixNano(), formatIntBase),
+				secString:          strconv.FormatInt(seconds, formatIntBase),
+				nanosecString:      strconv.FormatInt(nSeconds, formatIntBase),
 			},
 		},
 	}

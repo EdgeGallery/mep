@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -33,6 +33,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// GetOneDecode step to decode the service request query
 type GetOneDecode struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -41,23 +42,23 @@ type GetOneDecode struct {
 	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
-// OnRequest
+// OnRequest handles the service query decode
 func (t *GetOneDecode) OnRequest(data string) workspace.TaskCode {
 	var err error
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetResourceInfo(t.R))
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetHttpResourceInfo(t.R))
 	t.Ctx, t.CoreRequest, err = t.getFindParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("Parameters validation failed for service query request.", err)
 		return workspace.TaskFinish
 	}
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {
-		log.Error("get one instance request error", nil)
+		log.Error("Get one instance request error.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance request error")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Query request arrived to fetch the service information with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Query request arrived to fetch the service information with subscriptionId %s.", req.ProviderServiceId)
 	return workspace.TaskFinish
 
 }
@@ -67,17 +68,17 @@ func (t *GetOneDecode) getFindParam(r *http.Request) (context.Context, *proto.Ge
 
 	t.AppInstanceId = query.Get(":appInstanceId")
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("Validate X-AppInstanceId failed", err)
+		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return nil, nil, err
 	}
 
 	mp1SrvId := query.Get(":serviceId")
-	log.Info("service id " + mp1SrvId)
+	log.Infof("New service request(service id: %s).", mp1SrvId)
 	var err = meputil.ValidateServiceID(mp1SrvId)
 	if err != nil {
-		log.Error("Invalid service ID", err)
-		t.SetFirstErrorCode(meputil.SerErrFailBase, "Invalid service ID")
+		log.Error("Invalid service id.", err)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "invalid service id")
 		return nil, nil, err
 	}
 
@@ -94,6 +95,7 @@ func (t *GetOneDecode) getFindParam(r *http.Request) (context.Context, *proto.Ge
 	return ctx, req, nil
 }
 
+// GetOneInstance step to retrieve service entry
 type GetOneInstance struct {
 	workspace.TaskBase
 	HttpErrInf    *proto.Response `json:"httpErrInf,out"`
@@ -103,18 +105,18 @@ type GetOneInstance struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handle the service query
 func (t *GetOneInstance) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.GetOneInstanceRequest)
 	if !ok {
-		log.Error("get instance request error", nil)
+		log.Error("Get instance request error.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get instance request error")
 		return workspace.TaskFinish
 	}
 
 	resp, errGetOneInstance := core.InstanceAPI.GetOneInstance(t.Ctx, req)
 	if errGetOneInstance != nil {
-		log.Error("get one instance error", nil)
+		log.Error("Get one instance error.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "get one instance error")
 		return workspace.TaskFinish
 	}
@@ -126,18 +128,18 @@ func (t *GetOneInstance) OnRequest(data string) workspace.TaskCode {
 	if resp.Instance != nil {
 		mp1Rsp.FromServiceInstance(resp.Instance)
 	} else {
-		log.Error("service instance id not found", nil)
+		log.Error("Service instance id not found.", nil)
 		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "service instance id not found")
 		return workspace.TaskFinish
 	}
 	t.HttpRsp = mp1Rsp
 	_, err := json.Marshal(mp1Rsp)
 	if err != nil {
-		log.Error("marshal service info failed", nil)
+		log.Error("Service info marshalling failed.", nil)
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "marshal service info failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("Response for service information with subscriptionId %s", req.ProviderServiceId)
+	log.Debugf("Response for service information with subscriptionId %s.", req.ProviderServiceId)
 	return workspace.TaskFinish
 }
 

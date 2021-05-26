@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server mm5 interfaces
 package plans
 
 import (
@@ -25,18 +26,21 @@ import (
 	"mepserver/common/util"
 )
 
+// AppDConfigGet step to get the appd config
 type AppDConfigGet struct {
 	workspace.TaskBase
+	AppDCommon
 	AppInstanceId string      `json:"appInstanceId,in"`
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles appd config retrieval
 func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
-	log.Debugf("query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
+	log.Debugf("Query request arrived to fetch appD config for appId %s.", t.AppInstanceId)
 
 	appDConfigEntry, err := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if err != 0 {
-		log.Errorf(nil, "get appD config from data-store failed")
+		log.Errorf(nil, "Get appD config from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "appD config retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -44,7 +48,7 @@ func (t *AppDConfigGet) OnRequest(inputData string) workspace.TaskCode {
 	appDInStore := &models.AppDConfig{}
 	jsonErr := json.Unmarshal(appDConfigEntry, appDInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the appd config from data-store")
+		log.Errorf(nil, "Failed to parse the appd config from data-store.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse appd config  from data-store failed")
 		return workspace.TaskFinish
 	}

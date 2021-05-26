@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -30,6 +30,7 @@ import (
 	"mepserver/common/util"
 )
 
+// DelOneSubscribe steps to delete a subscription
 type DelOneSubscribe struct {
 	workspace.TaskBase
 	R             *http.Request       `json:"r,in"`
@@ -42,18 +43,18 @@ type DelOneSubscribe struct {
 	SubscribeType string              `json:"subscribeType,out"`
 }
 
-// set type and return DelOneSubscribe
+// WithType set type and return DelOneSubscribe
 func (t *DelOneSubscribe) WithType(subType string) *DelOneSubscribe {
 	t.SubscribeType = subType
 	return t
 }
 
-// OnRequest
+// OnRequest handles subscription update
 func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 
 	appInstanceId := t.AppInstanceId
 	subscribeId := t.SubscribeId
-	log.Debugf("Delete request arrived with app subscription with appId %s and subscriptionId %s",
+	log.Debugf("Delete request arrived with app subscription with appId %s and subscriptionId %s.",
 		appInstanceId, subscribeId)
 	appSubKeyPath := util.GetSubscribeKeyPath(t.SubscribeType) + appInstanceId + "/" + subscribeId
 	opts := []registry.PluginOp{
@@ -61,13 +62,13 @@ func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	resp, errGet := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if errGet != nil {
-		log.Errorf(nil, "get subscription from etcd failed")
+		log.Errorf(nil, "Get subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "get subscription from etch failed")
 		return workspace.TaskFinish
 	}
 
 	if len(resp.Kvs) == 0 {
-		log.Errorf(nil, "subscription does not exist")
+		log.Errorf(nil, "Subscription does not exist.")
 		t.SetFirstErrorCode(util.SubscriptionNotFound, "subscription not exist")
 		return workspace.TaskFinish
 	}
@@ -77,7 +78,7 @@ func (t *DelOneSubscribe) OnRequest(data string) workspace.TaskCode {
 	}
 	_, err := backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
 	if err != nil {
-		log.Errorf(nil, "delete subscription from etcd failed")
+		log.Errorf(nil, "Delete subscription from etcd failed.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "delete subscription from etch failed")
 		return workspace.TaskFinish
 	}

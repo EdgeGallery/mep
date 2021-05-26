@@ -31,6 +31,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
+// Worker keeps the asynchronous task parameters
 type Worker struct {
 	waitWorkerFinish sync.WaitGroup
 	dnsTypeConfig    string
@@ -38,9 +39,10 @@ type Worker struct {
 	dnsAgent         dns.DNSAgent
 }
 
-const dataInconsisError = "failed to revert the data, this will lead to data inconsistency"
-const ExistRuleError = "existig rule expected"
+const dataInconsistentError = "Failed to revert the data, this will lead to data inconsistency."
+const ExistRuleError = "existing rule expected"
 
+// InitializeWorker initialize worker instance
 func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DNSAgent, dnsType string) *Worker {
 	w.dataPlane = dataPlane
 	w.dnsAgent = dnsAgent
@@ -48,29 +50,31 @@ func (w *Worker) InitializeWorker(dataPlane dataplane.DataPlane, dnsAgent dns.DN
 	return w
 }
 
+// StartNewTask start new task for sync
 func (w *Worker) StartNewTask(appName, appInstanceId, taskId string) {
-	log.Infof("New task created(app-name: %s, app-id: %s, task-id: %s)", appName, appInstanceId, taskId)
+	log.Infof("New appd sync task created(app-name: %s, app-id: %s, task-id: %s).", appName, appInstanceId, taskId)
 	w.waitWorkerFinish.Add(1)
-	go w.ProcessDataPlane(appName, appInstanceId, taskId)
+	go w.ProcessAppDConfigSync(appName, appInstanceId, taskId)
 	return
 }
 
-func (w *Worker) ProcessDataPlane(appName, appInstanceId, taskId string) {
+// ProcessAppDConfigSync handles appd config sync
+func (w *Worker) ProcessAppDConfigSync(appName, appInstanceId, taskId string) {
 	defer w.waitWorkerFinish.Done()
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf(nil, "Sync process panic: %v \n %s", r, string(debug.Stack()))
+			log.Errorf(nil, "Sync process panic: %v.\n %s", r, string(debug.Stack()))
 		}
 	}()
 	w.ProcessDataPlaneSync(appName, appInstanceId, taskId)
 }
 
-// Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
+// ProcessDataPlaneSync Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
 func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 
 	syncJob := newTask(appName, appInstanceId, taskId, w.dataPlane, w.dnsAgent, w.dnsTypeConfig)
 	if syncJob == nil {
-		log.Error("failed to process the task, something went wrong", nil)
+		log.Error("Failed to process the task, something went wrong.", nil)
 		_ = backend.DeletePaths([]string{util.AppDLCMJobsPath + appInstanceId}, true)
 		taskStatus := newStatusDB(appInstanceId, taskId)
 		if taskStatus != nil {
@@ -82,31 +86,31 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 	}
 	err := syncJob.handleDNSRules(util.ApplyFunc)
 	if err != nil {
-		log.Error("failed to process the task in dns rules", err)
+		log.Error("Failed to process the task in dns rules.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to configure dns rules).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
 	err = syncJob.handleTrafficRules(util.ApplyFunc)
 	if err != nil {
-		log.Error("failed to process the task in traffic rules", err)
+		log.Error("Failed to process the task in traffic rules.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to configure traffic rules).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
 	err = syncJob.handleConfigDBWriteOnSuccess()
 	if err != nil {
-		log.Error("failed to save appd config", err)
+		log.Error("Failed to save appd config.", err)
 		syncJob.statusDb.setFailureReason("Internal error(failed to write appdconfig db).")
 		err = syncJob.handleErrorOnProcessing()
 		if err != nil {
-			log.Error(dataInconsisError, err)
+			log.Error(dataInconsistentError, err)
 		}
 		return
 	}
@@ -312,7 +316,7 @@ func (t *task) processTrfEntryApply(trfNewRule *dataplane.TrafficRule, trfOldRul
 		}
 		var err error
 		if operation != nil && operation.apply != nil {
-			log.Debugf("Traffic apply(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("Traffic apply(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.apply(ruleStatus.Id, trfNewRule, trfOldRule)
 		}
 		if err != nil {
@@ -345,7 +349,7 @@ func (t *task) processTrfEntryRevert(trfNewRule *dataplane.TrafficRule, trfOldRu
 		}
 		var err error
 		if operation != nil && operation.revert != nil {
-			log.Debugf("Traffic revert(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("Traffic revert(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.revert(ruleStatus.Id, trfNewRule, trfOldRule)
 		}
 		if err != nil {
@@ -403,7 +407,7 @@ func (t *task) processDNSEntryApply(dnsNewRule *dataplane.DNSRule, dnsOldRule *d
 		}
 		var err error
 		if operation != nil && operation.apply != nil {
-			log.Debugf("DNS apply(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("DNS apply(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.apply(ruleStatus.Id, dnsNewRule, dnsOldRule)
 		}
 		if err != nil {
@@ -435,7 +439,7 @@ func (t *task) processDNSEntryRevert(dnsNewRule *dataplane.DNSRule, dnsOldRule *
 		}
 		var err error
 		if operation != nil && operation.revert != nil {
-			log.Debugf("DNS revert(method:%v, state: %v)", ruleStatus.Method, state)
+			log.Debugf("DNS revert(method:%v, state: %v).", ruleStatus.Method, state)
 			err = operation.revert(ruleStatus.Id, dnsNewRule, dnsOldRule)
 		}
 		if err != nil {
@@ -471,8 +475,8 @@ func (t *task) addDNSOnMp2(ruleId string, newRule interface{}, existingRule inte
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.AddDNSRule(appInfo, ruleId, dnsRule.DomainName, dnsRule.IPAddressType,
 		dnsRule.IPAddress, dnsRule.TTL)
@@ -484,8 +488,8 @@ func (t *task) setDNSOnMp2(ruleId string, newRule interface{}, existingRule inte
 		return fmt.Errorf(ExistRuleError)
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 
 	dnsExistingRule := existingRule.(*dataplane.DNSRule)
@@ -524,8 +528,8 @@ func (t *task) deleteDNSOnMp2(ruleId string, newRule interface{}, existingRule i
 	}
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.DeleteDNSRule(appInfo, ruleId)
 }
@@ -594,8 +598,8 @@ func (t *task) addTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.AddTrafficRule(appInfo, ruleId, trRule.FilterType, trRule.Action,
 		trRule.Priority, trRule.TrafficFilter)
@@ -610,8 +614,8 @@ func (t *task) setTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 	trExistingRule := existingRule.(*dataplane.DNSRule)
 
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 
 	if trRule.State == "" {
@@ -646,8 +650,8 @@ func (t *task) deleteTrafficOnMp2(ruleId string, newRule interface{}, existingRu
 		return nil
 	}
 	appInfo := dataplane.ApplicationInfo{
-		ApplicationId:   t.appInstanceId,
-		ApplicationName: t.appName,
+		Id:   t.appInstanceId,
+		Name: t.appName,
 	}
 	return t.dataPlane.DeleteTrafficRule(appInfo, ruleId)
 }
@@ -657,14 +661,14 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 
 	for _, dnsRuleStatus := range t.statusDb.status.DNSRuleStatusLst {
 		if dnsRuleStatus.State != util.WaitConfigDBWrite {
-			log.Errorf(nil, "invalid state(%v) for dns rule(%s)", dnsRuleStatus.State, dnsRuleStatus.Id)
+			log.Errorf(nil, "Invalid state(%v) for dns rule(%s).", dnsRuleStatus.State, dnsRuleStatus.Id)
 			t.statusDb.setFailureReason("Internal error(invalid dns rule state).")
 			return fmt.Errorf("invalid state for dns rule(%s)", dnsRuleStatus.Id)
 		}
 	}
 	for _, trfRuleStatus := range t.statusDb.status.TrafficRuleStatusLst {
 		if trfRuleStatus.State != util.WaitConfigDBWrite {
-			log.Errorf(nil, "invalid state(%v) for traffic rule(%s)", trfRuleStatus.State, trfRuleStatus.Id)
+			log.Errorf(nil, "Invalid state(%v) for traffic rule(%s).", trfRuleStatus.State, trfRuleStatus.Id)
 			t.statusDb.setFailureReason("Internal error(invalid traffic rule state).")
 			return fmt.Errorf("invalid state for traffic rule(%s)", trfRuleStatus.Id)
 		}
@@ -677,7 +681,7 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 
 	appDConfigBytes, err := json.Marshal(t.appDJobDb.appDConfig)
 	if err != nil {
-		log.Errorf(nil, "can not marshal appDConfig info")
+		log.Errorf(nil, "Can not marshal appd config info.")
 		return err
 	}
 
@@ -689,7 +693,7 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 	}
 
 	if errCode != 0 {
-		log.Error("AppD config DB write error", err)
+		log.Error("AppD config DB write error.", err)
 		t.statusDb.setFailureReason("Internal error(failed to write appdconfig db).")
 		return err
 	}
@@ -701,20 +705,20 @@ func (t *task) handleConfigDBWriteOnSuccess() error {
 func (t *task) handleErrorOnProcessing() error {
 	err := t.handleDNSRules(util.RevertFunc)
 	if err != nil {
-		log.Error("failed to revert dns rules", err)
+		log.Error("Failed to revert dns rules.", err)
 		return err
 	}
 
 	err = t.handleTrafficRules(util.RevertFunc)
 	if err != nil {
-		log.Error("failed to revert dns rules", err)
+		log.Error("Failed to revert dns rules.", err)
 		return err
 	}
 
 	t.statusDb.status.Progress = util.TaskProgressFailure
 	err = t.statusDb.pushDB()
 	if err != nil {
-		log.Errorf(nil, "couldn't update progress failure status, this will lead to data inconsistency")
+		log.Errorf(nil, "Couldn't update progress failure status, this will lead to data inconsistency.")
 		return err
 	}
 

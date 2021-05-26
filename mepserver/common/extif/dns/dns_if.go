@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-// Package path implements dns client
+// Package dns defines dns client interfaces
 package dns
 
-// DNS rule record
+// RuleEntry DNS rule record
 type RuleEntry struct {
 	DomainName    string `json:"domainName"`
 	IpAddressType string `json:"ipAddressType"`
@@ -26,7 +26,7 @@ type RuleEntry struct {
 	State         string `json:"state"`
 }
 
-// Add a new DNs rule record
+// NewRuleRecord Add a new DNS rule record
 func NewRuleRecord(domainName string, ipAddressType string, ipAddress string, TTL int, state string) *RuleEntry {
 	return &RuleEntry{
 		DomainName:    domainName,
@@ -36,10 +36,10 @@ func NewRuleRecord(domainName string, ipAddressType string, ipAddress string, TT
 		State:         state}
 }
 
-// DNS agent interface
+// DNSAgent interface
 type DNSAgent interface {
-	// Set/Add DNS entry
-	SetResourceRecordTypeA(host, rrtype, class string, pointTo []string, ttl uint32) error
-	// Delete DNS entry
-	DeleteResourceRecordTypeA(host, rrtype string) error
+	// SetResourceRecordTypeA Set/Add DNS entry
+	SetResourceRecordTypeA(host, rrType, class string, pointTo []string, ttl uint32) error
+	// DeleteResourceRecordTypeA Delete DNS entry
+	DeleteResourceRecordTypeA(host, rrType string) error
 }

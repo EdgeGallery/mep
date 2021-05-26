@@ -31,7 +31,12 @@ import (
 
 const DBFailure = "put app config rule to data-store failed"
 
-func IsAppInstanceIdAlreadyExists(appInstanceId string) (isExists bool) {
+// AppDCommon appd common functions
+type AppDCommon struct {
+}
+
+// IsAppInstanceAlreadyCreated checks the app instance already configured or not
+func (a *AppDCommon) IsAppInstanceAlreadyCreated(appInstanceId string) (isExists bool) {
 
 	/* This Database maintains local cache of all the Dataplane configurations. If record exist here means that
 	   operation is completed and this APP has an existing rule configured*/
@@ -42,7 +47,8 @@ func IsAppInstanceIdAlreadyExists(appInstanceId string) (isExists bool) {
 	return true
 }
 
-func IsAppNameAlreadyExists(appName string) (isExists bool) {
+// IsDuplicateAppNameExists checks if duplicate app name exists
+func (a *AppDCommon) IsDuplicateAppNameExists(appName string) (isExists bool) {
 
 	records, errCode := backend.GetRecords(meputil.AppDConfigKeyPath)
 	if errCode != 0 || records == nil || len(records) == 0 {
@@ -61,7 +67,8 @@ func IsAppNameAlreadyExists(appName string) (isExists bool) {
 	return false
 }
 
-func IsAnyOngoingOperationExist(appInstanceId string) (isExists bool) {
+// IsAnyOngoingOperationExist checks any on-going operation exists for the application instance
+func (a *AppDCommon) IsAnyOngoingOperationExist(appInstanceId string) (isExists bool) {
 
 	/* Jobs DB temporarily holds the ongoing operation of this APPInstanceId. If entry exist in this DB mean the operation
 	   is going on and not complete. Once operation is completed this entry would be deleted from DB for this appInstanceId. */
@@ -76,29 +83,32 @@ func IsAnyOngoingOperationExist(appInstanceId string) (isExists bool) {
 	return false
 }
 
-func GenerateTaskResponse(taskId string, appInstanceId string, result string, percent string, details string) (progress models.TaskProgress) {
+func (a *AppDCommon) generateTaskResponse(taskId string, appInstanceId string, result string, percent string,
+	details string) (progress models.TaskProgress) {
 	return models.TaskProgress{
 		TaskId: taskId, AppInstanceId: appInstanceId, ConfigResult: result, ConfigPhase: percent, Details: details,
 	}
 }
 
-func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
+// StageNewTask stages new tasks for operation
+func (a *AppDCommon) StageNewTask(appInstanceId string, taskId string,
+	appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
 	appDInStore := &models.AppDConfig{}
 	// Table already exists for modify and delete request, hence reading db for non post scenarios
 	if appDConfigInput.Operation != http.MethodPost {
 		appDConfigEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + appInstanceId)
 		if errCode != 0 {
-			log.Errorf(nil, "app config (appId: %s) retrieval from data-store failed.", appInstanceId)
+			log.Errorf(nil, "App config (appId: %s) retrieval from data-store failed.", appInstanceId)
 			return workspace.ErrCode(errCode), "get app config rule from data-store failed"
 		}
 		err := json.Unmarshal(appDConfigEntry, appDInStore)
 		if err != nil {
-			log.Errorf(err, "failed to parse the appd config from data-store")
+			log.Errorf(err, "Failed to parse the appd config from data-store.")
 			return meputil.OperateDataWithEtcdErr, "parsing app config rule from data-store failed"
 		}
 	}
 	if appDConfigInput.Operation == http.MethodPut && appDConfigInput.AppName != appDInStore.AppName {
-		log.Errorf(nil, "app-name miss-match")
+		log.Errorf(nil, "App-name miss-match.")
 		return meputil.OperateDataWithEtcdErr, "app-name doesn't match"
 	}
 
@@ -115,50 +125,49 @@ func UpdateProcessingDatabase(appInstanceId string, taskId string, appDConfigInp
 		appDConfigBytes, err = json.Marshal(appDConfigInput)
 	}
 	if err != nil {
-		log.Errorf(nil, "can not marshal appDConfig info")
+		log.Errorf(nil, "Can not marshal appDConfig info.")
 		return meputil.ParseInfoErr, "can not marshal appDConfig info"
 	}
 
 	// Add to Jobs DB
 	errCode := backend.PutRecord(meputil.AppDLCMJobsPath+appInstanceId, appDConfigBytes)
 	if errCode != 0 {
-		log.Errorf(nil, "app config (appId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (appId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
 	errCode = backend.PutRecord(meputil.AppDLCMTasksPath+taskId, []byte(appInstanceId))
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId}, true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
-	taskStatus := buildTaskStatus(appDConfigInput, appDInStore)
+	taskStatus := a.buildTaskStatus(appDConfigInput, appDInStore)
 	if taskStatus.TrafficRuleStatusLst == nil && taskStatus.DNSRuleStatusLst == nil {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "no modification found")
+		log.Errorf(nil, "No modification found.")
 		return meputil.SubscriptionNotFound, "no modification data found in the input"
 	}
 
-	return putInDB(taskStatus, appInstanceId, taskId, appDConfigInput)
-}
-
-func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
-	appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
 	// Check any duplicate dns entry exists
-	if isDuplicateDomainNameForCreateExists(appInstanceId, appDConfigInput, taskStatus) {
+	if a.isDNSDomainNameExists(appInstanceId, appDConfigInput, taskStatus) {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "duplicate dns entry found in the request")
+		log.Errorf(nil, "Duplicate dns entry found in the request.")
 		return meputil.DuplicateOperation, "duplicate dns entry"
 	}
+	return a.writeStatusToStore(taskStatus, appInstanceId, taskId)
+}
+
+func (a *AppDCommon) writeStatusToStore(taskStatus *models.TaskStatus, appInstanceId string, taskId string) (code workspace.ErrCode, msg string) {
 
 	statusBytes, err := json.Marshal(taskStatus)
 	if err != nil {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "can not marshal status info")
+		log.Errorf(nil, "Can not marshal status info.")
 		return meputil.ParseInfoErr, "can not marshal status info"
 	}
 
@@ -166,32 +175,33 @@ func putInDB(taskStatus *models.TaskStatus, appInstanceId string, taskId string,
 	if errCode != 0 {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
-		log.Errorf(nil, "app config (taskId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
 	return 0, ""
 }
 
-func buildTaskStatus(appDConfigInput *models.AppDConfig, appDInStore *models.AppDConfig) *models.TaskStatus {
+func (a *AppDCommon) buildTaskStatus(appDConfigInput *models.AppDConfig,
+	appDInStore *models.AppDConfig) *models.TaskStatus {
 	var taskStatus = models.TaskStatus{}
 	taskStatus.Progress = 0
 
 	if appDConfigInput.Operation == http.MethodPost {
 		// create works with only the input data
-		handleRuleCreateOrDelete(meputil.OperCreate, appDConfigInput, &taskStatus)
+		a.handleRuleCreateOrDelete(meputil.OperCreate, appDConfigInput, &taskStatus)
 	} else if appDConfigInput.Operation == http.MethodDelete {
 		// delete works with the in-store data only
-		handleRuleCreateOrDelete(meputil.OperDelete, appDInStore, &taskStatus)
+		a.handleRuleCreateOrDelete(meputil.OperDelete, appDInStore, &taskStatus)
 	} else if appDConfigInput.Operation == http.MethodPut {
 		// modify works on both new and old data
-		handleRuleUpdate(appDConfigInput, appDInStore, &taskStatus)
+		a.handleRuleUpdate(appDConfigInput, appDInStore, &taskStatus)
 	}
 
 	return &taskStatus
 }
 
-func fillDnsDomainNameMap(appInstanceId string, path string, dnsRuleMap *map[string]bool) {
+func (a *AppDCommon) fillDnsDomainNameMap(appInstanceId string, path string, dnsRuleMap *map[string]bool) {
 	records, errCode := backend.GetRecords(path)
 	if errCode == 0 && len(records) != 0 {
 		for appId, record := range records {
@@ -210,13 +220,13 @@ func fillDnsDomainNameMap(appInstanceId string, path string, dnsRuleMap *map[str
 	}
 }
 
-func isDuplicateDomainNameForCreateExists(appInstanceId string, appDConfigInput *models.AppDConfig,
+func (a *AppDCommon) isDNSDomainNameExists(appInstanceId string, appDConfigInput *models.AppDConfig,
 	taskStatus *models.TaskStatus) bool {
 
 	dnsInStoreDomainNameMap := make(map[string]bool)
 
-	fillDnsDomainNameMap(appInstanceId, meputil.AppDConfigKeyPath, &dnsInStoreDomainNameMap)
-	fillDnsDomainNameMap(appInstanceId, meputil.AppDLCMJobsPath, &dnsInStoreDomainNameMap)
+	a.fillDnsDomainNameMap(appInstanceId, meputil.AppDConfigKeyPath, &dnsInStoreDomainNameMap)
+	a.fillDnsDomainNameMap(appInstanceId, meputil.AppDLCMJobsPath, &dnsInStoreDomainNameMap)
 
 	dnsInputRuleMap := make(map[string]*dataplane.DNSRule)
 	dnsInputDomainNameMap := make(map[string]bool)
@@ -241,7 +251,8 @@ func isDuplicateDomainNameForCreateExists(appInstanceId string, appDConfigInput 
 	return false
 }
 
-func handleRuleCreateOrDelete(method meputil.OperType, appDConfig *models.AppDConfig, taskStatus *models.TaskStatus) {
+func (a *AppDCommon) handleRuleCreateOrDelete(method meputil.OperType, appDConfig *models.AppDConfig,
+	taskStatus *models.TaskStatus) {
 	for _, dnsRule := range appDConfig.AppDNSRule {
 		state := models.RuleStatus{
 			Id:     dnsRule.DNSRuleID,
@@ -266,7 +277,8 @@ type ruleData struct {
 }
 
 // Update need to check with existing rule and make both create, modify and delete operations accordingly
-func handleRuleUpdate(appDConfigInput, appDConfigOnStore *models.AppDConfig, taskStatus *models.TaskStatus) {
+func (a *AppDCommon) handleRuleUpdate(appDConfigInput, appDConfigOnStore *models.AppDConfig,
+	taskStatus *models.TaskStatus) {
 
 	// Handling the DNS first
 	idDnsStoreMap := make(map[string]*ruleData)
@@ -286,7 +298,7 @@ func handleRuleUpdate(appDConfigInput, appDConfigOnStore *models.AppDConfig, tas
 		}
 	}
 
-	taskStatus.DNSRuleStatusLst = processRulesFromIDMap(idDnsInputMap, idDnsStoreMap)
+	taskStatus.DNSRuleStatusLst = a.processRulesFromIDMap(idDnsInputMap, idDnsStoreMap)
 
 	// Handling the Traffic rules
 	idTrfStoreMap := make(map[string]*ruleData)
@@ -306,10 +318,10 @@ func handleRuleUpdate(appDConfigInput, appDConfigOnStore *models.AppDConfig, tas
 		}
 	}
 
-	taskStatus.TrafficRuleStatusLst = processRulesFromIDMap(idTrfInputMap, idTrfStoreMap)
+	taskStatus.TrafficRuleStatusLst = a.processRulesFromIDMap(idTrfInputMap, idTrfStoreMap)
 }
 
-func processRulesFromIDMap(idInputMap, idStoreMap map[string]*ruleData) []models.RuleStatus {
+func (a *AppDCommon) processRulesFromIDMap(idInputMap, idStoreMap map[string]*ruleData) []models.RuleStatus {
 
 	var ruleStatusList []models.RuleStatus
 

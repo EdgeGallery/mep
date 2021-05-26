@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -29,6 +29,7 @@ import (
 	"mepserver/common/util"
 )
 
+// DNSRuleGet step to read a single dns rule
 type DNSRuleGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -36,18 +37,19 @@ type DNSRuleGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles dns rule query
 func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 	log.Debugf("query request arrived to fetch dns rule %s for appId %s.", t.DNSRuleId, t.AppInstanceId)
 
 	if len(t.DNSRuleId) == 0 {
-		log.Errorf(nil, "invalid dns id on query request")
+		log.Errorf(nil, "Invalid dns id on query request.")
 		t.SetFirstErrorCode(util.ParseInfoErr, "invalid query request")
 		return workspace.TaskFinish
 	}
 
 	appDConfigEntry, errCode := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode != 0 {
-		log.Errorf(nil, "get dns rule from data-store failed")
+		log.Errorf(nil, "Get dns rule from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "dns rule retrieval failed")
 		return workspace.TaskFinish
 	}
@@ -57,7 +59,7 @@ func (t *DNSRuleGet) OnRequest(data string) workspace.TaskCode {
 	if appDConfigEntry != nil {
 		jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
 		if jsonErr != nil {
-			log.Errorf(jsonErr, "failed to parse the dns entry from data-store on update request")
+			log.Errorf(jsonErr, "Failed to parse the dns entry from data-store on update request.")
 			t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules failed")
 			return workspace.TaskFinish
 		}

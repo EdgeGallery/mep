@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
-// Represent a consumer data
+// Consumer Represent a consumer data
 type Consumer struct {
 	AppInstanceId string `json:"applicationInstanceId"`
 }
 
-// Represents single Capability entry
+// PlatformCapability Represents single Capability entry
 type PlatformCapability struct {
 	CapabilityId   string     `json:"capabilityId"`
 	CapabilityName string     `json:"capabilityName"`

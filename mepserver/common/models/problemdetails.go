@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server object models
+// Package models implements mep server object models
 package models
 
 import (
@@ -22,6 +22,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
+// ProblemDetails represents the failure response body
 type ProblemDetails struct {
 	ProbType string `json:"type,omitempty"`
 	Title    string `json:"title,omitempty"`
@@ -30,11 +31,11 @@ type ProblemDetails struct {
 	Instance string `json:"instance,omitempty"`
 }
 
-// marshall object to json string
+// String generates the failure response body string
 func (pd ProblemDetails) String() string {
 	d, err := json.Marshal(pd)
 	if err != nil {
-		log.Errorf(nil, "json marshalling failed")
+		log.Errorf(nil, "Problem details marshalling failed.")
 		return ""
 	}
 	return string(d)

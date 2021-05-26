@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -29,15 +29,17 @@ import (
 	"mepserver/common/util"
 )
 
+// DNSRulesGet step to read dns rules
 type DNSRulesGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles dns rule query
 func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
 
-	log.Debugf("query request arrived to fetch all dns rules for appId %s.", t.AppInstanceId)
+	log.Debugf("Query request arrived to fetch all dns rules for appId %s.", t.AppInstanceId)
 
 	appDConfigEntry, errCode := backend.GetRecord(util.AppDConfigKeyPath + t.AppInstanceId)
 	if errCode == util.SubscriptionNotFound {
@@ -51,7 +53,7 @@ func (t *DNSRulesGet) OnRequest(data string) workspace.TaskCode {
 	appDInStore := models.AppDConfig{}
 	jsonErr := json.Unmarshal(appDConfigEntry, &appDInStore)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the dns entries from data-store")
+		log.Errorf(nil, "Failed to parse the dns entries from data-store.")
 		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
 		return workspace.TaskFinish
 	}

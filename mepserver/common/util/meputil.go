@@ -70,8 +70,8 @@ const CertSecNonceFilePath string = "ssl/cert_pwd_nonce"
 
 var KeyComponentFromUserStr *[]byte
 
-// InfoToProperties put k,v into map
-func InfoToProperties(properties map[string]string, key string, value string) {
+// UpdatePropertiesMap put k,v into map
+func UpdatePropertiesMap(properties map[string]string, key string, value string) {
 	if value != "" {
 		properties[key] = value
 	}
@@ -131,23 +131,21 @@ func HttpErrResponse(w http.ResponseWriter, statusCode int, obj interface{}) {
 
 	objJSON, err := json.Marshal(obj)
 	if err != nil {
-		log.Errorf(nil, "json marshaling failed")
+		log.Errorf(nil, "Http error response marshaling failed.")
 		return
 	}
 	w.Header().Set(rest.HEADER_CONTENT_TYPE, rest.CONTENT_TYPE_JSON)
 	_, err = fmt.Fprintln(w, string(objJSON))
 	if err != nil {
-		log.Errorf(nil, "send http response fail")
+		log.Errorf(nil, "Send http response fail.")
 	}
 }
 
-// Heartbeat use put to update a service register info
-func Heartbeat(ctx context.Context, mp1SvcId string) error {
-	serviceID := mp1SvcId[:len(mp1SvcId)/2]
-	instanceID := mp1SvcId[len(mp1SvcId)/2:]
+// RecordHeartbeat use put to update a service register info
+func RecordHeartbeat(ctx context.Context, mp1SvcId string) error {
 	req := &proto.HeartbeatRequest{
-		ServiceId:  serviceID,
-		InstanceId: instanceID,
+		ServiceId:  mp1SvcId[:len(mp1SvcId)/2],
+		InstanceId: mp1SvcId[len(mp1SvcId)/2:],
 	}
 	_, err := core.InstanceAPI.Heartbeat(ctx, req)
 	return err
@@ -193,13 +191,13 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 		instance[ServiceInfoDataCenter] = dci
 		message, err := json.Marshal(&instance)
 		if err != nil {
-			log.Errorf(nil, "instance convert to string failed")
+			log.Errorf(nil, "Instance convert to string failed.")
 			return nil, err
 		}
 		var ins *proto.MicroServiceInstance
 		err = json.Unmarshal(message, &ins)
 		if err != nil {
-			log.Errorf(nil, "String convert to MicroServiceInstance failed.")
+			log.Errorf(nil, "String convert to micro service instance failed.")
 			return nil, err
 		}
 		property := ins.Properties
@@ -213,6 +211,7 @@ func FindInstanceByKey(result url.Values) (*proto.FindInstancesResponse, error) 
 		}
 	}
 	if len(findResp) == 0 {
+		// The error message null is checked in the callers, hence do not change this
 		return nil, fmt.Errorf("null")
 	}
 	response := &proto.Response{Code: 0, Message: ""}
@@ -283,23 +282,14 @@ func ValidateAppInstanceIdWithHeader(id string, r *http.Request) error {
 	if id == r.Header.Get("X-AppinstanceID") {
 		return nil
 	}
-	if validateUrl(r) {
+	if strings.Contains(r.URL.Path, ServicesPath) {
 		return nil
 	}
 	return errors.New("UnAuthorization to access the resource")
 }
 
-func validateUrl(r *http.Request) bool {
-	url := r.URL.Path
-	if strings.Contains(url, ServicesPath) {
-		return true
-	}
-	return false
-
-}
-
-// GetResourceInfo get resource info
-func GetResourceInfo(r *http.Request) string {
+// GetHttpResourceInfo get resource info
+func GetHttpResourceInfo(r *http.Request) string {
 	resource := r.URL.String()
 	if resource == "" {
 		return "UNKNOWN"
@@ -334,7 +324,7 @@ func GetClientIp(r *http.Request) string {
 // ValidateKeyComponentUserInput validates the user component input for key generation
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < ComponentSize {
-		log.Errorf(nil, "key component user string length is not valid")
+		log.Errorf(nil, "Key component user string length validation failed.")
 		return fmt.Errorf("key component user string length is not valid")
 	}
 	return nil
@@ -344,13 +334,13 @@ func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Errorf(nil, "failed to create aes cipher")
+		log.Errorf(nil, "Failed to create aes cipher.")
 		return nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Errorf(nil, "failed to wrap cipher")
+		log.Errorf(nil, "Failed to wrap cipher.")
 		return nil, err
 	}
 
@@ -362,19 +352,19 @@ func EncryptByAES256GCM(plaintext []byte, key []byte, nonce []byte) ([]byte, err
 func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Errorf(nil, "failed to create aes cipher")
+		log.Errorf(nil, "Failed to create aes cipher.")
 		return nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Errorf(nil, "failed to wrap cipher")
+		log.Errorf(nil, "Failed to wrap cipher.")
 		return nil, err
 	}
 
 	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		log.Errorf(nil, "failed to decrypt secret key")
+		log.Errorf(nil, "Failed to decrypt secret key.")
 		return nil, err
 	}
 
@@ -386,7 +376,7 @@ func GetWorkKey() ([]byte, error) {
 	// get root key by key components
 	rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
 	if genRootKeyErr != nil {
-		log.Errorf(nil, "failed to generate root key by key components")
+		log.Errorf(nil, "Failed to generate root key by key components.")
 		return nil, genRootKeyErr
 	}
 	log.Info("Succeed to generate root key by key components.")
@@ -409,7 +399,7 @@ func InitRootKeyAndWorkKey() error {
 	if !IsFileOrDirExist(ComponentFilePath) || !IsFileOrDirExist(SaltFilePath) {
 		genRandRootKeyComponentErr := genRandRootKeyComponent(ComponentFilePath, SaltFilePath)
 		if genRandRootKeyComponentErr != nil {
-			log.Errorf(nil, "failed to generate random key")
+			log.Errorf(nil, "Failed to generate random key.")
 			return genRandRootKeyComponentErr
 		}
 		log.Info("Succeed to generate random key components and salt.")
@@ -420,7 +410,7 @@ func InitRootKeyAndWorkKey() error {
 		// get root key by key components
 		rootKey, genRootKeyErr := genRootKey(ComponentFilePath, SaltFilePath)
 		if genRootKeyErr != nil {
-			log.Errorf(nil, "failed to generate root key")
+			log.Errorf(nil, "Failed to generate root key.")
 			return genRootKeyErr
 		}
 		log.Info("Succeed to generate root key by key components.")
@@ -428,7 +418,7 @@ func InitRootKeyAndWorkKey() error {
 		ClearByteArray(workKey)
 		ClearByteArray(rootKey)
 		if genAndSaveWorkKeyErr != nil {
-			log.Errorf(nil, "failed to generate and save work key")
+			log.Errorf(nil, "Failed to generate and save work key.")
 			return genAndSaveWorkKeyErr
 		}
 		log.Info("Succeed to generate and save encrypted work key and nonce.")
@@ -489,8 +479,8 @@ func decryptKey(key []byte, encryptedKeyFilePath string, keyNonceFilePath string
 func genRootKey(componentFilePath string, saltFilePath string) ([]byte, error) {
 	// get component from user input
 	if len(*KeyComponentFromUserStr) == 0 {
-		log.Errorf(nil, "parameter of key is not provided")
-		return nil, fmt.Errorf("parameter of key is not provided")
+		log.Errorf(nil, "User key component length is not valid.")
+		return nil, fmt.Errorf("key component length not valid")
 	}
 	componentFromUser := make([]byte, ComponentSize, 300)
 	for i := 0; i < ComponentSize && i < len(*KeyComponentFromUserStr); i++ {
@@ -581,15 +571,14 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	certPwdNonce := make([]byte, NonceSize, 20)
 	_, certPwdNonceErr := rand.Read(certPwdNonce)
 	if certPwdNonceErr != nil {
-		errMsg := "failed to generate random cert password nonce"
-		log.Errorf(nil, errMsg)
+		log.Errorf(nil, "Failed to generate random cert password nonce.")
 		ClearByteArray(*certPwd)
-		return errors.New(errMsg)
+		return errors.New("failed to generate random cert password nonce")
 	}
 	// get work key
 	workKey, getWorkKeyErr := GetWorkKey()
 	if getWorkKeyErr != nil {
-		log.Errorf(nil, "failed to get work key")
+		log.Errorf(nil, "Failed to get work key.")
 		ClearByteArray(*certPwd)
 		ClearByteArray(certPwdNonce)
 		return getWorkKeyErr
@@ -598,10 +587,9 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	ClearByteArray(*certPwd)
 	ClearByteArray(workKey)
 	if encryptedCertPwdErr != nil {
-		errMsg := "failed to encrypt cert password"
-		log.Errorf(nil, errMsg)
+		log.Errorf(nil, "Failed to encrypt cert password.")
 		ClearByteArray(certPwdNonce)
-		return errors.New(errMsg)
+		return errors.New("failed to encrypt cert password")
 	}
 
 	writeEncryptedPwdErr := ioutil.WriteFile(EncryptedCertSecFilePath,
@@ -610,9 +598,8 @@ func EncryptAndSaveCertPwd(certPwd *[]byte) error {
 	ClearByteArray(encryptedCertPwd)
 	ClearByteArray(certPwdNonce)
 	if writeEncryptedPwdErr != nil || writeNonceErr != nil {
-		errMsg := "failed to write encrypt cert password and nonce to file"
-		log.Errorf(nil, errMsg)
-		return errors.New(errMsg)
+		log.Errorf(nil, "Failed to write encrypt cert password and nonce to file.")
+		return errors.New("failed to write encrypt cert password and nonce to file")
 	}
 	log.Info("Succeed to encrypt and save cert password and nonce to file.")
 	return nil
@@ -623,7 +610,7 @@ func GetCertPwd() ([]byte, error) {
 	// get work key
 	workKey, getWorkKeyErr := GetWorkKey()
 	if getWorkKeyErr != nil {
-		log.Errorf(nil, "failed to get work key")
+		log.Errorf(nil, "Failed to get the work key.")
 		return nil, getWorkKeyErr
 	}
 
@@ -658,10 +645,12 @@ func JoinURL(base string, paths ...string) string {
 		strings.TrimLeft(path.Join(paths...), "/"))
 }
 
+// GenerateUniqueId generates a unique uuid4 based id
 func GenerateUniqueId() string {
 	return uuid.NewV4().String()
 }
 
+// AppConfigProperties represents application config map
 type AppConfigProperties map[string]string
 
 // read app.conf file to AppConfigProperties object
@@ -672,13 +661,13 @@ func readPropertiesFile(filename string) (AppConfigProperties, error) {
 	}
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Errorf(nil, "Failed to open the file.")
+		log.Errorf(nil, "Failed to open the properties file.")
 		return nil, err
 	}
 	defer file.Close()
 	config, err := scanConfig(file)
 	if err != nil {
-		log.Errorf(nil, "Failed to read the file.")
+		log.Errorf(nil, "Failed to read the properties file.")
 		return nil, err
 	}
 	return config, nil

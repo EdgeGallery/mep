@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -35,6 +35,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DecodeCapabilityQueryReq step tp decode the capability query request
 type DecodeCapabilityQueryReq struct {
 	workspace.TaskBase
 	R            *http.Request   `json:"r,in"`
@@ -43,10 +44,11 @@ type DecodeCapabilityQueryReq struct {
 	QueryParam   url.Values      `json:"queryParam,out"`
 }
 
+// OnRequest handles the capability request decode functionality
 func (t *DecodeCapabilityQueryReq) OnRequest(data string) workspace.TaskCode {
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", nil)
+		log.Error("Parameters validation failed.", nil)
 		return workspace.TaskFinish
 	}
 	return workspace.TaskFinish
@@ -62,6 +64,7 @@ func (t *DecodeCapabilityQueryReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// CapabilitiesGet step to get the capabilities
 type CapabilitiesGet struct {
 	workspace.TaskBase
 	Ctx                    context.Context `json:"ctx,in"`
@@ -73,20 +76,21 @@ type CapabilitiesGet struct {
 	serviceCategoryMapping map[models.CategoryRef]string
 }
 
+// OnRequest handles capability query request
 func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
-	log.Debug("query request arrived to fetch all capabilities.")
+	log.Debug("Query request arrived to fetch all capabilities.")
 
 	capabilities := make([]models.PlatformCapability, 0)
 
 	resp, err := meputil.FindInstanceByKey(t.QueryParam)
 	if err != nil {
 		if err.Error() == "null" {
-			log.Info("the service is empty")
+			log.Info("Couldn't find any services to list the capabilities.")
 			t.HttpRsp = capabilities
 			return workspace.TaskFinish
 		}
-		log.Error("failed to find instance request", nil)
-		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find instance request")
+		log.Error("Failed to find service instances.", nil)
+		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find service instance")
 		return workspace.TaskFinish
 	}
 
@@ -129,7 +133,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 
 	appServiceList, errCode := backend.GetRecordsWithCompleteKeyPath(subscribeKeyPath[:len(subscribeKeyPath)-1])
 	if errCode != 0 {
-		log.Errorf(nil, "get entries from data-store failed")
+		log.Errorf(nil, "Get entries from data-store failed.")
 		return errCode
 	}
 
@@ -144,7 +148,7 @@ func (t *CapabilitiesGet) buildConsumerList() int {
 		subscriptionNotify := &models.SerAvailabilityNotificationSubscription{}
 		jsonErr := json.Unmarshal(subscriptionData, subscriptionNotify)
 		if jsonErr != nil {
-			log.Errorf(nil, "failed to parse the subscription entry from data-store")
+			log.Errorf(nil, "Failed to parse the subscription entry from data-store.")
 			return meputil.OperateDataWithEtcdErr
 		}
 		t.fillConsumerListForSubscription(subscriptionNotify, appInstanceId)

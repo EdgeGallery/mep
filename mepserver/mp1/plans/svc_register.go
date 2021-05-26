@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package path implements mep server api plans
+// Package plans implements mep server api plans
 package plans
 
 import (
@@ -36,6 +36,7 @@ import (
 	meputil "mepserver/common/util"
 )
 
+// DecodeRestReq step to decode the service registration request
 type DecodeRestReq struct {
 	workspace.TaskBase
 	R             *http.Request   `json:"r,in"`
@@ -46,51 +47,51 @@ type DecodeRestReq struct {
 	RestBody      interface{}     `json:"restBody,out"`
 }
 
-// OnRequest
+// OnRequest decodes the service request messages
 func (t *DecodeRestReq) OnRequest(data string) workspace.TaskCode {
-	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s]",
-		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetResourceInfo(t.R))
+	log.Infof("Received message from ClientIP [%s] AppInstanceId [%s] Operation [%s] Resource [%s].",
+		meputil.GetClientIp(t.R), meputil.GetAppInstanceId(t.R), meputil.GetMethodFromReq(t.R), meputil.GetHttpResourceInfo(t.R))
 
 	err := t.GetParam(t.R)
 	if err != nil {
-		log.Error("parameters validation failed", err)
+		log.Error("Parameters validation failed on service register request.", err)
 		return workspace.TaskFinish
 	}
 
 	err = t.ParseBody(t.R)
 	if err != nil {
-		log.Error("parse rest body failed", err)
+		log.Error("Service register request body parse failed.", err)
 	}
 	return workspace.TaskFinish
 }
 
-// Parse request body
+// ParseBody Parse request body
 func (t *DecodeRestReq) ParseBody(r *http.Request) error {
 	if t.RestBody == nil {
 		return nil
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("read failed", nil)
+		log.Error("Service register request read failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return errors.New("read failed")
 	}
 	if len(msg) > meputil.RequestBodyLength {
 		err = errors.New("request body too large")
-		log.Errorf(err, "request body too large %d", len(msg))
+		log.Errorf(err, "Service register request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
 	newMsg, err := t.checkParam(msg)
 	if err != nil {
-		log.Error("check Param failed", err)
+		log.Error("Service register check param failed.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "check Param failed")
 		return err
 	}
 
 	err = json.Unmarshal(newMsg, t.RestBody)
 	if err != nil {
-		log.Errorf(nil, "json unmarshalling failed")
+		log.Errorf(nil, "Service register request unmarshalling failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
 		return errors.New("json unmarshalling failed")
 	}
@@ -122,27 +123,27 @@ func (t *DecodeRestReq) checkParam(msg []byte) ([]byte, error) {
 	return msg, nil
 }
 
-// set body and return DecodeRestReq
+// WithBody set body and return DecodeRestReq
 func (t *DecodeRestReq) WithBody(body interface{}) *DecodeRestReq {
 	t.RestBody = body
 	return t
 }
 
-// get param
+// GetParam get url param and validates
 func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	query, _ := meputil.GetHTTPTags(r)
 	var err error
 
 	t.AppInstanceId = query.Get(":appInstanceId")
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("validate X-AppinstanceId failed", err)
+		log.Error("Validate X-AppinstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return err
 	}
 
 	err = meputil.ValidateUUID(t.AppInstanceId)
 	if err != nil {
-		log.Error("app Instance ID validation failed", err)
+		log.Error("App instance ID validation failed.", err)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "app Instance ID validation failed, invalid uuid")
 		return err
 	}
@@ -150,7 +151,7 @@ func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	t.SubscribeId = query.Get(":subscriptionId")
 	err = meputil.ValidateUUID(t.SubscribeId)
 	if err != nil {
-		log.Error("subscription ID validation failed", err)
+		log.Error("Subscription ID validation failed.", err)
 		t.SetFirstErrorCode(meputil.RequestParamErr, "subscription ID validation failed, invalid uuid")
 		return err
 	}
@@ -159,7 +160,7 @@ func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	if len(t.ServiceId) > 0 {
 		err = meputil.ValidateServiceID(t.ServiceId)
 		if err != nil {
-			log.Error("invalid service ID", err)
+			log.Error("Invalid service ID on service register.", err)
 			t.SetFirstErrorCode(meputil.SerErrFailBase, "invalid service ID")
 			return err
 		}
@@ -169,6 +170,7 @@ func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	return nil
 }
 
+// RegisterServiceId step to create new service id
 type RegisterServiceId struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
@@ -177,7 +179,7 @@ type RegisterServiceId struct {
 	RestBody  interface{}     `json:"restBody,in"`
 }
 
-// OnRequest
+// OnRequest handles service registration id generation
 func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
@@ -188,28 +190,29 @@ func (t *RegisterServiceId) OnRequest(data string) workspace.TaskCode {
 	}
 	_, err := json.Marshal(serviceInfo)
 	if err != nil {
-		log.Error("parse service info error", nil)
+		log.Error("Service register service info parse error", nil)
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "parse service info error")
 		return workspace.TaskFinish
 	}
 
 	req := &proto.CreateServiceRequest{}
-	serviceInfo.ToServiceRequest(req)
+	serviceInfo.GenerateServiceRequest(req)
 	resp, err := core.ServiceAPI.Create(t.Ctx, req)
 	if err != nil {
-		log.Error("service center service api create fail", nil)
+		log.Error("Service center service api create fail.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "service creation failed")
 		return workspace.TaskFinish
 	}
 
 	if resp.ServiceId == "" {
-		log.Error("service register failed", nil)
+		log.Error("Service register failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "service register failed")
 	}
 	t.ServiceId = resp.ServiceId
 	return workspace.TaskFinish
 }
 
+// RegisterServiceInst step to register new service instance
 type RegisterServiceInst struct {
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
@@ -222,7 +225,7 @@ type RegisterServiceInst struct {
 	HttpRsp       interface{}         `json:"httpRsp,out"`
 }
 
-// OnRequest
+// OnRequest handles service instance registrations
 func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	serviceInfo, ok := t.RestBody.(*models.ServiceInfo)
 	if !ok {
@@ -231,18 +234,18 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	req := &proto.RegisterInstanceRequest{}
-	serviceInfo.ToRegisterInstance(req,false, "")
+	serviceInfo.GenerateRegisterInstance(req,false, "")
 	req.Instance.ServiceId = t.ServiceId
 	req.Instance.Properties["appInstanceId"] = t.AppInstanceId
 	resp, err := core.InstanceAPI.Register(t.Ctx, req)
 	if err != nil {
-		log.Errorf(nil, "registerInstance fail: %s", t.ServiceId)
+		log.Errorf(nil, "Register instance fail: %s.", t.ServiceId)
 		t.SetFirstErrorCode(meputil.SerErrServiceInstanceFailed, "instance registration failed")
 		return workspace.TaskFinish
 	}
 	t.InstanceId = resp.InstanceId
 	if t.InstanceId == "" {
-		log.Error("instance id is empty", nil)
+		log.Error("Instance id is empty on service registration.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceInstanceFailed, "instance id is empty")
 		return workspace.TaskFinish
 	}
@@ -258,7 +261,7 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	}
 	_, err = core.InstanceAPI.UpdateInstanceProperties(t.Ctx, reqs)
 	if err != nil {
-		log.Error("service properties of heartbeat updation failed", nil)
+		log.Error("Service properties of heartbeat update failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceInstanceFailed, "Status properties failed")
 		return workspace.TaskFinish
 	}
@@ -271,22 +274,23 @@ func (t *RegisterServiceInst) OnRequest(data string) workspace.TaskCode {
 	t.W.Header().Set("Location", location)
 	_, err = json.Marshal(serviceInfo)
 	if err != nil {
-		log.Errorf(nil, "service info encoding on registration failed")
+		log.Errorf(nil, "Service info encoding on registration failed.")
 		unResReq := &proto.UnregisterInstanceRequest{
 			ServiceId:  t.ServiceId,
 			InstanceId: t.InstanceId,
 		}
 		_, err := core.InstanceAPI.Unregister(t.Ctx, unResReq)
 		if err != nil {
-			log.Errorf(nil, "service delete failed")
+			log.Errorf(nil, "Service delete failed.")
 		}
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "marshal service info failed")
 		return workspace.TaskFinish
 	}
-	log.Debugf("response sent for service registration with appId %s", t.AppInstanceId)
+	log.Debugf("Response sent for service registration with appId %s.", t.AppInstanceId)
 	return workspace.TaskFinish
 }
 
+// RegisterLimit step to check the service registration limit
 type RegisterLimit struct {
 	workspace.TaskBase
 	Ctx           context.Context `json:"ctx,in"`
@@ -294,21 +298,19 @@ type RegisterLimit struct {
 	AppInstanceId string          `json:"appInstanceId,in"`
 }
 
-// OnRequest
+// OnRequest handles the max limit checking for the service registration
 func (t *RegisterLimit) OnRequest(data string) workspace.TaskCode {
 	var query url.Values
 	instances, err := meputil.FindInstanceByKey(query)
 	if err != nil {
 		if err.Error() == "null" {
-			log.Info("the service is empty")
 			return workspace.TaskFinish
 		}
-		log.Error("find instance error", nil)
+		log.Error("Find service instance failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "find instance error")
 		return workspace.TaskFinish
 	}
 	if instances == nil {
-		log.Info("the service is empty")
 		return workspace.TaskFinish
 	}
 	var count int
@@ -318,7 +320,7 @@ func (t *RegisterLimit) OnRequest(data string) workspace.TaskCode {
 		}
 	}
 	if count >= meputil.ServicesMaxCount {
-		log.Error("registered services have achieve the limit", nil)
+		log.Error("Registered services have reached the limit.", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceRegFailed, "registered services have achieve the limit")
 	}
 	return workspace.TaskFinish

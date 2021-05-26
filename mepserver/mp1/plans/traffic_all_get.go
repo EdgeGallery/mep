@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// Package plans implements mep server traffic apis
 package plans
 
 import (
@@ -29,6 +30,7 @@ import (
 	"mepserver/common/arch/workspace"
 )
 
+// TrafficRulesGet step to query the traffic rule
 type TrafficRulesGet struct {
 	workspace.TaskBase
 	AppInstanceId string      `json:"appInstanceId,in"`
@@ -36,10 +38,11 @@ type TrafficRulesGet struct {
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
 
+// OnRequest handles the traffic rule query
 func (t *TrafficRulesGet) OnRequest(data string) workspace.TaskCode {
 
 	if len(t.AppInstanceId) == 0 {
-		log.Errorf(nil, "invalid app id on query request")
+		log.Errorf(nil, "Invalid app id on query request.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "invalid query request")
 		return workspace.TaskFinish
 	}
@@ -60,7 +63,7 @@ func (t *TrafficRulesGet) OnRequest(data string) workspace.TaskCode {
 	appDConfig := models.AppDConfig{}
 	jsonErr := json.Unmarshal(trafficRuleDB, &appDConfig)
 	if jsonErr != nil {
-		log.Errorf(nil, "failed to parse the dns entries from data-store")
+		log.Errorf(nil, "Failed to parse the dns entries from data-store.")
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "parse dns rules from data-store failed")
 		return workspace.TaskFinish
 	}

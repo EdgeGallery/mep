@@ -45,6 +45,7 @@ func newAppDConfigDB(appInstanceId string) *appDConfigDB {
 	return &appDConfigDB{appInstanceId, appDConfig}
 }
 
+// GetDnsRule retrieves dns rule based on the id input
 func (a *appDConfigDB) GetDnsRule(ruleId string) *dataplane.DNSRule {
 	for _, rule := range a.appDConfig.AppDNSRule {
 		if ruleId == rule.DNSRuleID {
@@ -54,6 +55,7 @@ func (a *appDConfigDB) GetDnsRule(ruleId string) *dataplane.DNSRule {
 	return nil
 }
 
+// GetTrafficRule retrieves traffic rule based on the id input
 func (a *appDConfigDB) GetTrafficRule(ruleId string) *dataplane.TrafficRule {
 	for _, rule := range a.appDConfig.AppTrafficRule {
 		if ruleId == rule.TrafficRuleID {
