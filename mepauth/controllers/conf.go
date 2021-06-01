@@ -53,18 +53,32 @@ func (c *ConfController) Put() {
 		return
 	}
 	c.logReceivedMsg(clientIp)
-	var appAuthInfo *models.AppAuthInfo
+	var appInstanceInfo *models.AppInstanceInfo
 	// Get application instance ID from param
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 
-	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appAuthInfo); err == nil {
-		c.Data["json"] = appAuthInfo
+	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appInstanceInfo); err == nil {
+		c.Data["json"] = appInstanceInfo
+		appAuthInfo := appInstanceInfo.AuthInfo
+		appInfo := appInstanceInfo.AppInfo
 		// Get AK
-		ak := appAuthInfo.AuthInfo.Credentials.AccessKeyId
+		ak := appAuthInfo.Credentials.AccessKeyId
 		// Get SK
-		sk := appAuthInfo.AuthInfo.Credentials.SecretKey
+		sk := appAuthInfo.Credentials.SecretKey
 		skByte := []byte(sk)
-		err := ConfigureAkAndSk(appInsId, ak, &skByte)
+		// Get app name
+		appName := appInfo.AppName
+		// Get required services
+		requiredServices := appInfo.RequiredServices
+		reqServices, err2 := json.Marshal(requiredServices)
+		if err2 != nil {
+			log.Error("RequiredServices json Marshal failed.")
+		}
+		strReqServices := ""
+		if reqServices != nil {
+			strReqServices = string(reqServices)
+		}
+		err = ConfigureAkAndSk(appInsId, ak, &skByte, appName, strReqServices)
 		if err != nil {
 			switch err.Error() {
 			case util.AppIDFailMsg:
@@ -117,7 +131,8 @@ func (c *ConfController) Delete() {
 		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
 	}
-	c.handleLoggingForSuccess(clientIp, "")
+	c.Data["json"] = "Delete success."
+	c.handleLoggingForSuccess(clientIp, "Delete success.")
 }
 
 // @Title Gets AK/SK configuration
@@ -160,7 +175,7 @@ func (c *ConfController) Get() {
 }
 
 // ConfigureAkAndSk save Ak and Sk configuration into file
-func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
+func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte, appName string, requiredServices string) error {
 
 	log.Infof("AK/SK configuration is received, the corresponding app is " + appInsID)
 
@@ -180,7 +195,7 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 		return validateSkErr
 	}
 
-	saveAkAndSkErr := saveAkAndSk(appInsID, ak, sk)
+	saveAkAndSkErr := saveAkAndSk(appInsID, ak, sk, appName, requiredServices)
 	if saveAkAndSkErr != nil {
 		log.Error("Failed to save ak and sk to file, appInstanceId is " + appInsID + ".")
 		return saveAkAndSkErr
@@ -189,16 +204,18 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte) error {
 	return nil
 }
 
-func saveAkAndSk(appInsID string, ak string, sk *[]byte) error {
+func saveAkAndSk(appInsID string, ak string, sk *[]byte, appName string, requiredServices string) error {
 	cipherSkBytes, nonceBytes, err := getCipherAndNonce(sk)
 	if err != nil {
 		return err
 	}
 	authInfoRecord := &models.AuthInfoRecord{
-		AppInsId: appInsID,
-		Ak:       ak,
-		Sk:       string(cipherSkBytes),
-		Nonce:    string(nonceBytes),
+		AppInsId:         appInsID,
+		Ak:               ak,
+		Sk:               string(cipherSkBytes),
+		Nonce:            string(nonceBytes),
+		AppName:          appName,
+		RequiredServices: requiredServices,
 	}
 	//err = InsertOrUpdateDataToFile(authInfoRecord)
 	err = adapter.Db.InsertOrUpdateData(authInfoRecord, appInstanceID)
