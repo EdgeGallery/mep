@@ -56,7 +56,6 @@ func TestPut(t *testing.T) {
 		return nil
 	})
 
-
 	var ct *beego.Controller
 	patch5 := ApplyMethod(reflect.TypeOf(ct), "ServeJSON", func(*beego.Controller, ...bool) {
 
@@ -76,33 +75,35 @@ func TestConfigureAkAndSk(t *testing.T) {
 	inValidAk := "invalidAk"
 	validSk := []byte("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
 	inValidSk := []byte("invailidSk")
+	appName := "appNmae"
+	requiredServices := ""
 	Convey("configure ak and sk", t, func() {
 		Convey("for success", func() {
-			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte) error {
+			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte, _ string, _ string) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := ConfigureAkAndSk(validAppInsID, validAk, &validSk)
+			err := ConfigureAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 			So(err, ShouldBeNil)
 		})
 		Convey("for fail", func() {
-			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte) error {
+			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte, _ string, _ string) error {
 				return errors.New("error")
 			})
 			defer patches.Reset()
-			err := ConfigureAkAndSk(validAppInsID, validAk, &validSk)
+			err := ConfigureAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 			So(err, ShouldNotBeNil)
 		})
 		Convey("invalid ak and sk", func() {
-			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte) error {
+			patches := ApplyFunc(saveAkAndSk, func(_ string, _ string, _ *[]byte, _ string, _ string) error {
 				return nil
 			})
 			defer patches.Reset()
-			err := ConfigureAkAndSk(inValidAppInsID, validAk, &validSk)
+			err := ConfigureAkAndSk(inValidAppInsID, validAk, &validSk, appName, requiredServices)
 			So(err, ShouldNotBeNil)
-			err = ConfigureAkAndSk(validAppInsID, inValidAk, &validSk)
+			err = ConfigureAkAndSk(validAppInsID, inValidAk, &validSk, appName, requiredServices)
 			So(err, ShouldNotBeNil)
-			err = ConfigureAkAndSk(validAppInsID, validAk, &inValidSk)
+			err = ConfigureAkAndSk(validAppInsID, validAk, &inValidSk, appName, requiredServices)
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -113,6 +114,8 @@ func TestSaveAkAndSk(t *testing.T) {
 	validAk := "oooooooooooooooooooo"
 	validSk := []byte("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")
 	validKey := []byte("00000000000000000000000000000000")
+	appName := "appNmae"
+	requiredServices := ""
 	adapter.Db = &adapter.PgDb{}
 
 	Convey("save ak and sk", t, func() {
@@ -128,7 +131,7 @@ func TestSaveAkAndSk(t *testing.T) {
 
 			defer patch1.Reset()
 			defer patch2.Reset()
-			err := saveAkAndSk(validAppInsID, validAk, &validSk)
+			err := saveAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 			So(err, ShouldBeNil)
 		})
 		Convey("read fail", func() {
@@ -139,7 +142,7 @@ func TestSaveAkAndSk(t *testing.T) {
 			patches.ApplyFunc(rand.Read, func(_ []byte) (n int, err error) {
 				return 1, errors.New("read fail")
 			})
-			err := saveAkAndSk(validAppInsID, validAk, &validSk)
+			err := saveAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 
 			So(err.Error(), ShouldEqual, "read fail")
 		})
@@ -148,7 +151,7 @@ func TestSaveAkAndSk(t *testing.T) {
 				return nil, errors.New("get work key fail")
 			})
 			defer patches.Reset()
-			err := saveAkAndSk(validAppInsID, validAk, &validSk)
+			err := saveAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 
 			So(err.Error(), ShouldEqual, "get work key fail")
 		})
@@ -160,7 +163,7 @@ func TestSaveAkAndSk(t *testing.T) {
 				return nil, errors.New("encrypt fail")
 			})
 			defer patches.Reset()
-			err := saveAkAndSk(validAppInsID, validAk, &validSk)
+			err := saveAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 
 			So(err.Error(), ShouldEqual, "encrypt fail")
 		})
@@ -176,7 +179,7 @@ func TestSaveAkAndSk(t *testing.T) {
 			defer patch1.Reset()
 			defer patch2.Reset()
 
-			err := saveAkAndSk(validAppInsID, validAk, &validSk)
+			err := saveAkAndSk(validAppInsID, validAk, &validSk, appName, requiredServices)
 
 			So(err.Error(), ShouldEqual, "insert fail")
 		})
