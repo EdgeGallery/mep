@@ -33,6 +33,8 @@ type AuthInfoRecord struct {
 	Ak       string
 	Sk       string
 	Nonce    string
+	AppName string
+	RequiredServices string
 }
 
 // AkSessionInfo AK session information data structure
@@ -64,4 +66,16 @@ type Credentials struct {
 // AppAuthInfo application authentication information data structure
 type AppAuthInfo struct {
 	AuthInfo AuthInfo `json:"authInfo"`
+}
+
+// AppInfo appName and required services
+type AppInfo struct {
+	AppName          string   `json:"appName"`
+	RequiredServices []string `json:"requiredServices"`
+}
+
+// AppInstanceInfo data structure
+type AppInstanceInfo struct {
+	AuthInfo AuthInfo `json:"authInfo"`
+	AppInfo     AppInfo     `json:"appInfo"`
 }
