@@ -29,12 +29,12 @@ func init() {
 
 // AuthInfoRecord authentication information record data structure
 type AuthInfoRecord struct {
-	AppInsId string `orm:"pk"`
-	Ak       string
-	Sk       string
-	Nonce    string
-	AppName string
-	RequiredServices string
+	AppInsId         string `orm:"pk" json:"app_ins_id"`
+	Ak               string `json:"ak"`
+	Sk               string `json:"sk"`
+	Nonce            string `json:"nonce"`
+	AppName          string `json:"app_name"`
+	RequiredServices string `json:"required_services"`
 }
 
 // AkSessionInfo AK session information data structure
@@ -77,5 +77,5 @@ type AppInfo struct {
 // AppInstanceInfo data structure
 type AppInstanceInfo struct {
 	AuthInfo AuthInfo `json:"authInfo"`
-	AppInfo     AppInfo     `json:"appInfo"`
+	AppInfo  AppInfo  `json:"appInfo"`
 }

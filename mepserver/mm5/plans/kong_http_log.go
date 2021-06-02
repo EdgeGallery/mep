@@ -247,7 +247,7 @@ func getAllServiceNames() []string {
 		return serviceNames
 	}
 
-	_, serviceInfos := mp1.Mp1CvtSrvDiscover(findInstancesResponse)
+	_, serviceInfos := mp1.Mp1CvtSrvDiscoverAll(findInstancesResponse)
 	if serviceInfos == nil {
 		log.Errorf(nil, "Service discovery failed.")
 		return serviceNames
