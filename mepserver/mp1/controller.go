@@ -136,7 +136,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
 		}},
-		// services
+		// services discovery
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: m.serviceDiscover},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: m.getOneService},
 		//traffic Rules

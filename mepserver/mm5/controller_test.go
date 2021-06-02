@@ -953,8 +953,7 @@ dataplane:
 		return &mepConfig, nil
 	})
 	defer patches.Reset()
-	var mm5Serv *Mm5Service
-	patches.ApplyMethod(reflect.TypeOf(mm5Serv), "ReadMepAuthEndpoint", func(*Mm5Service) (string, error) {
+	patches.ApplyFunc(util.ReadMepAuthEndpoint, func() (string, error) {
 		return "", nil
 	})
 

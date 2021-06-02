@@ -89,7 +89,7 @@ func refreshAPIGwAddr() {
 		return
 	}
 
-	_, apiGw := mp1.Mp1CvtSrvDiscover(resp)
+	_, apiGw := mp1.Mp1CvtSrvDiscoverAll(resp)
 	if len(apiGw) == 0 {
 		return
 	}

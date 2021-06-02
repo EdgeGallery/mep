@@ -19,19 +19,15 @@ package mm5
 
 import (
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/rest"
+	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 	"mepserver/common/config"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/mm5/task"
-	"net"
 	"net/http"
-	"os"
-	"strconv"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/rest"
-	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
 
 	"mepserver/common"
 	"mepserver/common/arch/workspace"
@@ -86,32 +82,11 @@ func (m *Mm5Service) Init() error {
 	log.Infof("Data-plane initialized to %s.", m.config.DataPlane.Type)
 	m.mp2Worker.InitializeWorker(dataPlane, dnsAgent, m.config.DNSAgent.Type)
 
-	m.mepAuthBaseUrl, err = m.ReadMepAuthEndpoint()
+	m.mepAuthBaseUrl, err = meputil.ReadMepAuthEndpoint()
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// ReadMepAuthEndpoint read mep auth ip and port
-func (m *Mm5Service) ReadMepAuthEndpoint() (string, error) {
-	mepAuthPort := os.Getenv(meputil.EnvMepAuthPort)
-	if len(mepAuthPort) <= 0 || len(mepAuthPort) > meputil.MaxPortLength {
-		log.Error("Invalid mep-auth port.", nil)
-		return "", fmt.Errorf("port validation error")
-	} else if num, err := strconv.Atoi(mepAuthPort); err == nil {
-		if num <= 0 || num > meputil.MaxPortNumber {
-			log.Error("Mep-auth port parse failed.", nil)
-			return "", fmt.Errorf("port parse error")
-		}
-	}
-	mepAuthIp := os.Getenv(meputil.EnvMepAuthHost)
-	if net.ParseIP(mepAuthIp) == nil {
-		log.Error("Mep-auth ip env is not set.", nil)
-		return "", fmt.Errorf("ip parse error")
-	}
-
-	return fmt.Sprintf(meputil.MepAuthBaseUrlFormat, mepAuthIp, mepAuthPort), nil
 }
 
 // URLPatterns resisters url patterns

@@ -25,6 +25,8 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,6 +71,16 @@ const EncryptedCertSecFilePath string = "ssl/cert_pwd"
 const CertSecNonceFilePath string = "ssl/cert_pwd_nonce"
 
 var KeyComponentFromUserStr *[]byte
+
+// AuthInfoRecord authentication information record data structure
+type AuthInfoRecord struct {
+	AppInsId         string `json:"app_ins_id"`
+	Ak               string `json:"ak"`
+	Sk               string `json:"sk"`
+	Nonce            string `json:"nonce"`
+	AppName          string `json:"app_name"`
+	RequiredServices string `json:"required_services"`
+}
 
 // UpdatePropertiesMap put k,v into map
 func UpdatePropertiesMap(properties map[string]string, key string, value string) {
@@ -732,4 +744,87 @@ func GetApiGwSerName(instance *proto.MicroServiceInstance) string {
 		apiGwSerName = arr[len(arr)-1]
 	}
 	return apiGwSerName
+}
+
+// GetRequiredSerFromMepauth query required services from mepauth
+func GetRequiredSerFromMepauth(appInstanceId string) ([]string, error) {
+	authBaseUrl, err := ReadMepAuthEndpoint()
+	if err != nil {
+		log.Error("Get mepauth endpoint failed.", err)
+		return nil, err
+	}
+	url := fmt.Sprintf(authBaseUrl+"/%s/confs", appInstanceId)
+	config, err := TlsConfig()
+	if err != nil {
+		log.Error("Unable to set the cipher %s.", err)
+		return nil, err
+	}
+
+	response, err := SendGetRequest(url, config)
+	if err != nil {
+		log.Error("SendGetRequest error", err)
+		return nil, err
+	}
+	log.Infof("GetRequiredSerFromMepauth response: %s", response)
+	var appInfo AuthInfoRecord
+	err = json.Unmarshal([]byte(response), &appInfo)
+	if err != nil {
+		log.Error("string convert to appInfo failed", err)
+		return nil, err
+	}
+	requiredServices := appInfo.RequiredServices
+	var reqServices []string
+	err = json.Unmarshal([]byte(requiredServices), &reqServices)
+	if err != nil {
+		log.Error("string convert to reqServices failed", err)
+		return nil, err
+	}
+
+	return reqServices, nil
+}
+
+// TlsConfig Constructs tls configuration
+func TlsConfig() (*tls.Config, error) {
+	rootCAs := x509.NewCertPool()
+	domainName := os.Getenv("MEPSERVER_CERT_DOMAIN_NAME")
+	if ValidateDomainName(domainName) != nil {
+		return nil, errors.New("domain name validation failed")
+	}
+	return &tls.Config{
+		RootCAs:            rootCAs,
+		ServerName:         domainName,
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	}, nil
+}
+
+// ReadMepAuthEndpoint read mep auth ip and port
+func ReadMepAuthEndpoint() (string, error) {
+	mepAuthPort := os.Getenv(EnvMepAuthPort)
+	if len(mepAuthPort) <= 0 || len(mepAuthPort) > MaxPortLength {
+		log.Error("Invalid mep-auth port.", nil)
+		return "", fmt.Errorf("port validation error")
+	} else if num, err := strconv.Atoi(mepAuthPort); err == nil {
+		if num <= 0 || num > MaxPortNumber {
+			log.Error("Mep-auth port parse failed.", nil)
+			return "", fmt.Errorf("port parse error")
+		}
+	}
+	mepAuthIp := os.Getenv(EnvMepAuthHost)
+	if net.ParseIP(mepAuthIp) == nil {
+		log.Error("Mep-auth ip env is not set.", nil)
+		return "", fmt.Errorf("ip parse error")
+	}
+
+	return fmt.Sprintf(MepAuthBaseUrlFormat, mepAuthIp, mepAuthPort), nil
+}
+
+// InArray whether the element exists in array
+func InArray(value string, array []string)  bool{
+	for _, v := range array{
+		if v==value{
+			return true
+		}
+	}
+	return false
 }
