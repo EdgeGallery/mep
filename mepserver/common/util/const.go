@@ -44,6 +44,7 @@ const (
 	ServiceInactive                               = 18
 	DuplicateOperation                            = 19
 	ForbiddenOperation                            = 20
+	OperateDataWithNtpErr                         = 21
 )
 
 // Mep server api paths
@@ -62,6 +63,7 @@ const (
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
+	TimingPath          = RootPath + MecAppSupportPath + "/timing"
 
 	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
 	AppDConfigPath        = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
@@ -77,6 +79,8 @@ const (
 	ServiceIdPath      = "/:serviceId"
 	CapabilityIdPath   = "/:capabilityId"
 	Liveness           = "/liveness"
+	CurrentTIme        = "/current_time"
+	TimingCaps         = "/timing_caps"
 )
 
 // Resource state
@@ -103,9 +107,9 @@ const (
 )
 
 const (
-	GetMethod   = "GET"
+	GetMethod    = "GET"
 	PostMethod   = "POST"
-	PutMethod   = "PUT"
+	PutMethod    = "PUT"
 	DeleteMethod = "DELETE"
 )
 
