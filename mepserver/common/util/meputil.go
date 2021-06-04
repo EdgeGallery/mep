@@ -326,7 +326,7 @@ func GetAppInstanceId(r *http.Request) string {
 
 // GetClientIp get clientIp from request
 func GetClientIp(r *http.Request) string {
-	clientIp := r.Header.Get("X-Real-Ip")
+	clientIp := r.Header.Get(XRealIp)
 	if clientIp == "" {
 		clientIp = "UNKNOWN_IP"
 	}
@@ -820,9 +820,9 @@ func ReadMepAuthEndpoint() (string, error) {
 }
 
 // InArray whether the element exists in array
-func InArray(value string, array []string)  bool{
-	for _, v := range array{
-		if v==value{
+func InArray(value string, array []string) bool {
+	for _, v := range array {
+		if v == value {
 			return true
 		}
 	}
