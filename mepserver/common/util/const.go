@@ -103,9 +103,9 @@ const (
 )
 
 const (
-	GetMethod   = "GET"
+	GetMethod    = "GET"
 	PostMethod   = "POST"
-	PutMethod   = "PUT"
+	PutMethod    = "PUT"
 	DeleteMethod = "DELETE"
 )
 
@@ -143,6 +143,7 @@ const HookTimerLimit time.Duration = 5
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
 
 const ErrorRequestBodyMessage = "request body invalid"
+const XRealIp = "X-Real-Ip"
 
 // MaxFQDNLength As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
 // one length and one null terminating character. Hence it is limited as 253.

@@ -158,7 +158,7 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 	}
 
 	req.SetTLSClientConfig(tlsCfg)
-	req.Header("X-Real-Ip", GetLocalIP())
+	req.Header(XRealIp, GetLocalIP())
 
 	res, err := req.String()
 	if err != nil {

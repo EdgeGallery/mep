@@ -204,6 +204,7 @@ func (t *DeleteFromMepauth) OnRequest(data string) workspace.TaskCode {
 		TLSClientConfig: config,
 	}
 	client := &http.Client{Transport: tr}
+	req.Header.Add(meputil.XRealIp, meputil.GetLocalIP())
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
