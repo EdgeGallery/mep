@@ -106,9 +106,7 @@ type packet struct {
 }
 
 // GetCurrentTime to get current time form NTP server
-func GetCurrentTime() (record []byte, seconds uint64, nanosecondsß uint64, errorCode int) {
-	var data []byte
-	data[0] = 1
+func GetCurrentTime() (record []byte, seconds uint64, nanoseconds uint64, errorCode int) {
 	var host string
 	flag.StringVar(&host, "e", "us.pool.ntp.org:123", "NTP host")
 	flag.Parse()
