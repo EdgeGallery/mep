@@ -90,10 +90,12 @@ func (c *ConfController) Put() {
 				return
 			default:
 				c.handleLoggingForError(clientIp, http.StatusInternalServerError, "Error while saving configuration")
+				return
 			}
 		}
 	} else {
 		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
+		return
 	}
 	c.handleLoggingForSuccess(clientIp, "")
 }
@@ -186,7 +188,7 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte, appName string, re
 
 	validateAkErr := util.ValidateAk(ak)
 	if validateAkErr != nil {
-		log.Error("Ak is invalid, appInstanceId is " + appInsID + ".")
+		log.Error("Ak " + ak + " is invalid, appInstanceId is " + appInsID + ".")
 		return validateAkErr
 	}
 	validateSkErr := util.ValidateSk(sk)
