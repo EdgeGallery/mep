@@ -144,7 +144,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.getTrafficRule},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.trafficRuleUpdate},
 		//NTP
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getDnsRules},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getCurrentTIme},
 	}
 }
 
