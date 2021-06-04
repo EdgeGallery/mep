@@ -384,7 +384,7 @@ func (m *Mp1Service) trafficRuleUpdate(w http.ResponseWriter, r *http.Request) {
 func (m *Mp1Service) getCurrentTIme(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(&plans.TrafficRuleGet{})
+	workPlan.Try(&plans.CurrentTimeGet{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
