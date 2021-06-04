@@ -28,11 +28,11 @@ import (
 /* ntp external interface functions*/
 // DS which used to communicate with NTP server.
 
-// CurrentTimeIf if struct
-type CurrentTime struct {
-	seconds          uint64 `json:"seconds"`
-	nanoSeconds      uint64 `json:"nanoSeconds"`
-	timeSourceStatus string `json:"timeSourceStatus"`
+// NtpCurrentTime if struct
+type NtpCurrentTime struct {
+	Seconds          uint64
+	NanoSeconds      uint64
+	TimeSourceStatus string
 }
 
 // TimingCaps ntp platform capabilities
@@ -106,9 +106,9 @@ type packet struct {
 }
 
 // GetCurrentTime to get current time form NTP server
-func GetCurrentTime() (c *CurrentTime, errorCode int) {
+func GetCurrentTime() (c *NtpCurrentTime, errorCode int) {
 	var host string
-	var currentTime CurrentTime
+	var currentTime NtpCurrentTime
 	flag.StringVar(&host, "e", "us.pool.ntp.org:123", "NTP host")
 	flag.Parse()
 
@@ -154,9 +154,9 @@ func GetCurrentTime() (c *CurrentTime, errorCode int) {
 	secs := float64(rsp.TxTimeSec) - ntpEpochOffset
 	nanos := (int64(rsp.TxTimeFrac) * 1e9) >> 32 // convert fractional to nanos
 	fmt.Printf("%v\n", time.Unix(int64(secs), nanos))
-	currentTime.seconds = uint64(secs)
-	currentTime.nanoSeconds = uint64(nanos)
-	currentTime.timeSourceStatus = "TRACEABLE"
+	currentTime.Seconds = uint64(secs)
+	currentTime.NanoSeconds = uint64(nanos)
+	currentTime.TimeSourceStatus = "TRACEABLE"
 	return &currentTime, 0
 }
 

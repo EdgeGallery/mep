@@ -21,6 +21,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/ntp"
+	"mepserver/common/models"
 )
 
 // CurrentTimeGet step to read a single dns rule
@@ -41,6 +42,10 @@ func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 	}
 
 	//log.Infof("Seconds %v nanos %v", currentTime.seconds, nanos)
+	ct := models.CurrentTime{}
+	ct.Seconds = currentTimeRsp.Seconds
+	ct.NanoSeconds = currentTimeRsp.NanoSeconds
+	ct.TimeSourceStatus = currentTimeRsp.TimeSourceStatus
 
 	t.HttpRsp = currentTimeRsp
 	return workspace.TaskFinish
