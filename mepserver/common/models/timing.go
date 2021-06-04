@@ -18,7 +18,7 @@ package models
 
 // CurrentTime ntp current time record
 type CurrentTime struct {
-	Seconds          uint64 `json:"seconds"`
-	NanoSeconds      uint64 `json:"nanoSeconds"`
+	Seconds          int64  `json:"seconds"`
+	NanoSeconds      int    `json:"nanoSeconds"`
 	TimeSourceStatus string `json:"timeSourceStatus"`
 }
