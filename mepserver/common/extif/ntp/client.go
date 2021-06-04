@@ -106,9 +106,9 @@ type packet struct {
 }
 
 // GetCurrentTime to get current time form NTP server
-func GetCurrentTime() (record []byte, seconds uint64, nanoseconds uint64, errorCode int) {
-	var data []byte
+func GetCurrentTime() (c *CurrentTime, errorCode int) {
 	var host string
+	var currentTime CurrentTime
 	flag.StringVar(&host, "e", "us.pool.ntp.org:123", "NTP host")
 	flag.Parse()
 
@@ -154,7 +154,10 @@ func GetCurrentTime() (record []byte, seconds uint64, nanoseconds uint64, errorC
 	secs := float64(rsp.TxTimeSec) - ntpEpochOffset
 	nanos := (int64(rsp.TxTimeFrac) * 1e9) >> 32 // convert fractional to nanos
 	fmt.Printf("%v\n", time.Unix(int64(secs), nanos))
-	return data, uint64(secs), uint64(nanos), 0
+	currentTime.seconds = uint64(secs)
+	currentTime.nanoSeconds = uint64(nanos)
+	currentTime.timeSourceStatus = "TRACEABLE"
+	return &currentTime, 0
 }
 
 // API connect to NTP server and get the response here

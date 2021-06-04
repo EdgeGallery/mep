@@ -21,8 +21,6 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/ntp"
-	"mepserver/common/models"
-	meputil "mepserver/common/util"
 )
 
 // CurrentTimeGet step to read a single dns rule
@@ -34,33 +32,16 @@ type CurrentTimeGet struct {
 // OnRequest handles the traffic rule query
 func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 
-	// call if api to get current time
-	timeData, secs, nanos, errCode := ntp.GetCurrentTime() // time data type should be in bytes
+	// call external if api to get current time
+	currentTimeRsp, errCode := ntp.GetCurrentTime()
 	if errCode != 0 {
 		log.Errorf(nil, "Get current time from NTP server failed")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "current time get failed")
 		return workspace.TaskFinish
 	}
 
-	log.Infof("Seconds %v nanos %v", secs, nanos)
+	//log.Infof("Seconds %v nanos %v", currentTime.seconds, nanos)
 
-	Timing := models.Timing{}
-	var currentTime *ntp.CurrentTime
-	if timeData != nil {
-		//jsonErr := json.Unmarshal(timeData, &Timing.CurrentTime)
-		//if jsonErr != nil {
-		//	log.Warn("Could not read the traffic rule properly from etcd.")
-		//	t.SetFirstErrorCode(meputil.OperateDataWithNtpErr, "parse traffic rules from etcd failed")
-		//	return workspace.TaskFinish
-		//}
-		currentTime = &Timing.CurrentTime
-	}
-
-	if currentTime == nil {
-		log.Error("Requested didnt get the current time.", nil)
-		t.SetFirstErrorCode(meputil.SubscriptionNotFound, "didnt get the current time")
-		return workspace.TaskFinish
-	}
-	t.HttpRsp = currentTime
+	t.HttpRsp = currentTimeRsp
 	return workspace.TaskFinish
 }

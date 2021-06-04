@@ -16,12 +16,9 @@
 
 package models
 
-import (
-	"mepserver/common/extif/ntp"
-)
-
-// Timing ntp current time record
-type Timing struct {
-	CurrentTime ntp.CurrentTime `json:"CurrentTime"`
-	//Capabilities  ntp.TimingCaps `json:"Capabilities"`
+// CurrentTime ntp current time record
+type CurrentTime struct {
+	seconds          uint64 `json:"seconds"`
+	nanoSeconds      uint64 `json:"nanoSeconds"`
+	timeSourceStatus string `json:"timeSourceStatus"`
 }
