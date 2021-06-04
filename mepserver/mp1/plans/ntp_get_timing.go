@@ -41,7 +41,8 @@ func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	//log.Infof("Seconds %v nanos %v", currentTime.seconds, nanos)
+	log.Infof("Seconds %v nanos %v", currentTimeRsp.Seconds, currentTimeRsp.NanoSeconds)
+
 	ct := models.CurrentTime{}
 	ct.Seconds = currentTimeRsp.Seconds
 	ct.NanoSeconds = currentTimeRsp.NanoSeconds

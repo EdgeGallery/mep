@@ -44,7 +44,7 @@ const (
 	ServiceInactive                               = 18
 	DuplicateOperation                            = 19
 	ForbiddenOperation                            = 20
-	OperateDataWithNtpErr                         = 21
+	NtpConnectionErr                              = 21
 )
 
 // Mep server api paths

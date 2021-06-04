@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"mepserver/common/util"
 	"net"
 	"time"
 )
@@ -56,7 +57,7 @@ type NtpCurrentTime struct {
 
 const ntpEpochOffset = 2208988800
 
-/* NTP packet format (v3 with optional v4 fields removed)
+/*  NTP packet format (v3 with optional v4 fields removed)
 
 0                   1                   2                   3
 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -105,8 +106,8 @@ type packet struct {
 	TxTimeFrac     uint32 // transmit time frac
 }
 
-// GetCurrentTime to get current time form NTP server
-func GetCurrentTime() (c *NtpCurrentTime, errorCode int) {
+// GetCurrentTime to get current time from NTP server
+func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	var host string
 	var currentTime NtpCurrentTime
 	flag.StringVar(&host, "e", "us.pool.ntp.org:123", "NTP host")
@@ -116,15 +117,17 @@ func GetCurrentTime() (c *NtpCurrentTime, errorCode int) {
 	conn, err := net.Dial("udp", host)
 	if err != nil {
 		log.Fatalf("failed to connect: %v", err)
+		return nil, util.NtpConnectionErr
 	}
 
 	defer conn.Close()
 
 	if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
 		log.Fatalf("failed to set deadline: %v", err)
+		return nil, util.NtpConnectionErr
 	}
 
-	/* configure request settings by specifying the first byte as
+	/* Frame request packet settings by specifying the first byte as
 	00 011 011 (or 0x1B)
 	|  |   +-- client mode (3)
 	|  + ----- version (3)
@@ -135,12 +138,14 @@ func GetCurrentTime() (c *NtpCurrentTime, errorCode int) {
 	// send time request
 	if err := binary.Write(conn, binary.BigEndian, req); err != nil {
 		log.Fatalf("failed to send request: %v", err)
+		return nil, util.NtpConnectionErr
 	}
 
 	// block to receive server response
 	rsp := &packet{}
 	if err := binary.Read(conn, binary.BigEndian, rsp); err != nil {
 		log.Fatalf("failed to read server response: %v", err)
+		return nil, util.NtpConnectionErr
 	}
 
 	/*  On POSIX-compliant OS, time is expressed
@@ -156,7 +161,14 @@ func GetCurrentTime() (c *NtpCurrentTime, errorCode int) {
 	fmt.Printf("%v\n", time.Unix(int64(secs), nanos))
 	currentTime.Seconds = uint64(secs)
 	currentTime.NanoSeconds = uint64(nanos)
-	currentTime.TimeSourceStatus = "TRACEABLE"
+
+	// if Stratum number is indicating primary server
+	if rsp.Stratum == 1 {
+		currentTime.TimeSourceStatus = "TRACEABLE"
+	} else {
+		currentTime.TimeSourceStatus = "NONTRACEABLE"
+	}
+
 	return &currentTime, 0
 }
 
