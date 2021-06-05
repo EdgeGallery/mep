@@ -33,8 +33,8 @@ type Timestamp struct {
 type NtpServers struct {
 	NtpServerAddrType string `json:"ntpServerAddrType"`
 	NtpServerAddr     string `json:"ntpServerAddr"`
-	MinPolInterval    int    `json:"minPollingInterval"`
-	MaxPolInterval    int    `json:"maxPollingInterval"`
+	MinPollInterval   int    `json:"minPollingInterval"`
+	MaxPollInterval   int    `json:"maxPollingInterval"`
 	LocalPriority     int    `json:"localPriority"`
 	AuthOption        string `json:"authenticationOption"`
 	AuthKeyNum        int    `json:"authenticationKeyNum"`

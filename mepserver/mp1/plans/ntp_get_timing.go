@@ -58,6 +58,18 @@ type TimingCaps struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
+func fillTimingCapsRsp(tcOut models.TimingCaps, tcIn *ntp.NtpTimingCaps) {
+	tcOut.TimeStamp.Seconds = tcIn.Seconds
+	tcOut.TimeStamp.NanoSeconds = tcIn.NanoSeconds
+	tcOut.NtpServers.NtpServerAddrType = tcIn.NtpServerAddrType
+	tcOut.NtpServers.NtpServerAddr = tcIn.NtpServerAddr
+	tcOut.NtpServers.LocalPriority = tcIn.LocalPriority
+	tcOut.NtpServers.AuthKeyNum = tcIn.AuthenticationKeyNum
+	tcOut.NtpServers.AuthOption = tcIn.AuthenticationOption
+	tcOut.NtpServers.MaxPollInterval = tcIn.MaxPollingInterval
+	tcOut.NtpServers.MinPollInterval = tcIn.MinPollingInterval
+}
+
 // OnRequest handles to get timing capabilities query
 func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 
@@ -72,8 +84,8 @@ func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 	log.Infof("Seconds %v nanos %v", timingCapsRsp.Seconds, timingCapsRsp.NanoSeconds)
 
 	tc := models.TimingCaps{}
-	tc.TimeStamp.Seconds = timingCapsRsp.Seconds
-	tc.TimeStamp.NanoSeconds = timingCapsRsp.NanoSeconds
+
+	fillTimingCapsRsp(tc, timingCapsRsp)
 
 	t.HttpRsp = tc
 	return workspace.TaskFinish
