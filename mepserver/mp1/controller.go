@@ -144,7 +144,8 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.getTrafficRule},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.trafficRuleUpdate},
 		//NTP
-		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getCurrentTIme},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getCurrentTime},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.TimingCaps, Func: m.getTimingCaps},
 	}
 }
 
@@ -381,10 +382,19 @@ func (m *Mp1Service) trafficRuleUpdate(w http.ResponseWriter, r *http.Request) {
 	workspace.WkRun(workPlan)
 }
 
-func (m *Mp1Service) getCurrentTIme(w http.ResponseWriter, r *http.Request) {
+func (m *Mp1Service) getCurrentTime(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(&plans.CurrentTimeGet{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) getTimingCaps(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(&plans.TimingCaps{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)

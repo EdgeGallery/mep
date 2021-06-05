@@ -24,17 +24,17 @@ import (
 	"mepserver/common/models"
 )
 
-// CurrentTimeGet step to read a single dns rule
+// CurrentTimeGet step to get current time
 type CurrentTimeGet struct {
 	workspace.TaskBase
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-// OnRequest handles the traffic rule query
+// OnRequest handles get current timing query
 func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 
 	// call external if api to get current time
-	currentTimeRsp, errCode := ntp.GetCurrentTimeInUnix()
+	currentTimeRsp, errCode := ntp.GetCurrentTime()
 	if errCode != 0 {
 		log.Errorf(nil, "Get current time from NTP server failed")
 		t.SetFirstErrorCode(workspace.ErrCode(errCode), "current time get failed")
@@ -48,6 +48,33 @@ func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 	ct.NanoSeconds = currentTimeRsp.NanoSeconds
 	ct.TimeSourceStatus = currentTimeRsp.TimeSourceStatus
 
-	t.HttpRsp = currentTimeRsp
+	t.HttpRsp = ct
+	return workspace.TaskFinish
+}
+
+// TimingCaps to get timing capabilities
+type TimingCaps struct {
+	workspace.TaskBase
+	HttpRsp interface{} `json:"httpRsp,out"`
+}
+
+// OnRequest handles to get timing capabilities query
+func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
+
+	// call external if api to get current time
+	timingCapsRsp, errCode := ntp.GetTimingCaps()
+	if errCode != 0 {
+		log.Errorf(nil, "Get timing caps from NTP server failed")
+		t.SetFirstErrorCode(workspace.ErrCode(errCode), "timing caps get failed")
+		return workspace.TaskFinish
+	}
+
+	log.Infof("Seconds %v nanos %v", timingCapsRsp.Seconds, timingCapsRsp.NanoSeconds)
+
+	tc := models.TimingCaps{}
+	tc.TimeStamp.Seconds = timingCapsRsp.Seconds
+	tc.TimeStamp.NanoSeconds = timingCapsRsp.NanoSeconds
+
+	t.HttpRsp = tc
 	return workspace.TaskFinish
 }

@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"flag"
 	"fmt"
 	"golang.org/x/net/ipv4"
 	"log"
@@ -33,162 +32,68 @@ import (
 // capable of querying the current time from a remote NTP server.  See
 // RFC5905 (https://tools.ietf.org/html/rfc5905) for more details.
 
-// NtpCurrentTime if struct
+// NtpCurrentTime protocol message storing data structure
 type NtpCurrentTime struct {
 	Seconds          int64
 	NanoSeconds      int
 	TimeSourceStatus string
 }
 
-// TimingCaps ntp platform capabilities
-//type TimingCaps struct {
-//	timeStamp    byte `json:"timeStamp"`
-//	seconds      uint64 `json:"seconds"`
-//	nanoSeconds  uint64 `json:"nanoSeconds"`
-//	ntpServers   string `json:"ntpServers"`
-//	ntpServerAddrType    string `json:"ntpServerAddrType"`
-//	ntpServerAddr	     string `json:"ntpServerAddr"`
-//	minPollingInterval   int `json:"minPollingInterval"`
-//	maxPollingInterval   int `json:"maxPollingInterval"`
-//	localPriority        int `json:"localPriority"`
-//	authenticationOption string `json:"authenticationOption"`
-//	authenticationKeyNum int `json:"authenticationKeyNum"`
-//	ptpMasters           string `json:"ptpMasters"`
-//	ptpMasterIpAddress   string `json:"ptpMasterIpAddress"`
-//	ptpMasterLocalPriority int `json:"authenticationKeyNum"`
-//	delayReqMaxRate        int `json:"delayReqMaxRate"`
-//}
-
-const ntpEpochOffset = 2208988800
-
-/*  NTP packet format (v3 with optional v4 fields removed)
-
-0                   1                   2                   3
-0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|LI | VN  |Mode |    Stratum     |     Poll      |  Precision   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         Root Delay                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         Root Dispersion                       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          Reference ID                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                     Reference Timestamp (64)                  +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                      Origin Timestamp (64)                    +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                      Receive Timestamp (64)                   +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                      Transmit Timestamp (64)                  +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-*/
-
-type packet struct {
-	Settings       uint8  // leap yr indicator, ver number, and mode
-	Stratum        uint8  // stratum of local clock
-	Poll           int8   // poll exponent
-	Precision      int8   // precision exponent
-	RootDelay      uint32 // root delay
-	RootDispersion uint32 // root dispersion
-	ReferenceID    uint32 // reference id
-	RefTimeSec     uint32 // reference timestamp sec
-	RefTimeFrac    uint32 // reference timestamp fractional
-	OrigTimeSec    uint32 // origin time secs
-	OrigTimeFrac   uint32 // origin time fractional
-	RxTimeSec      uint32 // receive time secs
-	RxTimeFrac     uint32 // receive time frac
-	TxTimeSec      uint32 // transmit time secs
-	TxTimeFrac     uint32 // transmit time frac
+//NtpTimingCaps ntp platform capabilities
+type NtpTimingCaps struct {
+	Seconds              int64
+	NanoSeconds          int
+	NtpServerAddrType    string
+	NtpServerAddr        string
+	MinPollingInterval   int
+	MaxPollingInterval   int
+	LocalPriority        int
+	AuthenticationOption string
+	AuthenticationKeyNum int
+	//ptpMasterIpAddress   string // PTP is not supported
+	//ptpMasterLocalPriority int  // PTP is not supported
+	//delayReqMaxRate        int  // PTP is not supported
 }
 
-// GetCurrentTime to get current time from NTP server
 func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
-	var host string
-	var currentTime NtpCurrentTime
-	flag.StringVar(&host, "e", "us.pool.ntp.org:123", "NTP host")
-	flag.Parse()
-
-	// Setup a UDP connection
-	conn, err := net.Dial("udp", host)
-	if err != nil {
-		log.Fatalf("failed to connect: %v", err)
-		return nil, util.NtpConnectionErr
-	}
-
-	defer conn.Close()
-
-	if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
-		log.Fatalf("failed to set deadline: %v", err)
-		return nil, util.NtpConnectionErr
-	}
-
-	/* Frame request packet settings by specifying the first byte as
-	00 011 011 (or 0x1B)
-	|  |   +-- client mode (3)
-	|  + ----- version (3)
-	+ -------- leap year indicator, 0 no warning
-	*/
-	req := &packet{Settings: 0x1B}
-
-	// send time request
-	if err := binary.Write(conn, binary.BigEndian, req); err != nil {
-		log.Fatalf("failed to send request: %v", err)
-		return nil, util.NtpConnectionErr
-	}
-
-	// block to receive server response
-	rsp := &packet{}
-	if err := binary.Read(conn, binary.BigEndian, rsp); err != nil {
-		log.Fatalf("failed to read server response: %v", err)
-		return nil, util.NtpConnectionErr
-	}
-
-	/*  On POSIX-compliant OS, time is expressed
-	using the Unix time epoch (or secs since year 1970).
-	NTP seconds are counted since 1900 and therefore must
-	be corrected with an epoch offset to convert NTP seconds
-	to Unix time by removing 70 yrs of seconds (1970-1900)
-	or 2208988800 seconds.
-	*/
-
-	secs := float64(rsp.TxTimeSec) - ntpEpochOffset
-	nanos := (int64(rsp.TxTimeFrac) * 1e9) >> 32 // convert fractional to nanos
-
-	currentTime.Seconds = int64(secs)
-	currentTime.NanoSeconds = int(nanos)
-
-	// if Stratum number is indicating primary server
-	if rsp.Stratum == 1 {
-		currentTime.TimeSourceStatus = "TRACEABLE"
-	} else {
-		currentTime.TimeSourceStatus = "NONTRACEABLE"
-	}
-
-	return &currentTime, 0
-}
-
-func GetCurrentTimeInUnix() (curTime *NtpCurrentTime, errorCode int) {
 	var currentTime NtpCurrentTime
 	ntpTime, err := Time("us.pool.ntp.org")
 	if err != nil {
 		log.Fatalf("failed to read server response: %v", err)
 		return nil, util.NtpConnectionErr
 	}
-
+	// the number of seconds elapsed since January 1, 1970 UTC
 	currentTime.Seconds = ntpTime.Unix()
+	// nanosecond offset within the second
 	currentTime.NanoSeconds = ntpTime.Nanosecond()
+	// TODO
 	currentTime.TimeSourceStatus = "TRACEABLE"
 
 	return &currentTime, 0
+}
+
+func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
+	var timingCaps NtpTimingCaps
+	ntpTime, err := Time("us.pool.ntp.org")
+	if err != nil {
+		log.Fatalf("failed to read server response: %v", err)
+		return nil, util.NtpConnectionErr
+	}
+
+	// the number of seconds elapsed since January 1, 1970 UTC
+	timingCaps.Seconds = ntpTime.Unix()
+	// nanosecond offset within the second
+	timingCaps.NanoSeconds = ntpTime.Nanosecond()
+
+	timingCaps.AuthenticationOption = "NONE"
+	timingCaps.AuthenticationKeyNum = 0
+	timingCaps.NtpServerAddr = "us.pool.ntp.org"
+	timingCaps.NtpServerAddrType = "DOMAIN_NAME"
+	timingCaps.LocalPriority = 1
+	timingCaps.MaxPollingInterval = 1024
+	timingCaps.MinPollingInterval = 6
+
+	return &timingCaps, 0
 }
 
 // The LeapIndicator is used to warn if a leap second should be inserted
@@ -288,6 +193,37 @@ func (t ntpTimeShort) Duration() time.Duration {
 	}
 	return time.Duration(sec + nsec)
 }
+
+/*  NTP packet format (v3 with optional v4 fields removed)
+
+0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|LI | VN  |Mode |    Stratum     |     Poll      |  Precision   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Root Delay                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Root Dispersion                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          Reference ID                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                     Reference Timestamp (64)                  +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                      Origin Timestamp (64)                    +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                      Receive Timestamp (64)                   +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                      Transmit Timestamp (64)                  +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
 
 // msg is an internal representation of an NTP packet.
 type msg struct {

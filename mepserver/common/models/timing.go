@@ -22,3 +22,26 @@ type CurrentTime struct {
 	NanoSeconds      int    `json:"nanoSeconds"`
 	TimeSourceStatus string `json:"timeSourceStatus"`
 }
+
+// Timestamp record
+type Timestamp struct {
+	Seconds     int64 `json:"seconds"`
+	NanoSeconds int   `json:"nanoSeconds"`
+}
+
+// NtpServers record
+type NtpServers struct {
+	NtpServerAddrType string `json:"ntpServerAddrType"`
+	NtpServerAddr     string `json:"ntpServerAddr"`
+	MinPolInterval    int    `json:"minPollingInterval"`
+	MaxPolInterval    int    `json:"maxPollingInterval"`
+	LocalPriority     int    `json:"localPriority"`
+	AuthOption        string `json:"authenticationOption"`
+	AuthKeyNum        int    `json:"authenticationKeyNum"`
+}
+
+// TimingCaps ntp timing capabilities record
+type TimingCaps struct {
+	TimeStamp  Timestamp  `json:"timeStamp"`
+	NtpServers NtpServers `json:"ntpServers"`
+}
