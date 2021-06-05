@@ -58,7 +58,7 @@ type TimingCaps struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-func fillTimingCapsRsp(tcOut models.TimingCaps, tcIn *ntp.NtpTimingCaps) {
+func fillTimingCapsRsp(tcOut *models.TimingCaps, tcIn *ntp.NtpTimingCaps) {
 	tcOut.TimeStamp.Seconds = tcIn.Seconds
 	tcOut.TimeStamp.NanoSeconds = tcIn.NanoSeconds
 	tcOut.NtpServers.NtpServerAddrType = tcIn.NtpServerAddrType
@@ -85,7 +85,7 @@ func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 
 	tc := models.TimingCaps{}
 
-	fillTimingCapsRsp(tc, timingCapsRsp)
+	fillTimingCapsRsp(&tc, timingCapsRsp)
 
 	t.HttpRsp = tc
 	return workspace.TaskFinish
