@@ -287,6 +287,9 @@ func TestAddServiceRoute(t *testing.T) {
 			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*apiGwInitializer, string, []byte) error {
 				return nil
 			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPutRequest", func(*apiGwInitializer, string, []byte) error {
+				return nil
+			})
 			defer patches.Reset()
 			i := &apiGwInitializer{}
 			err := i.AddServiceRoute("mepauth", []string{"test1", "test2"}, "https://127.0.0.1:8080", false)
@@ -299,6 +302,9 @@ func TestAddServiceRoute(t *testing.T) {
 			})
 			var initializer *apiGwInitializer
 			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*apiGwInitializer, string, []byte) error {
+				return nil
+			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPutRequest", func(*apiGwInitializer, string, []byte) error {
 				return nil
 			})
 			defer patches.Reset()
@@ -314,6 +320,9 @@ func TestAddServiceRoute(t *testing.T) {
 			var initializer *apiGwInitializer
 			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPostRequest", func(*apiGwInitializer, string, []byte) error {
 				return errors.New("send post request error")
+			})
+			patches.ApplyMethod(reflect.TypeOf(initializer), "SendPutRequest", func(*apiGwInitializer, string, []byte) error {
+				return errors.New("send put request error")
 			})
 			defer patches.Reset()
 			i := &apiGwInitializer{}
