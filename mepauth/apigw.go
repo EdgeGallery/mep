@@ -258,10 +258,10 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 
 	paths := strings.Join(servicePaths, `", "`)
 
-	apiGwServiceURL := apiGwURL + servicesPath
+	apiGwServiceURL := apiGwURL + servicesPath + "/" + serviceName
 	serviceReq := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`,
 		targetURL, serviceName))
-	errMepService := i.SendPostRequest(apiGwServiceURL, serviceReq)
+	errMepService := i.SendPutRequest(apiGwServiceURL, serviceReq)
 	if errMepService != nil {
 		log.Error("Addition of " + serviceName + " service to apiGw failed.")
 		return errMepService
@@ -314,8 +314,33 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 	return nil
 }
 
+// Send post request
+func (i *apiGwInitializer) SendPutRequest(consumerURL string, jsonStr []byte) error {
+
+	req := httplib.Put(consumerURL)
+	req.Header(util.ContentType, util.JsonUtf8)
+	req.SetTLSClientConfig(i.tlsConfig)
+	req.Body(jsonStr)
+	resp, err := req.Response()
+	if err != nil {
+		log.Error("Request sending is having error")
+		return err
+	}
+	defer resp.Body.Close()
+	_, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		log.Error("Request's response not received")
+	}
+
+	if !(resp.StatusCode >= 200 && resp.StatusCode <= 299) && resp.StatusCode != http.StatusConflict {
+		log.Error("Request sending returned failure response with status code " + strconv.Itoa(resp.StatusCode))
+		return errors.New("request sending returned failure response, status is " + strconv.Itoa(resp.StatusCode))
+	}
+	return nil
+}
+
 func (i *apiGwInitializer) getHttpLogPluginData() (data []byte, err error) {
-	c := &models.ConfigInfo {
+	c := &models.ConfigInfo{
 		HTTPEndpoint: "https://mep-mm5:80/mep/service_govern/v1/kong_log",
 		Method:       "POST",
 		Timeout:      1000,
