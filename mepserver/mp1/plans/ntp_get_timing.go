@@ -41,8 +41,6 @@ func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Infof("Seconds %v nanos %v", currentTimeRsp.Seconds, currentTimeRsp.NanoSeconds)
-
 	ct := models.CurrentTime{}
 	ct.Seconds = currentTimeRsp.Seconds
 	ct.NanoSeconds = currentTimeRsp.NanoSeconds
@@ -59,15 +57,14 @@ type TimingCaps struct {
 }
 
 func fillTimingCapsRsp(tcOut *models.TimingCaps, tcIn *ntp.NtpTimingCaps) {
-	tcOut.TimeStamp.Seconds = tcIn.Seconds
-	tcOut.TimeStamp.NanoSeconds = tcIn.NanoSeconds
-	tcOut.NtpServers.NtpServerAddrType = tcIn.NtpServerAddrType
-	tcOut.NtpServers.NtpServerAddr = tcIn.NtpServerAddr
-	tcOut.NtpServers.LocalPriority = tcIn.LocalPriority
-	tcOut.NtpServers.AuthKeyNum = tcIn.AuthenticationKeyNum
-	tcOut.NtpServers.AuthOption = tcIn.AuthenticationOption
-	tcOut.NtpServers.MaxPollInterval = tcIn.MaxPollingInterval
-	tcOut.NtpServers.MinPollInterval = tcIn.MinPollingInterval
+
+	tcOut.TimeStamp.Seconds = tcIn.TimeStamp.Seconds
+	tcOut.TimeStamp.NanoSeconds = tcIn.TimeStamp.NanoSeconds
+
+	for _, NtpServerIn := range tcIn.NtpServers {
+		NtpServer := models.NtpServers(NtpServerIn)
+		tcOut.NtpServers = append(tcOut.NtpServers, NtpServer)
+	}
 }
 
 // OnRequest handles to get timing capabilities query
@@ -81,10 +78,8 @@ func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Infof("Seconds %v nanos %v", timingCapsRsp.Seconds, timingCapsRsp.NanoSeconds)
-
 	tc := models.TimingCaps{}
-
+	// Fill the response record
 	fillTimingCapsRsp(&tc, timingCapsRsp)
 
 	t.HttpRsp = tc

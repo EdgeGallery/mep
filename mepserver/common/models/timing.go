@@ -18,30 +18,38 @@ package models
 
 // CurrentTime ntp current time record
 type CurrentTime struct {
-	Seconds          int64  `json:"seconds"`
+	Seconds          int    `json:"seconds"`
 	NanoSeconds      int    `json:"nanoSeconds"`
 	TimeSourceStatus string `json:"timeSourceStatus"`
 }
 
-// Timestamp record
-type Timestamp struct {
-	Seconds     int64 `json:"seconds"`
-	NanoSeconds int   `json:"nanoSeconds"`
-}
-
-// NtpServers record
-type NtpServers struct {
-	NtpServerAddrType string `json:"ntpServerAddrType"`
-	NtpServerAddr     string `json:"ntpServerAddr"`
-	MinPollInterval   int    `json:"minPollingInterval"`
-	MaxPollInterval   int    `json:"maxPollingInterval"`
-	LocalPriority     int    `json:"localPriority"`
-	AuthOption        string `json:"authenticationOption"`
-	AuthKeyNum        int    `json:"authenticationKeyNum"`
-}
-
 // TimingCaps ntp timing capabilities record
 type TimingCaps struct {
-	TimeStamp  Timestamp  `json:"timeStamp"`
-	NtpServers NtpServers `json:"ntpServers"`
+	TimeStamp  NtpTimeStamp `json:"timeStamp"`
+	NtpServers []NtpServers `json:"ntpServers"`
+	//PtpMasters []PtpMasters `json:"ptpMasters"` //not supporting
+}
+
+// NtpTimeStamp for timestamp record
+type NtpTimeStamp struct {
+	Seconds     int `json:"seconds"`
+	NanoSeconds int `json:"nanoSeconds"`
+}
+
+// NtpServers for NTP server list
+type NtpServers struct {
+	NtpServerAddrType    string `json:"ntpServerAddrType"`
+	NtpServerAddr        string `json:"ntpServerAddr"`
+	MinPollingInterval   int    `json:"minPollingInterval"`
+	MaxPollingInterval   int    `json:"maxPollingInterval"`
+	LocalPriority        int    `json:"localPriority"`
+	AuthenticationOption string `json:"authenticationOption"`
+	AuthenticationKeyNum int    `json:"authenticationKeyNum"`
+}
+
+// PtpMasters for PTP master list: not supporting
+type PtpMasters struct {
+	PtpMasterIPAddress     string `json:"ptpMasterIpAddress"`
+	PtpMasterLocalPriority int    `json:"ptpMasterLocalPriority"`
+	DelayReqMaxRate        int    `json:"delayReqMaxRate"`
 }

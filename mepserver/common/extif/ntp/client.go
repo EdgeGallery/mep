@@ -34,15 +34,22 @@ import (
 
 // NtpCurrentTime protocol message storing data structure
 type NtpCurrentTime struct {
-	Seconds          int64
+	Seconds          int
 	NanoSeconds      int
 	TimeSourceStatus string
 }
 
 //NtpTimingCaps ntp platform capabilities
 type NtpTimingCaps struct {
-	Seconds              int64
-	NanoSeconds          int
+	TimeStamp  NtpTimeStamp
+	NtpServers []NtpServers
+	PtpMasters []PtpMasters
+}
+type NtpTimeStamp struct {
+	Seconds     int
+	NanoSeconds int
+}
+type NtpServers struct {
 	NtpServerAddrType    string
 	NtpServerAddr        string
 	MinPollingInterval   int
@@ -50,9 +57,11 @@ type NtpTimingCaps struct {
 	LocalPriority        int
 	AuthenticationOption string
 	AuthenticationKeyNum int
-	//ptpMasterIpAddress   string // PTP is not supported
-	//ptpMasterLocalPriority int  // PTP is not supported
-	//delayReqMaxRate        int  // PTP is not supported
+}
+type PtpMasters struct {
+	PtpMasterIPAddress     string
+	PtpMasterLocalPriority int
+	DelayReqMaxRate        int
 }
 
 func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
@@ -63,7 +72,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 		return nil, util.NtpConnectionErr
 	}
 	// the number of seconds elapsed since January 1, 1970 UTC
-	currentTime.Seconds = ntpTime.Unix()
+	currentTime.Seconds = int(ntpTime.Unix())
 	// nanosecond offset within the second
 	currentTime.NanoSeconds = ntpTime.Nanosecond()
 	// TODO
@@ -81,17 +90,20 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	}
 
 	// the number of seconds elapsed since January 1, 1970 UTC
-	timingCaps.Seconds = ntpTime.Unix()
+	timingCaps.TimeStamp.Seconds = int(ntpTime.Unix())
 	// nanosecond offset within the second
-	timingCaps.NanoSeconds = ntpTime.Nanosecond()
+	timingCaps.TimeStamp.NanoSeconds = ntpTime.Nanosecond()
+	//NTP server capabilities
+	var NtpServer NtpServers
+	NtpServer.NtpServerAddr = "us.pool.ntp.org"
+	NtpServer.NtpServerAddrType = "DNS_NAME"
+	NtpServer.AuthenticationOption = "NONE"
+	NtpServer.AuthenticationKeyNum = 0
+	NtpServer.LocalPriority = 0
+	NtpServer.MaxPollingInterval = 1024
+	NtpServer.MinPollingInterval = 6
 
-	timingCaps.AuthenticationOption = "NONE"
-	timingCaps.AuthenticationKeyNum = 0
-	timingCaps.NtpServerAddr = "us.pool.ntp.org"
-	timingCaps.NtpServerAddrType = "DOMAIN_NAME"
-	timingCaps.LocalPriority = 1
-	timingCaps.MaxPollingInterval = 1024
-	timingCaps.MinPollingInterval = 6
+	timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
 
 	return &timingCaps, 0
 }
