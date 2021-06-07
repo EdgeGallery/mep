@@ -45,10 +45,14 @@ type NtpTimingCaps struct {
 	NtpServers []NtpServers
 	PtpMasters []PtpMasters
 }
+
+// NtpTimeStamp ntp record
 type NtpTimeStamp struct {
 	Seconds     int
 	NanoSeconds int
 }
+
+// NtpServers ntp record
 type NtpServers struct {
 	NtpServerAddrType    string
 	NtpServerAddr        string
@@ -58,6 +62,8 @@ type NtpServers struct {
 	AuthenticationOption string
 	AuthenticationKeyNum int
 }
+
+// PtpMasters ntp record
 type PtpMasters struct {
 	PtpMasterIPAddress     string
 	PtpMasterLocalPriority int
@@ -66,33 +72,38 @@ type PtpMasters struct {
 
 func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	var currentTime NtpCurrentTime
-	ntpTime, err := Time("us.pool.ntp.org")
-	if err != nil {
+	host := "us.pool.ntp.org"
+	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
+	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
 		return nil, util.NtpConnectionErr
 	}
-	// the number of seconds elapsed since January 1, 1970 UTC
-	currentTime.Seconds = int(ntpTime.Unix())
-	// nanosecond offset within the second
-	currentTime.NanoSeconds = ntpTime.Nanosecond()
-	// TODO
-	currentTime.TimeSourceStatus = "TRACEABLE"
+
+	// The number of seconds elapsed since January 1, 1970 UTC
+	currentTime.Seconds = int(ntpRsp.Time.Unix())
+	currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
+
+	if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
+		currentTime.TimeSourceStatus = "TRACEABLE"
+	} else {
+		currentTime.TimeSourceStatus = "NONTRACEABLE"
+	}
 
 	return &currentTime, 0
 }
 
 func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	var timingCaps NtpTimingCaps
-	ntpTime, err := Time("us.pool.ntp.org")
-	if err != nil {
+	host := "us.pool.ntp.org"
+	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
+	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
 		return nil, util.NtpConnectionErr
 	}
 
 	// the number of seconds elapsed since January 1, 1970 UTC
-	timingCaps.TimeStamp.Seconds = int(ntpTime.Unix())
-	// nanosecond offset within the second
-	timingCaps.TimeStamp.NanoSeconds = ntpTime.Nanosecond()
+	timingCaps.TimeStamp.Seconds = int(ntpRsp.Time.Unix())
+	timingCaps.TimeStamp.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
 	//NTP server capabilities
 	var NtpServer NtpServers
 	NtpServer.NtpServerAddr = "us.pool.ntp.org"
@@ -403,13 +414,6 @@ func (r *Response) Validate() error {
 	return nil
 }
 
-// Query returns a response from the remote NTP server host. It contains
-// the time at which the server transmitted the response as well as other
-// useful information about the time and the remote server.
-func Query(host string) (*Response, error) {
-	return QueryWithOptions(host, QueryOptions{})
-}
-
 // QueryWithOptions performs the same function as Query but allows for the
 // customization of several query options.
 func QueryWithOptions(host string, opt QueryOptions) (*Response, error) {
@@ -418,33 +422,6 @@ func QueryWithOptions(host string, opt QueryOptions) (*Response, error) {
 		return nil, err
 	}
 	return parseTime(m, now), nil
-}
-
-// TimeV returns the current time using information from a remote NTP server.
-// On error, it returns the local system time. The version may be 2, 3, or 4.
-//
-// Deprecated: TimeV is deprecated. Use QueryWithOptions instead.
-func TimeV(host string, version int) (time.Time, error) {
-	m, recvTime, err := getTime(host, QueryOptions{Version: version})
-	if err != nil {
-		return time.Now(), err
-	}
-
-	r := parseTime(m, recvTime)
-	err = r.Validate()
-	if err != nil {
-		return time.Now(), err
-	}
-
-	// Use the clock offset to calculate the time.
-	return time.Now().Add(r.ClockOffset), nil
-}
-
-// Time returns the current time using information from a remote NTP server.
-// It uses version 4 of the NTP protocol. On error, it returns the local
-// system time.
-func Time(host string) (time.Time, error) {
-	return TimeV(host, defaultNtpVersion)
 }
 
 // getTime performs the NTP server query and returns the response message
@@ -460,6 +437,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	// Resolve the remote NTP server address.
 	raddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(host, "123"))
 	if err != nil {
+		log.Fatalf("failed to Resolve UDP address : %v", err)
 		return nil, 0, err
 	}
 
@@ -468,6 +446,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	if opt.LocalAddress != "" {
 		laddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(opt.LocalAddress, "0"))
 		if err != nil {
+			log.Fatalf("failed to Resolve local address : %v", err)
 			return nil, 0, err
 		}
 	}
@@ -480,6 +459,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	// Prepare a "connection" to the remote server.
 	con, err := net.DialUDP("udp", laddr, raddr)
 	if err != nil {
+		log.Fatalf("Dail UDP failed : %v", err)
 		return nil, 0, err
 	}
 	defer con.Close()
@@ -489,6 +469,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 		ipcon := ipv4.NewConn(con)
 		err = ipcon.SetTTL(opt.TTL)
 		if err != nil {
+			log.Fatalf("Set TTL failed : %v", err)
 			return nil, 0, err
 		}
 	}

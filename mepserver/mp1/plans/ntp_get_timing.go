@@ -70,7 +70,7 @@ func fillTimingCapsRsp(tcOut *models.TimingCaps, tcIn *ntp.NtpTimingCaps) {
 // OnRequest handles to get timing capabilities query
 func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 
-	// call external if api to get current time
+	// Call external if api to get current time from NTP server
 	timingCapsRsp, errCode := ntp.GetTimingCaps()
 	if errCode != 0 {
 		log.Errorf(nil, "Get timing caps from NTP server failed")
