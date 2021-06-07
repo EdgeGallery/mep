@@ -43,7 +43,7 @@ type ServiceInfo struct {
 	SerName           string        `json:"serName" validate:"required,max=128,validateName"`
 	SerCategory       CategoryRef   `json:"serCategory" validate:"omitempty"`
 	Version           string        `json:"version" validate:"required,max=32,validateVersion"`
-	State             string        `json:"state" validate:"required,oneof=ACTIVE INACTIVE SUSPENDED"`
+	State             string        `json:"state" validate:"required,oneof=ACTIVE INACTIVE"`
 	TransportID       string        `json:"transportId" validate:"omitempty,max=64,validateId"`
 	TransportInfo     TransportInfo `json:"transportInfo" validate:"omitempty"`
 	Serializer        string        `json:"serializer" validate:"required,oneof=JSON XML PROTOBUF3"`
