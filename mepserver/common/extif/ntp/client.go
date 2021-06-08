@@ -76,7 +76,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
 
 	if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
-		currentTime.TimeSourceStatus = "TRACEABLE " + host
+		currentTime.TimeSourceStatus = "TRACEABLE "
 	} else {
 		currentTime.TimeSourceStatus = "NONTRACEABLE"
 	}
@@ -102,6 +102,16 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	NtpServer.NtpServerAddrType = "DNS_NAME"
 	NtpServer.AuthenticationOption = "NONE"
 	NtpServer.AuthenticationKeyNum = 0
+	NtpServer.LocalPriority = 0
+	NtpServer.MaxPollingInterval = 1024
+	NtpServer.MinPollingInterval = 6
+
+	timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
+
+	NtpServer.NtpServerAddr = "in.pool.ntp.com"
+	NtpServer.NtpServerAddrType = "DNS_NAME"
+	NtpServer.AuthenticationOption = "SYMMETRIC"
+	NtpServer.AuthenticationKeyNum = 20
 	NtpServer.LocalPriority = 0
 	NtpServer.MaxPollingInterval = 1024
 	NtpServer.MinPollingInterval = 6
