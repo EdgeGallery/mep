@@ -25,6 +25,9 @@ import (
 	"log"
 	"mepserver/common/util"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -98,25 +101,21 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	timingCaps.TimeStamp.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
 	//NTP server capabilities
 	var NtpServer NtpServers
-	NtpServer.NtpServerAddr = "us.pool.ntp.org"
-	NtpServer.NtpServerAddrType = "DNS_NAME"
-	NtpServer.AuthenticationOption = "NONE"
-	NtpServer.AuthenticationKeyNum = 0
-	NtpServer.LocalPriority = 0
-	NtpServer.MaxPollingInterval = 1024
-	NtpServer.MinPollingInterval = 6
-
-	timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
-
-	NtpServer.NtpServerAddr = "in.pool.ntp.com"
-	NtpServer.NtpServerAddrType = "DNS_NAME"
-	NtpServer.AuthenticationOption = "SYMMETRIC"
-	NtpServer.AuthenticationKeyNum = 20
-	NtpServer.LocalPriority = 0
-	NtpServer.MaxPollingInterval = 1024
-	NtpServer.MinPollingInterval = 6
-
-	timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
+	serverList := os.Getenv("NTP_SERVERS")
+	log.Printf("failed to read server response: %v", serverList)
+	servers := strings.Split(serverList, ",")
+	priority := 1
+	for _, server := range servers {
+		NtpServer.NtpServerAddr = server
+		NtpServer.NtpServerAddrType = "DNS_NAME"
+		NtpServer.AuthenticationOption = "NONE" //Authentication not supported now
+		NtpServer.AuthenticationKeyNum = 0      // Invalid key number
+		NtpServer.LocalPriority = priority
+		NtpServer.MaxPollingInterval, _ = strconv.Atoi(os.Getenv("NtpMaxPollInterval"))
+		NtpServer.MinPollingInterval, _ = strconv.Atoi(os.Getenv("MinPollingInterval"))
+		timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
+		priority++
+	}
 
 	return &timingCaps, 0
 }

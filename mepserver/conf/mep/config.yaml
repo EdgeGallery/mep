@@ -29,10 +29,3 @@ dnsAgent:
 dataplane:
   # values: none
   type: none
-
-ntpServer:
-  type: all
-  endPoint:
-    address:
-      host: localhost
-      port: 123
