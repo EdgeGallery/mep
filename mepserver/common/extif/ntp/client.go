@@ -43,7 +43,6 @@ type NtpCurrentTime struct {
 type NtpTimingCaps struct {
 	TimeStamp  NtpTimeStamp
 	NtpServers []NtpServers
-	PtpMasters []PtpMasters
 }
 
 // NtpTimeStamp ntp record
@@ -63,16 +62,9 @@ type NtpServers struct {
 	AuthenticationKeyNum int
 }
 
-// PtpMasters ntp record
-type PtpMasters struct {
-	PtpMasterIPAddress     string
-	PtpMasterLocalPriority int
-	DelayReqMaxRate        int
-}
-
 func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	var currentTime NtpCurrentTime
-	host := "us.pool.ntp.org"
+	host := "mep-ntp"
 	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
 	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
