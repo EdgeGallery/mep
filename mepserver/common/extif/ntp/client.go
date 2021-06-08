@@ -64,7 +64,7 @@ type NtpServers struct {
 
 func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	var currentTime NtpCurrentTime
-	host := "us.pool.ntp.org"
+	host := "mep-ntp"
 	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
 	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
