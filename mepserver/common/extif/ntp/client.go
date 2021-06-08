@@ -111,8 +111,8 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 		NtpServer.AuthenticationOption = "NONE" //Authentication not supported now
 		NtpServer.AuthenticationKeyNum = 0      // Invalid key number
 		NtpServer.LocalPriority = priority
-		NtpServer.MaxPollingInterval, _ = strconv.Atoi(os.Getenv("NtpMaxPollInterval"))
-		NtpServer.MinPollingInterval, _ = strconv.Atoi(os.Getenv("MinPollingInterval"))
+		NtpServer.MaxPollingInterval, _ = strconv.Atoi(os.Getenv("maxpoll"))
+		NtpServer.MinPollingInterval, _ = strconv.Atoi(os.Getenv("minpoll"))
 		timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
 		priority++
 	}
