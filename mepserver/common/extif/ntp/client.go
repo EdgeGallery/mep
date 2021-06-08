@@ -76,7 +76,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
 
 	if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
-		currentTime.TimeSourceStatus = "TRACEABLE"
+		currentTime.TimeSourceStatus = "TRACEABLE " + host
 	} else {
 		currentTime.TimeSourceStatus = "NONTRACEABLE"
 	}
@@ -86,7 +86,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 
 func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	var timingCaps NtpTimingCaps
-	host := "us.pool.ntp.org"
+	host := "mep-ntp"
 	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
 	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
