@@ -106,7 +106,7 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	priority := 1
 	for _, server := range servers {
 
-		NtpServer.NtpServerAddr = server
+		NtpServer.NtpServerAddr = strings.TrimSpace(server)
 		NtpServer.NtpServerAddrType = "DNS_NAME"
 		NtpServer.AuthenticationOption = "NONE" //Authentication not supported now
 		NtpServer.AuthenticationKeyNum = 0      // Invalid key number

@@ -27,7 +27,7 @@ type CurrentTime struct {
 type TimingCaps struct {
 	TimeStamp  NtpTimeStamp `json:"timeStamp"`
 	NtpServers []NtpServers `json:"ntpServers"`
-	//PtpMasters []PtpMasters `json:"ptpMasters"` //not supporting
+	//PtpMasters []PtpMasters `json:"ptpMasters"` //not supported
 }
 
 // NtpTimeStamp for timestamp record
