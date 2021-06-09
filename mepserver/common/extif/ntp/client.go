@@ -26,7 +26,6 @@ import (
 	"mepserver/common/util"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -89,30 +88,31 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 
 func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	var timingCaps NtpTimingCaps
+	var NtpServer NtpServers
+
 	host := "mep-ntp"
-	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
+	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: defaultNtpVersion})
 	if ntpRsp == nil {
 		log.Fatalf("failed to read server response: %v", err)
 		return nil, util.NtpConnectionErr
 	}
 
-	// the number of seconds elapsed since January 1, 1970 UTC
+	// Timestamp
 	timingCaps.TimeStamp.Seconds = int(ntpRsp.Time.Unix())
 	timingCaps.TimeStamp.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
-	//NTP server capabilities
-	var NtpServer NtpServers
+
 	serverList := os.Getenv("NTP_SERVERS")
-	log.Printf("failed to read server response: %v", serverList)
 	servers := strings.Split(serverList, ",")
 	priority := 1
 	for _, server := range servers {
+
 		NtpServer.NtpServerAddr = server
 		NtpServer.NtpServerAddrType = "DNS_NAME"
 		NtpServer.AuthenticationOption = "NONE" //Authentication not supported now
 		NtpServer.AuthenticationKeyNum = 0      // Invalid key number
 		NtpServer.LocalPriority = priority
-		NtpServer.MaxPollingInterval, _ = strconv.Atoi(os.Getenv("maxpoll"))
-		NtpServer.MinPollingInterval, _ = strconv.Atoi(os.Getenv("minpoll"))
+		NtpServer.MaxPollingInterval = minPoll
+		NtpServer.MinPollingInterval = maxPoll
 		timingCaps.NtpServers = append(timingCaps.NtpServers, NtpServer)
 		priority++
 	}
@@ -146,6 +146,8 @@ const (
 	defaultTimeout    = 5 * time.Second
 	maxPollInterval   = (1 << 17) * time.Second
 	maxDispersion     = 16 * time.Second
+	minPoll           = 4
+	maxPoll           = 17
 )
 
 // Internal variables
