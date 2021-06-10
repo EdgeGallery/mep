@@ -399,7 +399,7 @@ func (m *Mp1Service) getCurrentTime(w http.ResponseWriter, r *http.Request) {
 func (m *Mp1Service) getTimingCaps(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(&plans.Transports{})
+	workPlan.Try(&plans.TimingCaps{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)

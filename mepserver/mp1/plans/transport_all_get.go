@@ -16,7 +16,9 @@ type Transports struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-func (t *Transports) fillTransportInfo(tpInfos []models.TransportInfo) {
+func fillTransportInfo(tpInfos []models.TransportInfo) {
+	log.Info("In fillTransportInfo")
+	fmt.Println("In fillTransportInfo....")
 	var transportInfo models.TransportInfo
 	tpInfos = make([]models.TransportInfo, 0)
 	transportInfo.ID = "abced"
@@ -28,9 +30,10 @@ func (t *Transports) fillTransportInfo(tpInfos []models.TransportInfo) {
 	tpInfos = append(tpInfos, transportInfo)
 }
 
-func (t *Transports) InitTransportInfo() error {
+func InitTransportInfo() error {
+	log.Info("In InitTransportInfo")
 	var transportInfos []models.TransportInfo
-	t.fillTransportInfo(transportInfos)
+	fillTransportInfo(transportInfos)
 	updateJSON, err := json.Marshal(transportInfos)
 	if err != nil {
 		log.Errorf(err, "Can not marshal the input transport info.")
@@ -48,7 +51,7 @@ func (t *Transports) InitTransportInfo() error {
 
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
-	t.InitTransportInfo()
+	InitTransportInfo()
 	transportsBytes, err := backend.GetRecord(util.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
