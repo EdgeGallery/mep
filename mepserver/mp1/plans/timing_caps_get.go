@@ -17,6 +17,7 @@ func (t *TimingCaps) fillTimingCapsRsp(tcOut *models.TimingCaps, tcIn *ntp.NtpTi
 
 	tcOut.TimeStamp.Seconds = tcIn.TimeStamp.Seconds
 	tcOut.TimeStamp.NanoSeconds = tcIn.TimeStamp.NanoSeconds
+	tcOut.NtpServers = make([]models.NtpServers, 0)
 
 	for _, NtpServerIn := range tcIn.NtpServers {
 		NtpServer := models.NtpServers(NtpServerIn)
@@ -36,7 +37,6 @@ func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 	}
 
 	tc := models.TimingCaps{}
-	// Fill the response record
 	t.fillTimingCapsRsp(&tc, timingCapsRsp)
 
 	t.HttpRsp = tc
