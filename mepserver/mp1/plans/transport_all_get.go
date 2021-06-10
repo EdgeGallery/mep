@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/models"
-	"mepserver/common/util"
+	mputil "mepserver/common/util"
 )
 
 // Transports to get timing capabilities
@@ -18,10 +19,9 @@ type Transports struct {
 
 func fillTransportInfo(tpInfos []models.TransportInfo) {
 	log.Info("In fillTransportInfo")
-	fmt.Println("In fillTransportInfo....")
 	var transportInfo models.TransportInfo
-	tpInfos = make([]models.TransportInfo, 0)
-	transportInfo.ID = "abced"
+
+	transportInfo.ID = util.GenerateUuid()
 	transportInfo.Name = "REST"
 	transportInfo.Description = "REST API"
 	transportInfo.TransType = "REST_HTTP"
@@ -32,7 +32,7 @@ func fillTransportInfo(tpInfos []models.TransportInfo) {
 
 func InitTransportInfo() error {
 	log.Info("In InitTransportInfo")
-	var transportInfos []models.TransportInfo
+	transportInfos := make([]models.TransportInfo, 0)
 	fillTransportInfo(transportInfos)
 	updateJSON, err := json.Marshal(transportInfos)
 	if err != nil {
@@ -40,7 +40,7 @@ func InitTransportInfo() error {
 		return fmt.Errorf("error: Can not marshal the input transport info")
 	}
 
-	resultErr := backend.PutRecord(util.TransportInfoPath, updateJSON)
+	resultErr := backend.PutRecord(mputil.TransportInfoPath, updateJSON)
 	if resultErr != 0 {
 		log.Errorf(nil, "Transport info update on etcd failed.")
 		return fmt.Errorf("error: Transport info update on etcd failed")
@@ -52,7 +52,7 @@ func InitTransportInfo() error {
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
 	InitTransportInfo()
-	transportsBytes, err := backend.GetRecord(util.TransportInfoPath)
+	transportsBytes, err := backend.GetRecord(mputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "transport info retrieval failed")
@@ -63,7 +63,7 @@ func (t *Transports) OnRequest(data string) workspace.TaskCode {
 	jsonErr := json.Unmarshal(transportsBytes, transportInfo)
 	if jsonErr != nil {
 		log.Errorf(nil, "Failed to parse the transport info from data-store.")
-		t.SetFirstErrorCode(util.OperateDataWithEtcdErr, "parse transport info from data-store failed")
+		t.SetFirstErrorCode(mputil.OperateDataWithEtcdErr, "parse transport info from data-store failed")
 		return workspace.TaskFinish
 	}
 
