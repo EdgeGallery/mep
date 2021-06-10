@@ -31,9 +31,11 @@ func fillTransportInfo(tpInfos []models.TransportInfo) {
 }
 
 func InitTransportInfo() error {
-	log.Info("In InitTransportInfo")
+
 	transportInfos := make([]models.TransportInfo, 0)
 	fillTransportInfo(transportInfos)
+	log.Infof("In InitTransportInfo %v", transportInfos[0].ID, len(transportInfos))
+
 	updateJSON, err := json.Marshal(transportInfos)
 	if err != nil {
 		log.Errorf(err, "Can not marshal the input transport info.")
