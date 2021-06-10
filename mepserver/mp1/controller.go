@@ -18,8 +18,10 @@
 package mp1
 
 import (
+	"encoding/json"
 	"fmt"
 	"mepserver/common/config"
+	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
@@ -96,6 +98,40 @@ func (m *Mp1Service) Init() error {
 	m.dataPlane = dataPlane
 	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
+	if err := m.InitTransportInfo(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *Mp1Service) fillTransportInfo(tpInfos []models.TransportInfo) {
+	var transportInfo models.TransportInfo
+	tpInfos = make([]models.TransportInfo, 0)
+	transportInfo.ID = "abced"
+	transportInfo.Name = "REST"
+	transportInfo.Description = "REST API"
+	transportInfo.TransType = "REST_HTTP"
+	transportInfo.Protocol = "HTTP"
+	transportInfo.Version = "2.0"
+	tpInfos = append(tpInfos, transportInfo)
+}
+
+func (m *Mp1Service) InitTransportInfo() error {
+	var transportInfos []models.TransportInfo
+	m.fillTransportInfo(transportInfos)
+	updateJSON, err := json.Marshal(transportInfos)
+	if err != nil {
+		log.Errorf(err, "Can not marshal the input transport info.")
+		return fmt.Errorf("error: Can not marshal the input transport info")
+	}
+
+	resultErr := backend.PutRecord(meputil.TransportInfoPath, updateJSON)
+	if resultErr != 0 {
+		log.Errorf(nil, "Transport info update on etcd failed.")
+		return fmt.Errorf("error: Transport info update on etcd failed")
+	}
+
 	return nil
 }
 
@@ -146,6 +182,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		//NTP
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getCurrentTime},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.TimingCaps, Func: m.getTimingCaps},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.TransportPath, Func: m.getTransports},
 	}
 }
 
@@ -394,7 +431,16 @@ func (m *Mp1Service) getCurrentTime(w http.ResponseWriter, r *http.Request) {
 func (m *Mp1Service) getTimingCaps(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try(&plans.TimingCaps{})
+	workPlan.Try(&plans.Transports{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) getTransports(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(&plans.Transports{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
