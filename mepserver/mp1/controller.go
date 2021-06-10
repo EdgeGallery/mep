@@ -18,10 +18,8 @@
 package mp1
 
 import (
-	"encoding/json"
 	"fmt"
 	"mepserver/common/config"
-	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
@@ -101,36 +99,6 @@ func (m *Mp1Service) Init() error {
 	//if err := m.InitTransportInfo(); err != nil {
 	//	return err
 	//}
-
-	return nil
-}
-
-func (m *Mp1Service) fillTransportInfo(tpInfos []models.TransportInfo) {
-	var transportInfo models.TransportInfo
-	tpInfos = make([]models.TransportInfo, 0)
-	transportInfo.ID = "abced"
-	transportInfo.Name = "REST"
-	transportInfo.Description = "REST API"
-	transportInfo.TransType = "REST_HTTP"
-	transportInfo.Protocol = "HTTP"
-	transportInfo.Version = "2.0"
-	tpInfos = append(tpInfos, transportInfo)
-}
-
-func (m *Mp1Service) InitTransportInfo() error {
-	var transportInfos []models.TransportInfo
-	m.fillTransportInfo(transportInfos)
-	updateJSON, err := json.Marshal(transportInfos)
-	if err != nil {
-		log.Errorf(err, "Can not marshal the input transport info.")
-		return fmt.Errorf("error: Can not marshal the input transport info")
-	}
-
-	resultErr := backend.PutRecord(meputil.TransportInfoPath, updateJSON)
-	if resultErr != 0 {
-		log.Errorf(nil, "Transport info update on etcd failed.")
-		return fmt.Errorf("error: Transport info update on etcd failed")
-	}
 
 	return nil
 }
