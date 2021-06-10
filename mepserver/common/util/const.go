@@ -70,6 +70,7 @@ const (
 
 	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
 	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
+	GovernServicesPath     = RootPath + MecServiceGovernPath + "/services"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
@@ -118,6 +119,7 @@ const (
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
 const FormatIntBase = 10
+const SuccessRetCode = 0
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"

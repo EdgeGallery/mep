@@ -19,6 +19,8 @@ package plans
 
 import (
 	"mepserver/common/arch/workspace"
+	"mepserver/common/models"
+	meputil "mepserver/common/util"
 	"mepserver/mp1/event"
 	"net/http"
 	"strings"
@@ -97,6 +99,10 @@ func (t *SubscriptionInfoReq) OnRequest(data string) workspace.TaskCode {
 	}
 	subscribeRes["subscribeRelations"] = relationsList
 
-	t.HttpRsp = subscribeRes
+	responseInfo := models.ResponseInfo{
+		Data:    subscribeRes,
+		RetCode: meputil.SuccessRetCode,
+	}
+	t.HttpRsp = responseInfo
 	return workspace.TaskFinish
 }
