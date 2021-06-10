@@ -52,6 +52,7 @@ func InitTransportInfo() error {
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
 	InitTransportInfo()
+
 	transportsBytes, err := backend.GetRecord(mputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
@@ -59,8 +60,8 @@ func (t *Transports) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	transportInfo := &models.TransportInfo{}
-	jsonErr := json.Unmarshal(transportsBytes, transportInfo)
+	transportInfo := make([]models.TransportInfo, 0)
+	jsonErr := json.Unmarshal(transportsBytes, &transportInfo)
 	if jsonErr != nil {
 		log.Errorf(nil, "Failed to parse the transport info from data-store.")
 		t.SetFirstErrorCode(mputil.OperateDataWithEtcdErr, "parse transport info from data-store failed")
