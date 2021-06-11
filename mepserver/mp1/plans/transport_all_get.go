@@ -25,6 +25,33 @@ func fillTransportInfo(tpInfos *models.TransportInfo) {
 	tpInfos.TransType = "REST_HTTP"
 	tpInfos.Protocol = "HTTP"
 	tpInfos.Version = "2.0"
+	var theArray = make([]string, 1)
+	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
+	tpInfos.Security.OAuth2Info.GrantTypes = theArray
+	tpInfos.Security.OAuth2Info.TokenEndpoint = "/mep/token"
+}
+
+func checkTransportIsExists(tpInfos *models.TransportInfo) bool {
+	respLists, err := backend.GetRecords(mputil.TransportInfoPath)
+	if err != 0 {
+		log.Errorf(nil, "Get transport info from data-store failed.")
+		return false
+	}
+
+	for _, value := range respLists {
+		var transportInfo *models.TransportInfo
+		err := json.Unmarshal(value, &transportInfo)
+		if err != nil {
+			log.Errorf(nil, "Transport Info decode failed.")
+			return false
+		}
+
+		if transportInfo.Name == "REST" {
+			log.Infof("Transport info exists for  %v", transportInfo.Name)
+			return true
+		}
+	}
+	return false
 }
 
 func InitTransportInfo() error {
@@ -32,6 +59,10 @@ func InitTransportInfo() error {
 	var transportInfos models.TransportInfo
 	fillTransportInfo(&transportInfos)
 	log.Infof("In InitTransportInfo %v", transportInfos.ID)
+
+	if checkTransportIsExists(&transportInfos) == true {
+		return nil
+	}
 
 	updateJSON, err := json.Marshal(transportInfos)
 	if err != nil {
