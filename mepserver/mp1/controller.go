@@ -18,8 +18,11 @@
 package mp1
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/util"
 	"mepserver/common/config"
+	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
@@ -35,6 +38,8 @@ import (
 	meputil "mepserver/common/util"
 	"mepserver/mp1/plans"
 )
+
+const transportNameRest = "REST"
 
 type APIHookFunc func() models.EndPointInfo
 
@@ -96,10 +101,70 @@ func (m *Mp1Service) Init() error {
 	m.dataPlane = dataPlane
 	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
-	//if err := m.InitTransportInfo(); err != nil {
-	//	return err
-	//}
+	if err := m.InitTransportInfo(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (m *Mp1Service) fillTransportInfo(tpInfos *models.TransportInfo) {
+	tpInfos.ID = util.GenerateUuid()
+	tpInfos.Name = "REST"
+	tpInfos.Description = "REST API"
+	tpInfos.TransType = "REST_HTTP"
+	tpInfos.Protocol = "HTTP"
+	tpInfos.Version = "2.0"
+	var theArray = make([]string, 1)
+	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
+	tpInfos.Security.OAuth2Info.GrantTypes = theArray
+	tpInfos.Security.OAuth2Info.TokenEndpoint = "/mep/token"
+}
+
+func (m *Mp1Service) checkTransportIsExists(tpInfos *models.TransportInfo) bool {
+	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
+	if err != 0 {
+		log.Errorf(nil, "Get transport info from data-store failed.")
+		return false
+	}
+
+	for _, value := range respLists {
+		var transportInfo *models.TransportInfo
+		err := json.Unmarshal(value, &transportInfo)
+		if err != nil {
+			log.Errorf(nil, "Transport Info decode failed.")
+			return false
+		}
+
+		if transportInfo.Name == transportNameRest {
+			log.Infof("Transport info exists for  %v", transportInfo.Name)
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Mp1Service) InitTransportInfo() error {
+	var transportInfos models.TransportInfo
+	m.fillTransportInfo(&transportInfos)
+
+	if m.checkTransportIsExists(&transportInfos) == true {
+		return nil
+	}
+
+	updateJSON, err := json.Marshal(transportInfos)
+	if err != nil {
+		log.Errorf(err, "Can not marshal the input transport info.")
+		return fmt.Errorf("error: Can not marshal the input transport info")
+	}
+
+	resultErr := backend.PutRecord(meputil.TransportInfoPath+transportInfos.ID, updateJSON)
+	if resultErr != 0 {
+		log.Errorf(nil, "Transport info update on etcd failed.")
+		return fmt.Errorf("error: Transport info update on etcd failed")
+	}
+
+	log.Infof("Transport info added for %s.", transportInfos.Name)
 	return nil
 }
 
