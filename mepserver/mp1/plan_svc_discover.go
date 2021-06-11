@@ -92,6 +92,7 @@ type DiscoverService struct {
 	QueryParam    url.Values      `json:"queryParam,in"`
 	CoreRequest   interface{}     `json:"coreRequest,in"`
 	AppInstanceId string          `json:"appInstanceId,in"`
+	Flag          bool            `json:"flag,out"`
 	InstanceId    string          `json:"instanceId,out"`
 	CoreRsp       interface{}     `json:"coreRsp,out"`
 }
@@ -148,6 +149,10 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	}
 	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
 	t.InstanceId = t.AppInstanceId
+	// Flag is true when appInstanceId is null, so need authentication
+	if t.QueryParam.Get(":appInstanceId") == "" {
+		t.Flag = true
+	}
 	if req.ServiceName == "" {
 		var errFindByKey error
 		t.CoreRsp, errFindByKey = meputil.FindInstanceByKey(t.QueryParam)
@@ -184,6 +189,7 @@ type ToStrDiscover struct {
 	workspace.TaskBase
 	CoreRsp    interface{}     `json:"coreRsp,in"`
 	InstanceId string          `json:"instanceId,in"`
+	Flag       bool            `json:"flag,in"`
 	HttpRsp    interface{}     `json:"httpRsp,out"`
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 }
@@ -196,7 +202,12 @@ func (t *ToStrDiscover) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance response failed")
 		return workspace.TaskFinish
 	}
-	t.HttpErrInf, t.HttpRsp = Mp1CvtSrvDiscover(value, t.InstanceId)
+	if t.Flag {
+		t.HttpErrInf, t.HttpRsp = Mp1CvtSrvAuthenDiscover(value, t.InstanceId)
+	} else {
+		t.HttpErrInf, t.HttpRsp = Mp1CvtSrvDiscover(value)
+	}
+
 	return workspace.TaskFinish
 }
 
@@ -246,7 +257,7 @@ func instanceHook(r *http.Request, rspData interface{}) interface{} {
 }
 
 // Mp1CvtSrvDiscover mp1 cvt all service discover
-func Mp1CvtSrvDiscoverAll(findInsResp *proto.FindInstancesResponse) (*proto.Response, []*models.ServiceInfo) {
+func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse) (*proto.Response, []*models.ServiceInfo) {
 	resp := findInsResp.Response
 	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {
 		return resp, nil
@@ -261,8 +272,8 @@ func Mp1CvtSrvDiscoverAll(findInsResp *proto.FindInstancesResponse) (*proto.Resp
 
 }
 
-// Mp1CvtSrvDiscover mp1 cvt service discover by app instance id
-func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse, appInsId string) (*proto.Response, []*models.ServiceInfo) {
+// Mp1CvtSrvAuthenDiscover mp1 cvt service discover by app instance id
+func Mp1CvtSrvAuthenDiscover(findInsResp *proto.FindInstancesResponse, appInsId string) (*proto.Response, []*models.ServiceInfo) {
 	resp := findInsResp.Response
 	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {
 		return resp, nil
