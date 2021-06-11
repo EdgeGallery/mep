@@ -54,7 +54,7 @@ func getAllServices() []*models.ServiceInfo {
 		return serviceInfos
 	}
 
-	_, serviceInfos = mp1.Mp1CvtSrvDiscoverAll(findInstancesResponse)
+	_, serviceInfos = mp1.Mp1CvtSrvDiscover(findInstancesResponse)
 	if serviceInfos == nil {
 		log.Errorf(nil, "Service discovery failed.")
 		return serviceInfos
