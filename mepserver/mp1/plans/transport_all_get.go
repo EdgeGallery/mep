@@ -17,24 +17,21 @@ type Transports struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-func fillTransportInfo(tpInfos []models.TransportInfo) {
+func fillTransportInfo(tpInfos *models.TransportInfo) {
 	log.Info("In fillTransportInfo")
-	var transportInfo models.TransportInfo
-
-	transportInfo.ID = util.GenerateUuid()
-	transportInfo.Name = "REST"
-	transportInfo.Description = "REST API"
-	transportInfo.TransType = "REST_HTTP"
-	transportInfo.Protocol = "HTTP"
-	transportInfo.Version = "2.0"
-	tpInfos = append(tpInfos, transportInfo)
+	tpInfos.ID = util.GenerateUuid()
+	tpInfos.Name = "REST" //key
+	tpInfos.Description = "REST API"
+	tpInfos.TransType = "REST_HTTP"
+	tpInfos.Protocol = "HTTP"
+	tpInfos.Version = "2.0"
 }
 
 func InitTransportInfo() error {
 
-	transportInfos := make([]models.TransportInfo, 0)
-	fillTransportInfo(transportInfos)
-	log.Infof("In InitTransportInfo %v", transportInfos[0].ID, len(transportInfos))
+	var transportInfos models.TransportInfo
+	fillTransportInfo(&transportInfos)
+	log.Infof("In InitTransportInfo %v", transportInfos.ID)
 
 	updateJSON, err := json.Marshal(transportInfos)
 	if err != nil {
@@ -42,7 +39,7 @@ func InitTransportInfo() error {
 		return fmt.Errorf("error: Can not marshal the input transport info")
 	}
 
-	resultErr := backend.PutRecord(mputil.TransportInfoPath, updateJSON)
+	resultErr := backend.PutRecord(mputil.TransportInfoPath+transportInfos.ID, updateJSON)
 	if resultErr != 0 {
 		log.Errorf(nil, "Transport info update on etcd failed.")
 		return fmt.Errorf("error: Transport info update on etcd failed")
@@ -55,21 +52,25 @@ func InitTransportInfo() error {
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
 	InitTransportInfo()
 
-	transportsBytes, err := backend.GetRecord(mputil.TransportInfoPath)
+	respLists, err := backend.GetRecords(mputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "transport info retrieval failed")
 		return workspace.TaskFinish
 	}
-
-	transportInfo := make([]models.TransportInfo, 0)
-	jsonErr := json.Unmarshal(transportsBytes, &transportInfo)
-	if jsonErr != nil {
-		log.Errorf(nil, "Failed to parse the transport info from data-store.")
-		t.SetFirstErrorCode(mputil.OperateDataWithEtcdErr, "parse transport info from data-store failed")
-		return workspace.TaskFinish
+	var transportRecords []*models.TransportInfo
+	for _, value := range respLists {
+		var transportInfo *models.TransportInfo
+		err := json.Unmarshal(value, &transportInfo)
+		if err != nil {
+			log.Errorf(nil, "Transport Info decode failed.")
+			t.SetFirstErrorCode(mputil.ParseInfoErr, err.Error())
+			return workspace.TaskFinish
+		}
+		log.Infof("out Id  %v", transportInfo.ID)
+		transportRecords = append(transportRecords, transportInfo)
 	}
 
-	t.HttpRsp = transportInfo
+	t.HttpRsp = transportRecords
 	return workspace.TaskFinish
 }
