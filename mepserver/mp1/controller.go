@@ -39,8 +39,6 @@ import (
 	"mepserver/mp1/plans"
 )
 
-const transportNameRest = "REST"
-
 type APIHookFunc func() models.EndPointInfo
 
 type APIGwHook struct {
@@ -101,14 +99,14 @@ func (m *Mp1Service) Init() error {
 	m.dataPlane = dataPlane
 	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
-	if err := m.InitTransportInfo(); err != nil {
+	if err := InitTransportInfo(); err != nil {
 		//return err
 	}
 
 	return nil
 }
 
-func (m *Mp1Service) fillTransportInfo(tpInfos *models.TransportInfo) {
+func fillTransportInfo(tpInfos *models.TransportInfo) {
 	tpInfos.ID = util.GenerateUuid()
 	tpInfos.Name = "REST"
 	tpInfos.Description = "REST API"
@@ -121,7 +119,7 @@ func (m *Mp1Service) fillTransportInfo(tpInfos *models.TransportInfo) {
 	tpInfos.Security.OAuth2Info.TokenEndpoint = "/mep/token"
 }
 
-func (m *Mp1Service) checkTransportIsExists(tpInfos *models.TransportInfo) bool {
+func checkTransportIsExists(tpInfos *models.TransportInfo) bool {
 	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
@@ -136,7 +134,7 @@ func (m *Mp1Service) checkTransportIsExists(tpInfos *models.TransportInfo) bool 
 			return false
 		}
 
-		if transportInfo.Name == transportNameRest {
+		if transportInfo.Name == tpInfos.Name {
 			log.Infof("Transport info exists for  %v", transportInfo.Name)
 			return true
 		}
@@ -144,11 +142,11 @@ func (m *Mp1Service) checkTransportIsExists(tpInfos *models.TransportInfo) bool 
 	return false
 }
 
-func (m *Mp1Service) InitTransportInfo() error {
+func InitTransportInfo() error {
 	var transportInfos models.TransportInfo
-	m.fillTransportInfo(&transportInfos)
+	fillTransportInfo(&transportInfos)
 
-	if m.checkTransportIsExists(&transportInfos) == true {
+	if checkTransportIsExists(&transportInfos) == true {
 		return nil
 	}
 
