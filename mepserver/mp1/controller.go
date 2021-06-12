@@ -18,25 +18,25 @@
 package mp1
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/apache/servicecomb-service-center/pkg/log"
-	"github.com/apache/servicecomb-service-center/pkg/rest"
 	"github.com/apache/servicecomb-service-center/pkg/util"
-	backenddb "github.com/apache/servicecomb-service-center/server/core/backend"
-	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
-	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
-	"mepserver/common"
-	"mepserver/common/arch/workspace"
 	"mepserver/common/config"
+	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	dpCommon "mepserver/common/extif/dataplane/common"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
+	"net/http"
+
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/rest"
+	v4 "github.com/apache/servicecomb-service-center/server/rest/controller/v4"
+
+	"mepserver/common"
+	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
 	"mepserver/mp1/plans"
-	"net/http"
 )
 
 type APIHookFunc func() models.EndPointInfo
@@ -100,7 +100,7 @@ func (m *Mp1Service) Init() error {
 	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
 	if err := InitTransportInfo(); err != nil {
-		//return err
+		return err
 	}
 
 	return nil
@@ -119,28 +119,28 @@ func fillTransportInfo(tpInfos *models.TransportInfo) {
 	tpInfos.Security.OAuth2Info.TokenEndpoint = "/mep/token"
 }
 
-//func checkTransportIsExists(tpInfos *models.TransportInfo) bool {
-//	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
-//	if err != 0 {
-//		log.Errorf(nil, "Get transport info from data-store failed.")
-//		return false
-//	}
-//
-//	for _, value := range respLists {
-//		var transportInfo *models.TransportInfo
-//		err := json.Unmarshal(value, &transportInfo)
-//		if err != nil {
-//			log.Errorf(nil, "Transport Info decode failed.")
-//			return false
-//		}
-//
-//		if transportInfo.Name == tpInfos.Name {
-//			log.Infof("Transport info exists for  %v", transportInfo.Name)
-//			return true
-//		}
-//	}
-//	return false
-//}
+func checkTransportIsExists(tpInfos *models.TransportInfo) bool {
+	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
+	if err != 0 {
+		log.Errorf(nil, "Get transport info from data-store failed.")
+		return false
+	}
+
+	for _, value := range respLists {
+		var transportInfo *models.TransportInfo
+		err := json.Unmarshal(value, &transportInfo)
+		if err != nil {
+			log.Errorf(nil, "Transport Info decode failed.")
+			return false
+		}
+
+		if transportInfo.Name == tpInfos.Name {
+			log.Infof("Transport info exists for  %v", transportInfo.Name)
+			return true
+		}
+	}
+	return false
+}
 
 func InitTransportInfo() error {
 	var transportInfos models.TransportInfo
@@ -150,7 +150,7 @@ func InitTransportInfo() error {
 	//	return nil
 	//}
 
-	updateJSON, err := json.Marshal(transportInfos)
+	_, err := json.Marshal(transportInfos)
 	if err != nil {
 		log.Errorf(err, "Can not marshal the input transport info.")
 		return fmt.Errorf("error: Can not marshal the input transport info")
@@ -161,15 +161,6 @@ func InitTransportInfo() error {
 	//	log.Errorf(nil, "Transport info update on etcd failed.")
 	//	return fmt.Errorf("error: Transport info update on etcd failed")
 	//}
-
-	opts := []registry.PluginOp{
-		registry.OpPut(registry.WithStrKey(meputil.TransportInfoPath+transportInfos.ID), registry.WithValue(updateJSON)),
-	}
-	_, error := backenddb.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
-	if error != nil {
-		log.Errorf(nil, "Write to data-store failed.")
-		return fmt.Errorf("error: Transport info update on etcd failed")
-	}
 
 	log.Infof("Transport info added for %s.", transportInfos.Name)
 	return nil
