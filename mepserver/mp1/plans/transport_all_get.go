@@ -12,8 +12,9 @@ type Transports struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-func (t *Transports) fillTransportInfo(tpInfos []*models.TransportInfo) {
-	var tpInfo *models.TransportInfo
+func (t *Transports) getTransportInfo() []models.TransportInfo {
+	var tpInfo models.TransportInfo
+	tpInfos := make([]models.TransportInfo, 0)
 	tpInfo.ID = util.GenerateUuid()
 	tpInfo.Name = "REST"
 	tpInfo.Description = "REST API"
@@ -25,13 +26,12 @@ func (t *Transports) fillTransportInfo(tpInfos []*models.TransportInfo) {
 	tpInfo.Security.OAuth2Info.GrantTypes = theArray
 	tpInfo.Security.OAuth2Info.TokenEndpoint = "/mep/token"
 	tpInfos = append(tpInfos, tpInfo)
+	return tpInfos
 }
 
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
-	var transportRecords []*models.TransportInfo
-	t.fillTransportInfo(transportRecords)
-
+	transportRecords := t.getTransportInfo()
 	t.HttpRsp = transportRecords
 	return workspace.TaskFinish
 }
