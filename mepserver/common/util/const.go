@@ -105,7 +105,6 @@ const (
 	AppDLCMJobsPath       = DBRootPath + "mep/applcm/jobs/"
 	AppDLCMTasksPath      = DBRootPath + "mep/applcm/tasks/"
 	AppDLCMTaskStatusPath = DBRootPath + "mep/applcm/taskstatus/"
-	TransportInfoPath     = DBRootPath + "transports/"
 )
 
 const (

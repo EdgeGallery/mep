@@ -1,12 +1,9 @@
 package plans
 
 import (
-	"encoding/json"
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	"github.com/apache/servicecomb-service-center/pkg/util"
 	"mepserver/common/arch/workspace"
-	"mepserver/common/extif/backend"
 	"mepserver/common/models"
-	mputil "mepserver/common/util"
 )
 
 // Transports to get timing capabilities
@@ -15,26 +12,25 @@ type Transports struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
+func (t *Transports) fillTransportInfo(tpInfos []*models.TransportInfo) {
+	var tpInfo *models.TransportInfo
+	tpInfo.ID = util.GenerateUuid()
+	tpInfo.Name = "REST"
+	tpInfo.Description = "REST API"
+	tpInfo.TransType = "REST_HTTP"
+	tpInfo.Protocol = "HTTP"
+	tpInfo.Version = "2.0"
+	var theArray = make([]string, 1)
+	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
+	tpInfo.Security.OAuth2Info.GrantTypes = theArray
+	tpInfo.Security.OAuth2Info.TokenEndpoint = "/mep/token"
+	tpInfos = append(tpInfos, tpInfo)
+}
+
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
-	respLists, err := backend.GetRecords(mputil.TransportInfoPath)
-	if err != 0 {
-		log.Errorf(nil, "Get transport info from data-store failed.")
-		t.SetFirstErrorCode(workspace.ErrCode(err), "transport info retrieval failed")
-		return workspace.TaskFinish
-	}
 	var transportRecords []*models.TransportInfo
-	for _, value := range respLists {
-		var transportInfo *models.TransportInfo
-		err := json.Unmarshal(value, &transportInfo)
-		if err != nil {
-			log.Errorf(nil, "Transport Info decode failed.")
-			t.SetFirstErrorCode(mputil.ParseInfoErr, err.Error())
-			return workspace.TaskFinish
-		}
-		log.Infof("out Id  %v", transportInfo.ID)
-		transportRecords = append(transportRecords, transportInfo)
-	}
+	t.fillTransportInfo(transportRecords)
 
 	t.HttpRsp = transportRecords
 	return workspace.TaskFinish
