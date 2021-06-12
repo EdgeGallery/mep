@@ -99,9 +99,9 @@ func (m *Mp1Service) Init() error {
 	m.dataPlane = dataPlane
 	log.Infof("Data plane initialized to %s.", m.config.DataPlane.Type)
 
-	if err := InitTransportInfo(); err != nil {
-		//return err
-	}
+	//if err := InitTransportInfo(); err != nil {
+	//	//return err
+	//}
 
 	return nil
 }
