@@ -85,7 +85,9 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 	}
 	// If not present then add to DB
 	for _, tpInfo := range tpInfos {
-		t.addTransportInfoToDb(&tpInfo)
+		if t.addTransportInfoToDb(&tpInfo) != nil {
+			log.Errorf(nil, "Add transport to DB failed.")
+		}
 	}
 
 	return tpInfos
