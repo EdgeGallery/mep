@@ -46,6 +46,7 @@ func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) error {
 		return nil
 	}
 
+	log.Infof("Transport info added for  %v", tpInfo.Name)
 	return nil
 }
 
@@ -69,6 +70,7 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 
 		for _, tpInfo := range tpInfos {
 			if transportInfo.Name == tpInfo.Name {
+				tpInfo.ID = transportInfo.ID
 				log.Infof("Transport info exists for  %v", transportInfo.Name)
 				return tpInfos
 			}
