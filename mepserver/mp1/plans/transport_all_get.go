@@ -60,6 +60,8 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 		return nil
 	}
 
+	tpInfoRecords := make([]models.TransportInfo, 0)
+
 	for _, value := range respLists {
 		var transportInfo *models.TransportInfo
 		err := json.Unmarshal(value, &transportInfo)
@@ -71,11 +73,13 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 		for _, tpInfo := range tpInfos {
 			if transportInfo.Name == tpInfo.Name {
 				tpInfo.ID = transportInfo.ID
+				tpInfoRecords = append(tpInfoRecords, tpInfo)
 				log.Infof("Transport info exists for  %v", transportInfo.Name)
-				return tpInfos
+				return tpInfoRecords
 			}
 		}
 	}
+
 	// If not present then add to DB
 	for _, tpInfo := range tpInfos {
 		t.addTransportInfoToDb(&tpInfo)
