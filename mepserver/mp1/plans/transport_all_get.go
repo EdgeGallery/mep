@@ -33,21 +33,21 @@ func (t *Transports) getTransportInfo() []models.TransportInfo {
 	return tpInfos
 }
 
-func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) error {
+func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) int {
 	updateJSON, jsonErr := json.Marshal(tpInfo)
 	if jsonErr != nil {
 		log.Errorf(jsonErr, "Can not marshal the input transport info.")
-		return nil
+		return 1
 	}
 
 	resultErr := backend.PutRecord(meputil.TransportInfoPath+tpInfo.ID, updateJSON)
 	if resultErr != 0 {
 		log.Errorf(nil, "Transport info update on etcd failed.")
-		return nil
+		return 1
 	}
 
-	log.Infof("Transport info added for  %v", tpInfo.Name)
-	return nil
+	log.Infof("Transport info added successfully for  %v", tpInfo.Name)
+	return 0
 }
 
 func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int) {
@@ -67,7 +67,7 @@ func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int
 		err := json.Unmarshal(value, &transportInfo)
 		if err != nil {
 			log.Errorf(nil, "Transport Info decode failed.")
-			return nil, meputil.OperateDataWithEtcdErr
+			return nil, meputil.ParseInfoErr
 		}
 
 		for _, tpInfo := range tpInfos {
@@ -85,8 +85,9 @@ func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int
 	}
 	// If not present then add to DB
 	for _, tpInfo := range tpInfos {
-		if t.addTransportInfoToDb(&tpInfo) != nil {
-			log.Errorf(nil, "Add transport to DB failed.")
+		ret := t.addTransportInfoToDb(&tpInfo)
+		if ret != 0 {
+			return nil, ret
 		}
 	}
 
@@ -97,8 +98,8 @@ func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
 	ts, err := t.checkAndUpdateTransportsInfo()
 	if err != 0 {
-		log.Errorf(nil, "Get timing caps from NTP server failed")
-		t.SetFirstErrorCode(workspace.ErrCode(err), "timing caps get failed")
+		log.Errorf(nil, "Get transport info failed.")
+		t.SetFirstErrorCode(workspace.ErrCode(err), "Get transport info failed")
 		return workspace.TaskFinish
 	}
 	t.HttpRsp = ts
