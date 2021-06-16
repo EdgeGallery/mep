@@ -260,7 +260,7 @@ const (
 	EnvMepAuthPort = "MEPAUTH_SERVICE_PORT"
 	EnvMepAuthHost = "MEPAUTH_PORT_10443_TCP_ADDR"
 )
-const MepAuthBaseUrlFormat = "https://%s:%s/mepauth/v1/applications"
+const MepAuthBaseUrlFormat = "https://%s:%s/mep/appMng/v1/applications"
 
 const (
 	NtpHost                = "mep-ntp"
