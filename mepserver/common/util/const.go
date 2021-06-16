@@ -279,4 +279,4 @@ const (
 	TransportGrantTypes    = "OAUTH2_CLIENT_CREDENTIALS"
 	TransportTokenEndpoint = "/mep/token"
 )
-const MepAuthBaseUrlFormat = "https://%s:%s/mep/appMng/v1/applications"
+
