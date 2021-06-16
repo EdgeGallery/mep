@@ -34,10 +34,10 @@ type CurrentTimeGet struct {
 func (t *CurrentTimeGet) OnRequest(data string) workspace.TaskCode {
 
 	// call external if api to get current time
-	currentTimeRsp, errCode := ntp.GetCurrentTime()
+	currentTimeRsp, errCode := ntp.GetTimeStamp()
 	if errCode != 0 {
 		log.Errorf(nil, "Get current time from NTP server failed")
-		t.SetFirstErrorCode(workspace.ErrCode(errCode), "current time get failed")
+		t.SetFirstErrorCode(workspace.ErrCode(errCode), "Current time get failed")
 		return workspace.TaskFinish
 	}
 

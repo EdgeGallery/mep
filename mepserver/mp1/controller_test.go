@@ -26,7 +26,6 @@ import (
 	"math/rand"
 	"mepserver/common/config"
 	"mepserver/common/extif/dataplane"
-	"mepserver/common/extif/ntp"
 	"mepserver/common/models"
 	"net/http"
 	"net/http/httptest"
@@ -2508,255 +2507,255 @@ func TestHeartbeatServiceInvalidServiceId(t *testing.T) {
 	mockWriter.AssertExpectations(t)
 }
 
-// Query dns rules request in mp1 interface
-func TestGetCurrentTime(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCurrentTIme),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(writeCurTimetFormat+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 200)
-
-	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
-		var ntpRsp ntp.Response
-
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-		ntpRsp.Stratum = 1
-		return &ntpRsp, nil
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[24].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query dns rules request in mp1 interface
-func TestGetCurrentTimeFailed(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCurrentTIme),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write",
-		[]byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"current time get failed\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(ntp.GetCurrentTime, func() (curTime *ntp.NtpCurrentTime, errorCode int) {
-		var currentTime ntp.NtpCurrentTime
-		return &currentTime, 1
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[24].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query dns rules request in mp1 interface
-func TestGetCurrentTimeNonSyncTime(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCurrentTIme),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(writeCurTimeNonSynct+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 200)
-
-	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
-		var ntpRsp ntp.Response
-
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-		ntpRsp.Stratum = 16
-		return &ntpRsp, nil
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[24].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query dns rules request in mp1 interface
-func TestGetCurrentTimeNtpConnFailed(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCurrentTIme),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":21,\"detail\":\"current time get failed\"}"+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
-		var ntpRsp ntp.Response
-
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-		ntpRsp.Stratum = 16
-		return nil, nil
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[24].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query dns rules request in mp1 interface
-func TestGetTimeCaps(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCaps),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(writeCaps+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 200)
-
-	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
-		var ntpRsp ntp.Response
-
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-
-		return &ntpRsp, nil
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[25].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-
-	mockWriter.AssertExpectations(t)
-}
-
-// Query dns rules request in mp1 interface
-func TestGetTimeCapsNtpFailed(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCaps),
-		bytes.NewReader([]byte("")))
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":21,\"detail\":\"timing caps get failed\"}"+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
-		var ntpRsp ntp.Response
-
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-
-		return nil, errors.New("Ntp err")
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[25].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		"failed to read server response: Ntp err")
-
-	mockWriter.AssertExpectations(t)
-}
+//// Query dns rules request in mp1 interface
+//func TestGetCurrentTime(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCurrentTIme),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte(writeCurTimetFormat+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 200)
+//
+//	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
+//		var ntpRsp ntp.Response
+//
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//		ntpRsp.Stratum = 1
+//		return &ntpRsp, nil
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[24].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor200)
+//
+//	mockWriter.AssertExpectations(t)
+//}
+//
+//// Query dns rules request in mp1 interface
+//func TestGetCurrentTimeFailed(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCurrentTIme),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write",
+//		[]byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"current time get failed\"}\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 400)
+//
+//	patches := gomonkey.ApplyFunc(ntp.GetCurrentTime, func() (curTime *ntp.NtpCurrentTime, errorCode int) {
+//		var currentTime ntp.NtpCurrentTime
+//		return &currentTime, 1
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[24].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor400)
+//
+//	mockWriter.AssertExpectations(t)
+//}
+//
+//// Query dns rules request in mp1 interface
+//func TestGetCurrentTimeNonSyncTime(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCurrentTIme),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte(writeCurTimeNonSynct+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 200)
+//
+//	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
+//		var ntpRsp ntp.Response
+//
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//		ntpRsp.Stratum = 16
+//		return &ntpRsp, nil
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[24].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor200)
+//
+//	mockWriter.AssertExpectations(t)
+//}
+//
+//// Query dns rules request in mp1 interface
+//func TestGetCurrentTimeNtpConnFailed(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCurrentTIme),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":21,\"detail\":\"current time get failed\"}"+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 400)
+//
+//	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
+//		var ntpRsp ntp.Response
+//
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//		ntpRsp.Stratum = 16
+//		return nil, nil
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[24].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor200)
+//
+//	mockWriter.AssertExpectations(t)
+//}
+//
+//// Query dns rules request in mp1 interface
+//func TestGetTimeCaps(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCaps),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte(writeCaps+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 200)
+//
+//	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
+//		var ntpRsp ntp.Response
+//
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//
+//		return &ntpRsp, nil
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[25].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor200)
+//
+//	mockWriter.AssertExpectations(t)
+//}
+//
+//// Query dns rules request in mp1 interface
+//func TestGetTimeCapsNtpFailed(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCaps),
+//		bytes.NewReader([]byte("")))
+//
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":21,\"detail\":\"timing caps get failed\"}"+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 400)
+//
+//	patches := gomonkey.ApplyFunc(ntp.QueryWithOptions, func(host string, opt ntp.QueryOptions) (*ntp.Response, error) {
+//		var ntpRsp ntp.Response
+//
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//
+//		return nil, errors.New("Ntp err")
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[25].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+//		"failed to read server response: Ntp err")
+//
+//	mockWriter.AssertExpectations(t)
+//}
 
 // Query dns rules request in mp1 interface
 func TestGetTransportInfo(t *testing.T) {
@@ -2938,60 +2937,60 @@ func TestGetTransportInfoPutRecordFailed(t *testing.T) {
 	mockWriter.AssertExpectations(t)
 }
 
-// Query dns rules request in mp1 interface
-func TestGetCurrentTimeWithHost(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("GET",
-		fmt.Sprintf(getTiming, getCurrentTIme),
-		bytes.NewReader([]byte("")))
-	serverTime := time.Unix(1623770544, 468538768)
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte(fmt.Sprintf(writeCurTimeFormatVal,
-		strconv.FormatInt(serverTime.Unix(), formatIntBase),
-		strconv.FormatInt(int64(serverTime.Nanosecond()), formatIntBase))+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 200)
-
-	patches := gomonkey.ApplyFunc(ntp.GetCurrentTime, func() (*ntp.NtpCurrentTime, int) {
-		var currentTime ntp.NtpCurrentTime
-		host := "pool.ntp.org"
-		ntpRsp, err := ntp.QueryWithOptions(host, ntp.QueryOptions{Version: 4})
-		if ntpRsp == nil {
-			log.Errorf(err, "failed to read server response")
-			return nil, util.NtpConnectionErr
-		}
-		ntpRsp.Time = time.Unix(1623770544, 468538768)
-		// The number of seconds elapsed since January 1, 1970 UTC
-		currentTime.Seconds = int(ntpRsp.Time.Unix())
-		currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
-
-		if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
-			currentTime.TimeSourceStatus = "TRACEABLE"
-		} else {
-			currentTime.TimeSourceStatus = "NONTRACEABLE"
-		}
-
-		return &currentTime, 0
-	})
-
-	defer patches.Reset()
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[24].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
-		responseCheckFor200)
-
-	mockWriter.AssertExpectations(t)
-}
+//// Query dns rules request in mp1 interface
+//func TestGetCurrentTimeWithHost(t *testing.T) {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			t.Errorf(panicFormatString, r)
+//		}
+//	}()
+//
+//	service := Mp1Service{}
+//
+//	// Create http get request
+//	getRequest, _ := http.NewRequest("GET",
+//		fmt.Sprintf(getTiming, getCurrentTIme),
+//		bytes.NewReader([]byte("")))
+//	serverTime := time.Unix(1623770544, 468538768)
+//	// Mock the response writer
+//	mockWriter := &mockHttpWriter{}
+//	responseHeader := http.Header{} // Create http response header
+//	mockWriter.On("Header").Return(responseHeader)
+//	mockWriter.On("Write", []byte(fmt.Sprintf(writeCurTimeFormatVal,
+//		strconv.FormatInt(serverTime.Unix(), formatIntBase),
+//		strconv.FormatInt(int64(serverTime.Nanosecond()), formatIntBase))+"\n")).
+//		Return(0, nil)
+//	mockWriter.On("WriteHeader", 200)
+//
+//	patches := gomonkey.ApplyFunc(ntp.GetCurrentTime, func() (*ntp.NtpCurrentTime, int) {
+//		var currentTime ntp.NtpCurrentTime
+//		host := "pool.ntp.org"
+//		ntpRsp, err := ntp.QueryWithOptions(host, ntp.QueryOptions{Version: 4})
+//		if ntpRsp == nil {
+//			log.Errorf(err, "failed to read server response")
+//			return nil, util.NtpConnectionErr
+//		}
+//		ntpRsp.Time = time.Unix(1623770544, 468538768)
+//		// The number of seconds elapsed since January 1, 1970 UTC
+//		currentTime.Seconds = int(ntpRsp.Time.Unix())
+//		currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
+//
+//		if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
+//			currentTime.TimeSourceStatus = "TRACEABLE"
+//		} else {
+//			currentTime.TimeSourceStatus = "NONTRACEABLE"
+//		}
+//
+//		return &currentTime, 0
+//	})
+//
+//	defer patches.Reset()
+//
+//	// 13 is the order of the DNS get all handler in the URLPattern
+//	service.URLPatterns()[24].Func(mockWriter, getRequest)
+//
+//	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+//		responseCheckFor200)
+//
+//	mockWriter.AssertExpectations(t)
+//}

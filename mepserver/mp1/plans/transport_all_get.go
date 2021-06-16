@@ -20,15 +20,15 @@ func (t *Transports) getTransportInfo() []models.TransportInfo {
 	var tpInfo models.TransportInfo
 	tpInfos := make([]models.TransportInfo, 0)
 	tpInfo.ID = util.GenerateUuid()
-	tpInfo.Name = "REST"
-	tpInfo.Description = "REST API"
-	tpInfo.TransType = "REST_HTTP"
-	tpInfo.Protocol = "HTTP"
-	tpInfo.Version = "2.0"
+	tpInfo.Name = meputil.TransportName
+	tpInfo.Description = meputil.TransportDescription
+	tpInfo.TransType = meputil.TransportTransType
+	tpInfo.Protocol = meputil.TransportProtocol
+	tpInfo.Version = meputil.TransportVersion
 	var theArray = make([]string, 1)
-	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
+	theArray[0] = meputil.TransportGrantTypes
 	tpInfo.Security.OAuth2Info.GrantTypes = theArray
-	tpInfo.Security.OAuth2Info.TokenEndpoint = "/mep/token"
+	tpInfo.Security.OAuth2Info.TokenEndpoint = meputil.TransportTokenEndpoint
 	tpInfos = append(tpInfos, tpInfo)
 	return tpInfos
 }
@@ -52,46 +52,35 @@ func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) int {
 
 func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int) {
 
-	tpInfos := t.getTransportInfo()
-
 	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
 		return nil, err
 	}
 
-	tpInfoRecords := make([]models.TransportInfo, 0)
-	isExist := false
-	for _, value := range respLists {
-		var transportInfo *models.TransportInfo
-		err := json.Unmarshal(value, &transportInfo)
-		if err != nil {
-			log.Errorf(nil, "Transport Info decode failed.")
-			return nil, meputil.ParseInfoErr
+	if respLists != nil {
+		tpInfoRecords := make([]models.TransportInfo, 0)
+		for _, value := range respLists {
+			var transportInfo models.TransportInfo
+			tpInfo := &transportInfo
+			err := json.Unmarshal(value, &tpInfo)
+			if err != nil {
+				log.Errorf(nil, "Transport Info decode failed.")
+				return nil, meputil.ParseInfoErr
+			}
+			tpInfoRecords = append(tpInfoRecords, transportInfo)
 		}
-
+	} else {
+		tpInfos := t.getTransportInfo()
 		for _, tpInfo := range tpInfos {
-			if transportInfo.Name == tpInfo.Name {
-				tpInfo.ID = transportInfo.ID
-				tpInfoRecords = append(tpInfoRecords, tpInfo)
-				log.Infof("Transport info exists for  %v", transportInfo.Name)
-				isExist = true
+			ret := t.addTransportInfoToDb(&tpInfo)
+			if ret != 0 {
+				return nil, ret
 			}
 		}
+		return tpInfos, 0
 	}
-
-	if isExist {
-		return tpInfoRecords, 0
-	}
-	// If not present then add to DB
-	for _, tpInfo := range tpInfos {
-		ret := t.addTransportInfoToDb(&tpInfo)
-		if ret != 0 {
-			return nil, ret
-		}
-	}
-
-	return tpInfos, 0
+	return nil, 1
 }
 
 // OnRequest handles to get timing capabilities query

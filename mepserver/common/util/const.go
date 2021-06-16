@@ -258,3 +258,21 @@ const (
 	EnvMepAuthHost = "MEPAUTH_PORT_10443_TCP_ADDR"
 )
 const MepAuthBaseUrlFormat = "https://%s:%s/mepauth/v1/applications"
+
+const (
+	NtpHost                = "mep-ntp"
+	Traceable              = "TRACEABLE"
+	NonTraceable           = "NONTRACEABLE"
+	MinPoll                = 4
+	MaxPoll                = 17
+	NtpServers             = "NTP_SERVERS"
+	NtpDnsName             = "DNS_NAME"
+	NtpAuthType            = "NONE"
+	TransportName          = "REST"
+	TransportDescription   = "REST API"
+	TransportTransType     = "REST_HTTP"
+	TransportProtocol      = "HTTP"
+	TransportVersion       = "2.0"
+	TransportGrantTypes    = "OAUTH2_CLIENT_CREDENTIALS"
+	TransportTokenEndpoint = "/mep/token"
+)
