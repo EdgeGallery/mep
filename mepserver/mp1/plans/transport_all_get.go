@@ -50,14 +50,14 @@ func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) error {
 	return nil
 }
 
-func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
+func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int) {
 
 	tpInfos := t.getTransportInfo()
 
 	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
-		return nil
+		return nil, err
 	}
 
 	tpInfoRecords := make([]models.TransportInfo, 0)
@@ -67,7 +67,7 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 		err := json.Unmarshal(value, &transportInfo)
 		if err != nil {
 			log.Errorf(nil, "Transport Info decode failed.")
-			return nil
+			return nil, meputil.OperateDataWithEtcdErr
 		}
 
 		for _, tpInfo := range tpInfos {
@@ -81,7 +81,7 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 	}
 
 	if isExist {
-		return tpInfoRecords
+		return tpInfoRecords, 0
 	}
 	// If not present then add to DB
 	for _, tpInfo := range tpInfos {
@@ -90,12 +90,17 @@ func (t *Transports) checkAndUpdateTransportsInfo() []models.TransportInfo {
 		}
 	}
 
-	return tpInfos
+	return tpInfos, 0
 }
 
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
-	ts := t.checkAndUpdateTransportsInfo()
+	ts, err := t.checkAndUpdateTransportsInfo()
+	if err != 0 {
+		log.Errorf(nil, "Get timing caps from NTP server failed")
+		t.SetFirstErrorCode(workspace.ErrCode(err), "timing caps get failed")
+		return workspace.TaskFinish
+	}
 	t.HttpRsp = ts
 	return workspace.TaskFinish
 }

@@ -21,8 +21,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	"golang.org/x/net/ipv4"
-	"log"
 	"mepserver/common/util"
 	"net"
 	"os"
@@ -69,7 +69,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	host := "mep-ntp"
 	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: 4})
 	if ntpRsp == nil {
-		log.Fatalf("failed to read server response: %v", err)
+		log.Errorf(err, "failed to read server response")
 		return nil, util.NtpConnectionErr
 	}
 
@@ -78,7 +78,7 @@ func GetCurrentTime() (curTime *NtpCurrentTime, errorCode int) {
 	currentTime.NanoSeconds = ntpRsp.Time.Nanosecond() // Nanosecond part within the second
 
 	if ntpRsp.Stratum >= 1 && ntpRsp.Stratum <= 15 {
-		currentTime.TimeSourceStatus = "TRACEABLE "
+		currentTime.TimeSourceStatus = "TRACEABLE"
 	} else {
 		currentTime.TimeSourceStatus = "NONTRACEABLE"
 	}
@@ -93,7 +93,7 @@ func GetTimingCaps() (timCaps *NtpTimingCaps, errorCode int) {
 	host := "mep-ntp"
 	ntpRsp, err := QueryWithOptions(host, QueryOptions{Version: defaultNtpVersion})
 	if ntpRsp == nil {
-		log.Fatalf("failed to read server response: %v", err)
+		log.Errorf(err, "Get timing caps from NTP server failed")
 		return nil, util.NtpConnectionErr
 	}
 
@@ -440,7 +440,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	// Resolve the remote NTP server address.
 	raddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(host, "123"))
 	if err != nil {
-		log.Fatalf("failed to Resolve UDP address : %v", err)
+		log.Errorf(err, "failed to Resolve UDP address")
 		return nil, 0, err
 	}
 
@@ -449,7 +449,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	if opt.LocalAddress != "" {
 		laddr, err = net.ResolveUDPAddr("udp", net.JoinHostPort(opt.LocalAddress, "0"))
 		if err != nil {
-			log.Fatalf("failed to Resolve local address : %v", err)
+			log.Errorf(err, "failed to Resolve local address")
 			return nil, 0, err
 		}
 	}
@@ -462,7 +462,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 	// Prepare a "connection" to the remote server.
 	con, err := net.DialUDP("udp", laddr, raddr)
 	if err != nil {
-		log.Fatalf("Dail UDP failed : %v", err)
+		log.Errorf(err, "Dail UDP failed")
 		return nil, 0, err
 	}
 	defer con.Close()
@@ -472,7 +472,7 @@ func getTime(host string, opt QueryOptions) (*msg, ntpTime, error) {
 		ipcon := ipv4.NewConn(con)
 		err = ipcon.SetTTL(opt.TTL)
 		if err != nil {
-			log.Fatalf("Set TTL failed : %v", err)
+			log.Errorf(err, "Set TTL failed")
 			return nil, 0, err
 		}
 	}
