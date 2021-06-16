@@ -111,6 +111,7 @@ func (m *Mm5Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.KongHttpLogPath, Func: m.insertHttpLog},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.KongHttpLogPath, Func: m.queryHttpLog},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.SubscribeStatisticPath, Func: m.querySubscribeStatistic},
+		{Method: rest.HTTP_METHOD_GET, Path: meputil.GovernServicesPath, Func: m.queryAllServices},
 	}
 }
 
@@ -223,6 +224,15 @@ func (m *Mm5Service) querySubscribeStatistic(w http.ResponseWriter, r *http.Requ
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(
 		&plans.SubscriptionInfoReq{})
+	workPlan.Finally(&common.SendHttpRsp{})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mm5Service) queryAllServices(w http.ResponseWriter, r *http.Request) {
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(
+		&plans.AllServicesReq{})
 	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)

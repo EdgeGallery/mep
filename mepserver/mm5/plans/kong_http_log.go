@@ -121,7 +121,12 @@ func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	res := make(map[string]interface{})
 	res["appServices"] = appList
 	res["mepServices"] = mepList
-	t.HttpRsp = res
+
+	responseInfo := models.ResponseInfo{
+		Data:    res,
+		RetCode: meputil.SuccessRetCode,
+	}
+	t.HttpRsp = responseInfo
 	return workspace.TaskFinish
 }
 
@@ -247,7 +252,7 @@ func getAllServiceNames() []string {
 		return serviceNames
 	}
 
-	_, serviceInfos := mp1.Mp1CvtSrvDiscoverAll(findInstancesResponse)
+	_, serviceInfos := mp1.Mp1CvtSrvDiscover(findInstancesResponse)
 	if serviceInfos == nil {
 		log.Errorf(nil, "Service discovery failed.")
 		return serviceNames
