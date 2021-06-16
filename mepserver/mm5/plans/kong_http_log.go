@@ -121,7 +121,12 @@ func (t *GetKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	res := make(map[string]interface{})
 	res["appServices"] = appList
 	res["mepServices"] = mepList
-	t.HttpRsp = res
+
+	responseInfo := models.ResponseInfo{
+		Data:    res,
+		RetCode: meputil.SuccessRetCode,
+	}
+	t.HttpRsp = responseInfo
 	return workspace.TaskFinish
 }
 

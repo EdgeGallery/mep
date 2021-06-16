@@ -23,6 +23,7 @@ import (
 	"errors"
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"io/ioutil"
+	"net"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -157,6 +158,7 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 	}
 
 	req.SetTLSClientConfig(tlsCfg)
+	req.Header(XRealIp, GetLocalIP())
 
 	res, err := req.String()
 	if err != nil {
@@ -165,4 +167,22 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 	}
 	log.Infof("Rest request completed(result: %s).", res)
 	return res, nil
+}
+
+// GetLocalIP get local ip
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+
+	for _, address := range addrs {
+		// Check the IP address to determine whether to loop back the address
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }

@@ -41,6 +41,7 @@ type MepSpace struct {
 	SubscribeId   string          `json:"subscribeId"`
 	DNSRuleId     string          `json:"dnsRuleId"`
 	TrafficRuleId string          `json:"trafficRuleId"`
+	Flag          bool            `json:"flag"`
 
 	QueryParam url.Values `json:"queryParam"`
 

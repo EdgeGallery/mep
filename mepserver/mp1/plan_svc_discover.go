@@ -37,10 +37,11 @@ import (
 // DiscoverDecode step to handle the service discovery request
 type DiscoverDecode struct {
 	workspace.TaskBase
-	R           *http.Request   `json:"r,in"`
-	Ctx         context.Context `json:"ctx,out"`
-	QueryParam  url.Values      `json:"queryParam,out"`
-	CoreRequest interface{}     `json:"coreRequest,out"`
+	R             *http.Request   `json:"r,in"`
+	Ctx           context.Context `json:"ctx,out"`
+	QueryParam    url.Values      `json:"queryParam,out"`
+	CoreRequest   interface{}     `json:"coreRequest,out"`
+	AppInstanceId string          `json:"appInstanceId,out"`
 }
 
 // OnRequest discover decode request
@@ -81,15 +82,19 @@ func (t *DiscoverDecode) GetFindParam(r *http.Request) error {
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), query.Get(":project"))
 	t.CoreRequest = req
 	t.QueryParam = query
+	t.AppInstanceId = r.Header.Get("X-AppInstanceId")
 	return nil
 }
 
 type DiscoverService struct {
 	workspace.TaskBase
-	Ctx         context.Context `json:"ctx,in"`
-	QueryParam  url.Values      `json:"queryParam,in"`
-	CoreRequest interface{}     `json:"coreRequest,in"`
-	CoreRsp     interface{}     `json:"coreRsp,out"`
+	Ctx           context.Context `json:"ctx,in"`
+	QueryParam    url.Values      `json:"queryParam,in"`
+	CoreRequest   interface{}     `json:"coreRequest,in"`
+	AppInstanceId string          `json:"appInstanceId,in"`
+	Flag          bool            `json:"flag,out"`
+	InstanceId    string          `json:"instanceId,out"`
+	CoreRsp       interface{}     `json:"coreRsp,out"`
 }
 
 func (t *DiscoverService) checkInstanceId(req *proto.FindInstancesRequest) bool {
@@ -143,6 +148,11 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
+	t.InstanceId = t.AppInstanceId
+	// Flag is true when appInstanceId is null, so need authentication
+	if t.QueryParam.Get(":appInstanceId") == "" {
+		t.Flag = true
+	}
 	if req.ServiceName == "" {
 		var errFindByKey error
 		t.CoreRsp, errFindByKey = meputil.FindInstanceByKey(t.QueryParam)
@@ -172,15 +182,16 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	}
 	t.CoreRsp = findInstance
 	t.filterAppInstanceId()
-
 	return workspace.TaskFinish
 }
 
 type ToStrDiscover struct {
-	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	workspace.TaskBase
-	CoreRsp interface{} `json:"coreRsp,in"`
-	HttpRsp interface{} `json:"httpRsp,out"`
+	CoreRsp    interface{}     `json:"coreRsp,in"`
+	InstanceId string          `json:"instanceId,in"`
+	Flag       bool            `json:"flag,in"`
+	HttpRsp    interface{}     `json:"httpRsp,out"`
+	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 }
 
 // OnRequest to string discover request
@@ -191,7 +202,12 @@ func (t *ToStrDiscover) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance response failed")
 		return workspace.TaskFinish
 	}
-	t.HttpErrInf, t.HttpRsp = Mp1CvtSrvDiscover(value)
+	if t.Flag {
+		t.HttpErrInf, t.HttpRsp = Mp1CvtSrvAuthenDiscover(value, t.InstanceId)
+	} else {
+		t.HttpErrInf, t.HttpRsp = Mp1CvtSrvDiscover(value)
+	}
+
 	return workspace.TaskFinish
 }
 
@@ -240,7 +256,7 @@ func instanceHook(r *http.Request, rspData interface{}) interface{} {
 	return rspBody
 }
 
-// Mp1CvtSrvDiscover mp1 cvt service discover
+// Mp1CvtSrvDiscover mp1 cvt all service discover
 func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse) (*proto.Response, []*models.ServiceInfo) {
 	resp := findInsResp.Response
 	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {
@@ -251,6 +267,29 @@ func Mp1CvtSrvDiscover(findInsResp *proto.FindInstancesResponse) (*proto.Respons
 		serviceInfo := &models.ServiceInfo{}
 		serviceInfo.FromServiceInstance(ins)
 		serviceInfos = append(serviceInfos, serviceInfo)
+	}
+	return resp, serviceInfos
+
+}
+
+// Mp1CvtSrvAuthenDiscover mp1 cvt service discover by app instance id
+func Mp1CvtSrvAuthenDiscover(findInsResp *proto.FindInstancesResponse, appInsId string) (*proto.Response, []*models.ServiceInfo) {
+	resp := findInsResp.Response
+	if resp != nil && resp.GetCode() != proto.Response_SUCCESS {
+		return resp, nil
+	}
+	serviceInfos := make([]*models.ServiceInfo, 0, len(findInsResp.Instances))
+	requiredServices, err := meputil.GetRequiredSerFromMepauth(appInsId)
+	if err != nil {
+		return resp, serviceInfos
+	}
+	for _, ins := range findInsResp.Instances {
+		serviceInfo := &models.ServiceInfo{}
+		serviceInfo.FromServiceInstance(ins)
+		serviceName := serviceInfo.SerName
+		if meputil.InArray(serviceName, requiredServices) {
+			serviceInfos = append(serviceInfos, serviceInfo)
+		}
 	}
 	return resp, serviceInfos
 

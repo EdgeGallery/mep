@@ -73,6 +73,7 @@ const (
 
 	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
 	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
+	GovernServicesPath     = RootPath + MecServiceGovernPath + "/services"
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
@@ -124,6 +125,7 @@ const (
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
 const FormatIntBase = 10
+const SuccessRetCode = 0
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"
@@ -149,6 +151,7 @@ const HookTimerLimit time.Duration = 5
 const ComponentContent = "j7k0UwOJSsIfi3dzainoBdkcpJJJOJlzd2oBwMQxXdaZ3oCswITWUyLP4eldxdcKGmDvG1qwUEfQjAg71ZeFYyHgXa5OpBlmug3z06bs7ssr2XYTuPydK6y4K34UfsgRKEwMgGP1Ieo8x20lbjXcq0tJG4Q7xgakXs59NwnBeNg2N8R1FgfqD0z9weWgxd7DdJZkDpbJgdANT31y4KDeDCpJXld6XQOxi99mO2xQdMcH6OUyIfgDP7dPaJU57D33"
 
 const ErrorRequestBodyMessage = "request body invalid"
+const XRealIp = "X-Real-Ip"
 
 // MaxFQDNLength As per RFC-1035 section-2.3.4, the maximum length of full FQDN name is 255 octets including
 // one length and one null terminating character. Hence it is limited as 253.
@@ -276,3 +279,4 @@ const (
 	TransportGrantTypes    = "OAUTH2_CLIENT_CREDENTIALS"
 	TransportTokenEndpoint = "/mep/token"
 )
+const MepAuthBaseUrlFormat = "https://%s:%s/mep/appMng/v1/applications"
