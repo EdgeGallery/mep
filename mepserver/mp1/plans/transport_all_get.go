@@ -57,8 +57,8 @@ func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int
 		log.Errorf(nil, "Get transport info from data-store failed.")
 		return nil, err
 	}
-	log.Infof("Transport info added successfully for  %v err %v", respLists, err)
-	if respLists != nil {
+
+	if len(respLists) != 0 {
 		tpInfoRecords := make([]models.TransportInfo, 0)
 		for _, value := range respLists {
 			var transportInfo models.TransportInfo
