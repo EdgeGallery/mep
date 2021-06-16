@@ -16,7 +16,7 @@ type TimingCaps struct {
 	HttpRsp interface{} `json:"httpRsp,out"`
 }
 
-func (t *TimingCaps) UpdateNtpServer(tc *models.TimingCaps) {
+func (t *TimingCaps) GetNtpServer(tc *models.TimingCaps) {
 	serverList := os.Getenv(util.NtpServers)
 	servers := strings.Split(serverList, ",")
 	priority := 1
@@ -49,8 +49,7 @@ func (t *TimingCaps) OnRequest(data string) workspace.TaskCode {
 	tc := models.TimingCaps{}
 	tc.TimeStamp.Seconds = timeStamp.Seconds
 	tc.TimeStamp.NanoSeconds = timeStamp.NanoSeconds
-	t.UpdateNtpServer(&tc)
-
+	t.GetNtpServer(&tc)
 	t.HttpRsp = tc
 	return workspace.TaskFinish
 }

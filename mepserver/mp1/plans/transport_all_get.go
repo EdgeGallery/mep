@@ -45,13 +45,10 @@ func (t *Transports) addTransportInfoToDb(tpInfo *models.TransportInfo) int {
 		log.Errorf(nil, "Transport info update on etcd failed.")
 		return 1
 	}
-
-	log.Infof("Transport info added successfully for  %v", tpInfo.Name)
 	return 0
 }
 
-func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int) {
-
+func (t *Transports) GetTransportsInfo() ([]models.TransportInfo, int) {
 	respLists, err := backend.GetRecords(meputil.TransportInfoPath)
 	if err != 0 {
 		log.Errorf(nil, "Get transport info from data-store failed.")
@@ -85,7 +82,7 @@ func (t *Transports) checkAndUpdateTransportsInfo() ([]models.TransportInfo, int
 
 // OnRequest handles to get timing capabilities query
 func (t *Transports) OnRequest(data string) workspace.TaskCode {
-	ts, err := t.checkAndUpdateTransportsInfo()
+	ts, err := t.GetTransportsInfo()
 	if err != 0 {
 		log.Errorf(nil, "Get transport info failed.")
 		t.SetFirstErrorCode(workspace.ErrCode(err), "Get transport info failed")
