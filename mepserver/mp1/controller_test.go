@@ -92,7 +92,7 @@ const writeCurTimetFormat = "{\"seconds\":1623770544,\"nanoSeconds\":468538768,"
 const writeCurTimeNonSynct = "{\"seconds\":1623770544,\"nanoSeconds\":468538768," +
 	"\"timeSourceStatus\":\"NONTRACEABLE\"}"
 const writeCaps = "{\"timeStamp\":{\"seconds\":1623770544,\"nanoSeconds\":468538768},\"ntpServers\"" +
-	":[{\"ntpServerAddrType\":\"DNS_NAME\",\"ntpServerAddr\":\"\",\"minPollingInterval\":4,\"maxPollingInterval\":17," +
+	":[{\"ntpServerAddrType\":\"DNS_NAME\",\"ntpServerAddr\":\"mep-ntp\",\"minPollingInterval\":4,\"maxPollingInterval\":17," +
 	"\"localPriority\":1,\"authenticationOption\":\"NONE\",\"authenticationKeyNum\":0}]}"
 const writeTransport = "{\"id\":\"8eb442b7cdfc11eba09314feb5b475da\",\"name\":\"REST\",\"description\":\"REST API\"," +
 	"\"type\":\"REST_HTTP\",\"protocol\":\"HTTP\",\"version\":\"2.0\",\"endpoint\":{\"uris\":null,\"addresses\":null," +
@@ -2938,4 +2938,3 @@ func TestGetTransportInfoPutRecordFailed(t *testing.T) {
 
 	mockWriter.AssertExpectations(t)
 }
-

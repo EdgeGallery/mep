@@ -6,8 +6,6 @@ import (
 	"mepserver/common/extif/ntp"
 	"mepserver/common/models"
 	"mepserver/common/util"
-	"os"
-	"strings"
 )
 
 // TimingCaps to get timing capabilities
@@ -17,22 +15,16 @@ type TimingCaps struct {
 }
 
 func (t *TimingCaps) GetNtpServer(tc *models.TimingCaps) {
-	serverList := os.Getenv(util.NtpServers)
-	servers := strings.Split(serverList, ",")
-	priority := 1
 	tc.NtpServers = make([]models.NtpServers, 0)
-	for _, server := range servers {
-		var NtpServer models.NtpServers
-		NtpServer.NtpServerAddr = strings.TrimSpace(server)
-		NtpServer.NtpServerAddrType = util.NtpDnsName
-		NtpServer.AuthenticationOption = util.NtpAuthType //Authentication not supported now
-		NtpServer.AuthenticationKeyNum = 0                // Invalid key number
-		NtpServer.LocalPriority = priority
-		NtpServer.MaxPollingInterval = util.MaxPoll
-		NtpServer.MinPollingInterval = util.MinPoll
-		tc.NtpServers = append(tc.NtpServers, NtpServer)
-		priority++
-	}
+	var NtpServer models.NtpServers
+	NtpServer.NtpServerAddr = util.NtpHost
+	NtpServer.NtpServerAddrType = util.NtpDnsName
+	NtpServer.AuthenticationOption = util.NtpAuthType //Authentication not supported now
+	NtpServer.AuthenticationKeyNum = 0                // Invalid key number
+	NtpServer.LocalPriority = 1
+	NtpServer.MaxPollingInterval = util.MaxPoll
+	NtpServer.MinPollingInterval = util.MinPoll
+	tc.NtpServers = append(tc.NtpServers, NtpServer)
 }
 
 // OnRequest handles to get timing capabilities query
