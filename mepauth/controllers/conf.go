@@ -170,6 +170,9 @@ func (c *ConfController) Get() {
 		c.handleLoggingForError(clientIp, http.StatusBadRequest, err.Error())
 		return
 	}
+	if len(authInfoRecord.RequiredServices) == 0 {
+		authInfoRecord.RequiredServices = "[]"
+	}
 	c.Data["json"] = authInfoRecord
 	c.ServeJSON()
 	log.Info("Response message for ClientIP [" + clientIp + operation + c.Ctx.Request.Method + "]" +
