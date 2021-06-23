@@ -102,7 +102,7 @@ func main() {
 		return
 	}
 	err = controllers.ConfigureAkAndSk(string(*appConfig["APP_INST_ID"]),
-		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"], "initApp","")
+		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"], "initApp", string(*appConfig["REQUIRED_SERVICES"]))
 	if err != nil {
 		log.Error("Failed to configure ak sk values")
 		return

@@ -283,11 +283,24 @@ func Mp1CvtSrvAuthenDiscover(findInsResp *proto.FindInstancesResponse, appInsId 
 	if err != nil {
 		return resp, serviceInfos
 	}
+
+	var reqServices []string
+	isAllService := false
+	if requiredServices == "*" {
+		isAllService = true
+	} else {
+		err = json.Unmarshal([]byte(requiredServices), &reqServices)
+		if err != nil {
+			log.Error("String convert to reqServices failed", err)
+			return resp, serviceInfos
+		}
+	}
+
 	for _, ins := range findInsResp.Instances {
 		serviceInfo := &models.ServiceInfo{}
 		serviceInfo.FromServiceInstance(ins)
 		serviceName := serviceInfo.SerName
-		if meputil.InArray(serviceName, requiredServices) {
+		if isAllService || meputil.InArray(serviceName, reqServices) {
 			serviceInfos = append(serviceInfos, serviceInfo)
 		}
 	}
