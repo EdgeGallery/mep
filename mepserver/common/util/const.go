@@ -24,41 +24,42 @@ import (
 )
 
 const (
-	SerErrFailBase              workspace.ErrCode = workspace.TaskFail
-	SerErrServiceNotFound                         = 2
-	SerInstanceNotFound                           = 3
-	ParseInfoErr                                  = 4
-	SubscriptionNotFound                          = 5
-	OperateDataWithEtcdErr                        = 6
-	SerErrServiceDelFailed                        = 7
-	SerErrServiceUpdFailed                        = 8
-	RemoteServerErr                               = 9
-	EtagMissMatchErr                              = 10
-	AuthorizationValidateErr                      = 11
-	SerErrServiceRegFailed                        = 12
-	SerErrServiceInstanceFailed                   = 13
-	RequestParamErr                               = 14
-	SubscriptionErr                               = 15
-	ResourceExists                                = 16
-	HeartbeatServiceNotFound                      = 17
-	ServiceInactive                               = 18
-	DuplicateOperation                            = 19
-	ForbiddenOperation                            = 20
+	SerErrFailBase              = workspace.TaskFail
+	SerErrServiceNotFound       = 2
+	SerInstanceNotFound         = 3
+	ParseInfoErr                = 4
+	SubscriptionNotFound        = 5
+	OperateDataWithEtcdErr      = 6
+	SerErrServiceDelFailed      = 7
+	SerErrServiceUpdFailed      = 8
+	RemoteServerErr             = 9
+	EtagMissMatchErr            = 10
+	AuthorizationValidateErr    = 11
+	SerErrServiceRegFailed      = 12
+	SerErrServiceInstanceFailed = 13
+	RequestParamErr             = 14
+	SubscriptionErr             = 15
+	ResourceExists              = 16
+	HeartbeatServiceNotFound    = 17
+	ServiceInactive             = 18
+	DuplicateOperation          = 19
+	ForbiddenOperation          = 20
 )
 
 // Mep server api paths
 const (
 	RootPath              = "/mep"
 	Mm5RootPath           = "/mepcfg"
+	ServicePath           = "/services"
 	MecServicePath        = "/mec_service_mgmt/v1"
 	MecAppSupportPath     = "/mec_app_support/v1"
 	MecPlatformConfigPath = "/mec_platform_config/v1"
 	MecAppDConfigPath     = "/app_lcm/v1"
 	MecServiceGovernPath  = "/service_govern/v1"
 
-	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
+	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + ServicePath
 	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
-	ServicesPath        = RootPath + MecServicePath + "/services"
+	ServicesPath        = RootPath + MecServicePath + ServicePath
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
@@ -70,7 +71,7 @@ const (
 
 	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
 	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
-	GovernServicesPath     = RootPath + MecServiceGovernPath + "/services"
+	GovernServicesPath     = RootPath + MecServiceGovernPath + ServicePath
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
@@ -255,3 +256,5 @@ const (
 	EnvMepAuthHost = "MEPAUTH_PORT_10443_TCP_ADDR"
 )
 const MepAuthBaseUrlFormat = "https://%s:%s/mep/appMng/v1/applications"
+
+const AppInstanceIdStr = ":appInstanceId"

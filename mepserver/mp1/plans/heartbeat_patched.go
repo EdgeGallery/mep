@@ -112,7 +112,7 @@ func (t *DecodeHeartbeatRestReq) getFindParam(r *http.Request) (context.Context,
 	query, ids := meputil.GetHTTPTags(r)
 
 	var err error
-	t.AppInstanceId = query.Get(":appInstanceId")
+	t.AppInstanceId = query.Get(meputil.AppInstanceIdStr)
 	err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r)
 	if err != nil {
 		log.Error("Validate X-AppInstanceId failed.", err)

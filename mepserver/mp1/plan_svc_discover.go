@@ -59,7 +59,7 @@ func (t *DiscoverDecode) OnRequest(data string) workspace.TaskCode {
 func (t *DiscoverDecode) GetFindParam(r *http.Request) error {
 
 	query, ids := meputil.GetHTTPTags(r)
-	if err := meputil.ValidateAppInstanceIdWithHeader(query.Get(":appInstanceId"), r); err != nil {
+	if err := meputil.ValidateAppInstanceIdWithHeader(query.Get(meputil.AppInstanceIdStr), r); err != nil {
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return err
 	}
@@ -117,7 +117,7 @@ func (t *DiscoverService) checkInstanceId(req *proto.FindInstancesRequest) bool 
 }
 
 func (t *DiscoverService) filterAppInstanceId() {
-	appInstanceId := t.QueryParam.Get(":appInstanceId")
+	appInstanceId := t.QueryParam.Get(meputil.AppInstanceIdStr)
 	if appInstanceId == "" {
 		return
 	}
@@ -150,7 +150,7 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
 	t.InstanceId = t.AppInstanceId
 	// Flag is true when appInstanceId is null, so need authentication
-	if t.QueryParam.Get(":appInstanceId") == "" {
+	if t.QueryParam.Get(meputil.AppInstanceIdStr) == "" {
 		t.Flag = true
 	}
 	if req.ServiceName == "" {

@@ -134,7 +134,7 @@ func (t *DecodeRestReq) GetParam(r *http.Request) error {
 	query, _ := meputil.GetHTTPTags(r)
 	var err error
 
-	t.AppInstanceId = query.Get(":appInstanceId")
+	t.AppInstanceId = query.Get(meputil.AppInstanceIdStr)
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
 		log.Error("Validate X-AppinstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
