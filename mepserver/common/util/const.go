@@ -51,15 +51,16 @@ const (
 const (
 	RootPath              = "/mep"
 	Mm5RootPath           = "/mepcfg"
+	ServicePath           = "/services"
 	MecServicePath        = "/mec_service_mgmt/v1"
 	MecAppSupportPath     = "/mec_app_support/v1"
 	MecPlatformConfigPath = "/mec_platform_config/v1"
 	MecAppDConfigPath     = "/app_lcm/v1"
 	MecServiceGovernPath  = "/service_govern/v1"
 
-	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + "/services"
+	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + ServicePath
 	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
-	ServicesPath        = RootPath + MecServicePath + "/services"
+	ServicesPath        = RootPath + MecServicePath + ServicePath
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
@@ -73,7 +74,7 @@ const (
 
 	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
 	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
-	GovernServicesPath     = RootPath + MecServiceGovernPath + "/services"
+	GovernServicesPath     = RootPath + MecServiceGovernPath + ServicePath
 
 	DNSRuleIdPath      = "/:dnsRuleId"
 	TrafficRuleIdPath  = "/:trafficRuleId"
@@ -280,3 +281,4 @@ const (
 	TransportTokenEndpoint = "/mep/token"
 )
 
+const AppInstanceIdStr = ":appInstanceId"

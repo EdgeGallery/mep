@@ -66,7 +66,7 @@ func (t *DecodeAppTerminationReq) GetFindParam(r *http.Request) (context.Context
 
 	query, _ := meputil.GetHTTPTags(r)
 
-	t.AppInstanceId = query.Get(":appInstanceId")
+	t.AppInstanceId = query.Get(meputil.AppInstanceIdStr)
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
 		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())

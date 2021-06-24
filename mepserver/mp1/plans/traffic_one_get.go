@@ -134,7 +134,7 @@ func (t *DecodeTrafficRestReq) getParam(r *http.Request) error {
 	query, _ := meputil.GetHTTPTags(r)
 	var err error
 
-	t.AppInstanceId = query.Get(":appInstanceId")
+	t.AppInstanceId = query.Get(meputil.AppInstanceIdStr)
 	if len(t.AppInstanceId) == 0 {
 		err = fmt.Errorf("invalid app instance id")
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())

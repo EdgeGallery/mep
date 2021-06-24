@@ -65,7 +65,7 @@ func (t *GetOneDecodeHeartbeat) getFindParam(r *http.Request) (context.Context, 
 		return nil, nil, err
 	}
 
-	t.AppInstanceId = query.Get(":appInstanceId")
+	t.AppInstanceId = query.Get(meputil.AppInstanceIdStr)
 	err = meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r)
 	if err != nil {
 		log.Error("Validate X-AppInstanceId in heartbeat failed.", err)
