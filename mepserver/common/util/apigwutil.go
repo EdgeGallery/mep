@@ -25,6 +25,7 @@ import (
 )
 
 const serviceUrl string = "/services/"
+const routeUrl string = "/routes/"
 
 var cipherSuiteMap = map[string]uint16{
 	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
@@ -85,7 +86,7 @@ func (a *ApiGwIf) AddOrUpdateApiGwService(serInfo SerInfo) {
 	serName := serInfo.SerName
 	serUrl := serInfo.Uri
 	jsonStr := []byte(fmt.Sprintf(`{ "url": "%s", "name": "%s" }`, serUrl, serName))
-	apiGwServiceUrl := a.baseURL + "/services/" + serName
+	apiGwServiceUrl := a.baseURL + serviceUrl + serName
 	_, err := SendPutRequest(apiGwServiceUrl, jsonStr, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to add or update API gateway service", err)
@@ -94,7 +95,7 @@ func (a *ApiGwIf) AddOrUpdateApiGwService(serInfo SerInfo) {
 
 //DeleteApiGwService delete service from api  gateway
 func (a *ApiGwIf) DeleteApiGwService(serviceName string) {
-	apiGwServiceUrl := a.baseURL + "/services/" + serviceName
+	apiGwServiceUrl := a.baseURL + serviceUrl + serviceName
 	_, err := SendDelRequest(apiGwServiceUrl, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to delete API gateway service.", err)
@@ -104,7 +105,7 @@ func (a *ApiGwIf) DeleteApiGwService(serviceName string) {
 // AddOrUpdateApiGwRoute add/update new route in the api gateway for application
 func (a *ApiGwIf) AddOrUpdateApiGwRoute(serInfo SerInfo) {
 	serName := serInfo.SerName
-	apiGwRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
+	apiGwRouteUrl := a.baseURL + serviceUrl + serName + routeUrl + serName
 	jsonStr := []byte(fmt.Sprintf(`{ "paths": ["/%s"], "name": "%s" }`, serName, serName))
 	_, err := SendPutRequest(apiGwRouteUrl, jsonStr, a.tlsCfg)
 	if err != nil {
@@ -114,7 +115,7 @@ func (a *ApiGwIf) AddOrUpdateApiGwRoute(serInfo SerInfo) {
 
 // DeleteApiGwRoute delete API gateway route
 func (a *ApiGwIf) DeleteApiGwRoute(serviceName string) {
-	apiGwRouteUrl := a.baseURL + serviceUrl + serviceName + "/routes/" + serviceName
+	apiGwRouteUrl := a.baseURL + serviceUrl + serviceName + routeUrl + serviceName
 	_, err := SendDelRequest(apiGwRouteUrl, a.tlsCfg)
 	if err != nil {
 		log.Error("Failed to delete API gateway route.", err)
@@ -145,7 +146,7 @@ func (a *ApiGwIf) DeleteJwtPlugin(serviceName string) {
 
 // ApiGwDelRoute delete application route from api gateway
 func (a *ApiGwIf) ApiGwDelRoute(serName string) {
-	apiGwRouteUrl := a.baseURL + serviceUrl + serName + "/routes/" + serName
+	apiGwRouteUrl := a.baseURL + serviceUrl + serName + routeUrl + serName
 	req := httplib.Delete(apiGwRouteUrl)
 	str, err := req.String()
 	if err != nil {

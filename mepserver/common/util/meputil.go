@@ -321,7 +321,7 @@ func GetMethodFromReq(r *http.Request) string {
 // GetAppInstanceId get appInstanceId from request
 func GetAppInstanceId(r *http.Request) string {
 	query, _ := GetHTTPTags(r)
-	return query.Get(":appInstanceId")
+	return query.Get(AppInstanceIdStr)
 }
 
 // GetClientIp get clientIp from request

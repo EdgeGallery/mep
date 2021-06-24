@@ -67,7 +67,7 @@ func (t *DecodeAppDRestReq) WithBody(body interface{}) *DecodeAppDRestReq {
 
 func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
-	t.AppInstanceId = queryReq.Get(":appInstanceId")
+	t.AppInstanceId = queryReq.Get(meputil.AppInstanceIdStr)
 	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
 		log.Error("Validate X-AppInstanceId failed.", err)
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
