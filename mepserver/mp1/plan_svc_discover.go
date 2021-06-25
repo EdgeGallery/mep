@@ -136,6 +136,7 @@ func (t *DiscoverService) filterAppInstanceId() {
 // service discover request
 func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	req, ok := t.CoreRequest.(*proto.FindInstancesRequest)
+	log.Infof("DiscoverService FindInstancesRequest: %s", req)
 	if !ok {
 		log.Error("cast input to find-instance-request failed", nil)
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "cast to instance request failed")
@@ -169,6 +170,7 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.SerErrServiceNotFound, "failed to find instance request")
 		return workspace.TaskFinish
 	}
+	log.Infof("findInstance: %s", findInstance)
 	t.CoreRsp = findInstance
 	t.filterAppInstanceId()
 
