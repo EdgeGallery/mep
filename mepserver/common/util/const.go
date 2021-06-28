@@ -44,6 +44,7 @@ const (
 	ServiceInactive             = 18
 	DuplicateOperation          = 19
 	ForbiddenOperation          = 20
+	NtpConnectionErr            = 21
 )
 
 // Mep server api paths
@@ -63,6 +64,8 @@ const (
 	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
 	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
+	TimingPath          = RootPath + MecAppSupportPath + "/timing"
+	TransportPath       = RootPath + MecServicePath + "/transports"
 
 	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
 	AppDConfigPath        = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
@@ -79,6 +82,8 @@ const (
 	ServiceIdPath      = "/:serviceId"
 	CapabilityIdPath   = "/:capabilityId"
 	Liveness           = "/liveness"
+	CurrentTIme        = "/current_time"
+	TimingCaps         = "/timing_caps"
 )
 
 // Resource state
@@ -102,6 +107,7 @@ const (
 	AppDLCMJobsPath       = DBRootPath + "mep/applcm/jobs/"
 	AppDLCMTasksPath      = DBRootPath + "mep/applcm/tasks/"
 	AppDLCMTaskStatusPath = DBRootPath + "mep/applcm/taskstatus/"
+	TransportInfoPath     = DBRootPath + "transports/"
 )
 
 const (
@@ -258,3 +264,21 @@ const (
 const MepAuthBaseUrlFormat = "https://%s:%s/mep/appMng/v1/applications"
 
 const AppInstanceIdStr = ":appInstanceId"
+
+const (
+	NtpHost                = "mep-ntp"
+	Traceable              = "TRACEABLE"
+	NonTraceable           = "NONTRACEABLE"
+	MinPoll                = 4
+	MaxPoll                = 17
+	NtpServers             = "NTP_SERVERS"
+	NtpDnsName             = "DNS_NAME"
+	NtpAuthType            = "NONE"
+	TransportName          = "REST"
+	TransportDescription   = "REST API"
+	TransportTransType     = "REST_HTTP"
+	TransportProtocol      = "HTTP"
+	TransportVersion       = "2.0"
+	TransportGrantTypes    = "OAUTH2_CLIENT_CREDENTIALS"
+	TransportTokenEndpoint = "/mep/token"
+)
