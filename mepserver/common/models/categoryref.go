@@ -22,5 +22,5 @@ type CategoryRef struct {
 	Href    string `json:"href"  validate:"omitempty,uri"`
 	ID      string `json:"id" validate:"omitempty,max=64,validateId"`
 	Name    string `json:"name" validate:"omitempty,max=128,validateName"`
-	Version string `json:"version" validate:"omitempty,max=32,validateVersion"`
+	Version string `json:"version" validate:"omitempty,max=32"`
 }
