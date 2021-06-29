@@ -1643,7 +1643,7 @@ type serviceInfo struct {
 	//	SerInstanceId     string        `json:"serInstanceId,omitempty"`
 	SerName           string               `json:"serName" validate:"required,max=128,validateName"`
 	SerCategory       models.CategoryRef   `json:"serCategory" validate:"omitempty"`
-	Version           string               `json:"version" validate:"required,max=32,validateVersion"`
+	Version           string               `json:"version" validate:"required,max=32"`
 	State             string               `json:"state" validate:"required,oneof=ACTIVE INACTIVE"`
 	TransportID       string               `json:"transportId" validate:"omitempty,max=64,validateId"`
 	TransportInfo     models.TransportInfo `json:"transportInfo" validate:"omitempty"`

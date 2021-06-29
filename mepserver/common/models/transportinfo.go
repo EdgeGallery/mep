@@ -24,7 +24,7 @@ type TransportInfo struct {
 	Description string         `json:"description" validate:"omitempty,max=128"`
 	TransType   TransportTypes `json:"type" validate:"omitempty,oneof=REST_HTTP MB_TOPIC_BASED MB_ROUTING MB_PUBSUB RPC RPC_STREAMING WEBSOCKET"`
 	Protocol    string         `json:"protocol" validate:"omitempty,max=32,validateProtocol"`
-	Version     string         `json:"version" validate:"omitempty,max=32,validateVersion"`
+	Version     string         `json:"version" validate:"omitempty,max=32"`
 	// This type represents information about a transport endpoint
 	Endpoint         EndPointInfo `json:"endpoint,omitempty"`
 	Security         SecurityInfo `json:"security,omitempty"`
