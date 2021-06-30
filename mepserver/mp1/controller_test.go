@@ -27,6 +27,7 @@ import (
 	"math/rand"
 	"mepserver/common/config"
 	"mepserver/common/extif/dataplane"
+	"mepserver/common/extif/dataplane/none"
 	"mepserver/common/models"
 	"net/http"
 	"net/http/httptest"
@@ -1653,111 +1654,6 @@ type serviceInfo struct {
 	IsLocal           bool                 `json:"isLocal,omitempty"`
 }
 
-// Register a service
-func TestPostServiceRegister(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	svcCat := models.CategoryRef{
-		Href:    href,
-		ID:      "id12345",
-		Name:    "RNI",
-		Version: "1.2.3",
-	}
-
-	var theArray = make([]string, 1)
-	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
-
-	authInfo := models.SecurityInfoOAuth2Info{
-		GrantTypes:    theArray,
-		TokenEndpoint: tokenEndPoint,
-	}
-
-	sec1 := models.SecurityInfo{
-		OAuth2Info: authInfo,
-	}
-	transInfo := models.TransportInfo{
-		ID:               "TransId12345",
-		Name:             "REST",
-		Description:      restApi,
-		TransType:        "REST_HTTP",
-		Protocol:         "HTTP",
-		Version:          "2.0",
-		Endpoint:         models.EndPointInfo{},
-		Security:         sec1,
-		ImplSpecificInfo: nil,
-	}
-	serviceInf := serviceInfo{
-		SerName:           "FaceRegService5",
-		SerCategory:       svcCat,
-		Version:           "4.5.8",
-		State:             "ACTIVE",
-		TransportID:       "Rest1",
-		TransportInfo:     transInfo,
-		Serializer:        "JSON",
-		ScopeOfLocality:   "MEC_SYSTEM",
-		ConsumedLocalOnly: false,
-		IsLocal:           true,
-	}
-	serviceInfBytes, _ := json.Marshal(serviceInf)
-	//Patching
-	var srvresp = &pb.CreateServiceResponse{
-		Response:  &pb.Response{Code: pb.Response_SUCCESS},
-		ServiceId: sampleServiceId,
-	}
-	n1 := &srv.MicroServiceService{}
-	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "Create", func(*srv.MicroServiceService, context.Context, *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error) {
-		return srvresp, nil
-	})
-	defer patch1.Reset()
-
-	var instResp = &pb.RegisterInstanceResponse{
-		Response:   &pb.Response{Code: pb.Response_SUCCESS},
-		InstanceId: sampleServiceId,
-	}
-	n2 := &srv.InstanceService{}
-	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n2), "Register", func(*srv.InstanceService, context.Context, *pb.RegisterInstanceRequest) (*pb.RegisterInstanceResponse, error) {
-		return instResp, nil
-	})
-	defer patch2.Reset()
-
-	var findInstResp = &pb.FindInstancesResponse{
-		Response: &pb.Response{Code: pb.Response_SUCCESS},
-		Instances: []*pb.MicroServiceInstance{
-			{
-				InstanceId: sampleInstanceId,
-				ServiceId:  sampleServiceId,
-			},
-		},
-	}
-	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(url.Values) (*pb.FindInstancesResponse, error) {
-		return findInstResp, nil
-	})
-	defer patch3.Reset()
-
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(serviceDiscoverUrlFormat, defaultAppInstanceId),
-		bytes.NewReader(serviceInfBytes))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriterWithoutWrite{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write").Return(0, nil)
-	mockWriter.On("WriteHeader", 201)
-
-	// 3 is the order of the DNS put handler in the URLPattern
-	service.URLPatterns()[4].Func(mockWriter, getRequest)
-}
-
 // Register a service and json marshalling failed when return response
 func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	defer func() {
@@ -1843,6 +1739,18 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 		}
 	})
 	defer patch3.Reset()
+	patch4 := gomonkey.ApplyFunc(util.ApiGWInterface.AddOrUpdateApiGwService, func(serInfo util.SerInfo) {
+		return
+	})
+	defer patch4.Reset()
+	patch5 := gomonkey.ApplyFunc(util.ApiGWInterface.AddOrUpdateApiGwRoute, func(serInfo util.SerInfo) {
+		return
+	})
+	defer patch5.Reset()
+	patch6 := gomonkey.ApplyFunc(util.ApiGWInterface.EnableJwtPlugin, func(serInfo util.SerInfo) {
+		return
+	})
+	defer patch6.Reset()
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("POST",
@@ -2932,6 +2840,255 @@ func TestGetTransportInfoPutRecordFailed(t *testing.T) {
 
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[26].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Update a dns rule
+func TestPutTrafficRuleStateAddRule(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	service.dataPlane = &none.NoneDataPlane{}
+	//service.dataPlane.AddTrafficRule()
+	updateRule := dataplane.TrafficRule{
+		TrafficRuleID: trafficRuleId,
+		FilterType:    "FLOW",
+		Priority:      5,
+		TrafficFilter: []dataplane.TrafficFilter{},
+		Action:        "DROP",
+		State:         util.ActiveState,
+	}
+	updateRuleBytes, _ := json.Marshal(updateRule)
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader(updateRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(fmt.Sprintf(writeTrafficPutObjectFormat, util.ActiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		TrafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.InactiveState}
+		var TrafficRules []dataplane.TrafficRule
+		TrafficRules = append(TrafficRules, TrafficRule)
+		entry := models.AppDConfig{AppTrafficRule: TrafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	// 23 is the order of the Traffic Rule put handler in the URLPattern
+	service.URLPatterns()[23].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Update a dns rule
+func TestPutTrafficRuleStateDeleteRule(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	service.dataPlane = &none.NoneDataPlane{}
+
+	updateRule := dataplane.TrafficRule{
+		TrafficRuleID: trafficRuleId,
+		FilterType:    "FLOW",
+		Priority:      5,
+		TrafficFilter: []dataplane.TrafficFilter{},
+		Action:        "DROP",
+		State:         util.InactiveState,
+	}
+	updateRuleBytes, _ := json.Marshal(updateRule)
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader(updateRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(fmt.Sprintf(writeTrafficPutObjectFormat, util.InactiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		TrafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.ActiveState}
+		var TrafficRules []dataplane.TrafficRule
+		TrafficRules = append(TrafficRules, TrafficRule)
+		entry := models.AppDConfig{AppTrafficRule: TrafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(service.dataPlane.AddTrafficRule, func(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int,
+		filter []dataplane.TrafficFilter) (err error) {
+		return errors.New("Error")
+	})
+	defer patches.Reset()
+
+	// 23 is the order of the Traffic Rule put handler in the URLPattern
+	service.URLPatterns()[23].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Update a dns rule
+func TestPutTrafficRuleStateSetRule(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	service.dataPlane = &none.NoneDataPlane{}
+
+	updateRule := dataplane.TrafficRule{
+		TrafficRuleID: trafficRuleId,
+		FilterType:    "FLOW",
+		Priority:      5,
+		TrafficFilter: []dataplane.TrafficFilter{},
+		Action:        "DROP",
+		State:         util.ActiveState,
+	}
+	updateRuleBytes, _ := json.Marshal(updateRule)
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader(updateRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(fmt.Sprintf(writeTrafficPutObjectFormat, util.ActiveState))).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		TrafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.ActiveState}
+		var TrafficRules []dataplane.TrafficRule
+		TrafficRules = append(TrafficRules, TrafficRule)
+		entry := models.AppDConfig{AppTrafficRule: TrafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(service.dataPlane.AddTrafficRule, func(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int,
+		filter []dataplane.TrafficFilter) (err error) {
+		return errors.New("Error")
+	})
+	defer patches.Reset()
+
+	// 23 is the order of the Traffic Rule put handler in the URLPattern
+	service.URLPatterns()[23].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Update a dns rule
+func TestPutTrafficRuleStatePutRecordFailed(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	service.dataPlane = &none.NoneDataPlane{}
+
+	updateRule := dataplane.TrafficRule{
+		TrafficRuleID: trafficRuleId,
+		FilterType:    "FLOW",
+		Priority:      5,
+		TrafficFilter: []dataplane.TrafficFilter{},
+		Action:        "DROP",
+		State:         util.ActiveState,
+	}
+	updateRuleBytes, _ := json.Marshal(updateRule)
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("PUT",
+		fmt.Sprintf(getOneTrafficRuleUrl, defaultAppInstanceId, trafficRuleId),
+		bytes.NewReader(updateRuleBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appIdAndTrafficRuleIdQueryFormat, defaultAppInstanceId, trafficRuleId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte("{\"title\":\"Bad Request\",\"status\":6,\"detail\":\"put traffic rule to etcd failed\"}"+"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		TrafficRule := dataplane.TrafficRule{TrafficRuleID: trafficRuleId, FilterType: "FLOW", Priority: 5,
+			Action: "DROP", State: util.ActiveState}
+		var TrafficRules []dataplane.TrafficRule
+		TrafficRules = append(TrafficRules, TrafficRule)
+		entry := models.AppDConfig{AppTrafficRule: TrafficRules}
+		outBytes, _ := json.Marshal(&entry)
+		return outBytes, 0
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		return 1
+	})
+	defer patches.Reset()
+
+	// 23 is the order of the Traffic Rule put handler in the URLPattern
+	service.URLPatterns()[23].Func(mockWriter, getRequest)
 
 	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
 		responseCheckFor200)
