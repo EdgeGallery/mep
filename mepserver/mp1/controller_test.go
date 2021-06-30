@@ -1654,6 +1654,111 @@ type serviceInfo struct {
 	IsLocal           bool                 `json:"isLocal,omitempty"`
 }
 
+// Register a service
+func TestPostServiceRegister(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	svcCat := models.CategoryRef{
+		Href:    href,
+		ID:      "id12345",
+		Name:    "RNI",
+		Version: "1.2.3",
+	}
+
+	var theArray = make([]string, 1)
+	theArray[0] = "OAUTH2_CLIENT_CREDENTIALS"
+
+	authInfo := models.SecurityInfoOAuth2Info{
+		GrantTypes:    theArray,
+		TokenEndpoint: tokenEndPoint,
+	}
+
+	sec1 := models.SecurityInfo{
+		OAuth2Info: authInfo,
+	}
+	transInfo := models.TransportInfo{
+		ID:               "TransId12345",
+		Name:             "REST",
+		Description:      restApi,
+		TransType:        "REST_HTTP",
+		Protocol:         "HTTP",
+		Version:          "2.0",
+		Endpoint:         models.EndPointInfo{},
+		Security:         sec1,
+		ImplSpecificInfo: nil,
+	}
+	serviceInf := serviceInfo{
+		SerName:           "FaceRegService5",
+		SerCategory:       svcCat,
+		Version:           "4.5.8",
+		State:             "ACTIVE",
+		TransportID:       "Rest1",
+		TransportInfo:     transInfo,
+		Serializer:        "JSON",
+		ScopeOfLocality:   "MEC_SYSTEM",
+		ConsumedLocalOnly: false,
+		IsLocal:           true,
+	}
+	serviceInfBytes, _ := json.Marshal(serviceInf)
+	//Patching
+	var srvresp = &pb.CreateServiceResponse{
+		Response:  &pb.Response{Code: pb.Response_SUCCESS},
+		ServiceId: sampleServiceId,
+	}
+	n1 := &srv.MicroServiceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n1), "Create", func(*srv.MicroServiceService, context.Context, *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error) {
+		return srvresp, nil
+	})
+	defer patch1.Reset()
+
+	var instResp = &pb.RegisterInstanceResponse{
+		Response:   &pb.Response{Code: pb.Response_SUCCESS},
+		InstanceId: sampleServiceId,
+	}
+	n2 := &srv.InstanceService{}
+	patch2 := gomonkey.ApplyMethod(reflect.TypeOf(n2), "Register", func(*srv.InstanceService, context.Context, *pb.RegisterInstanceRequest) (*pb.RegisterInstanceResponse, error) {
+		return instResp, nil
+	})
+	defer patch2.Reset()
+
+	var findInstResp = &pb.FindInstancesResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+		Instances: []*pb.MicroServiceInstance{
+			{
+				InstanceId: sampleInstanceId,
+				ServiceId:  sampleServiceId,
+			},
+		},
+	}
+	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(url.Values) (*pb.FindInstancesResponse, error) {
+		return findInstResp, nil
+	})
+	defer patch3.Reset()
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(serviceDiscoverUrlFormat, defaultAppInstanceId),
+		bytes.NewReader(serviceInfBytes))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 201)
+
+	// 3 is the order of the DNS put handler in the URLPattern
+	service.URLPatterns()[4].Func(mockWriter, getRequest)
+}
+
 // Register a service and json marshalling failed when return response
 func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 	defer func() {
@@ -1739,18 +1844,6 @@ func TestPostServiceRegisterJsonMarshalFail(t *testing.T) {
 		}
 	})
 	defer patch3.Reset()
-	patch4 := gomonkey.ApplyFunc(util.ApiGWInterface.AddOrUpdateApiGwService, func(serInfo util.SerInfo) {
-		return
-	})
-	defer patch4.Reset()
-	patch5 := gomonkey.ApplyFunc(util.ApiGWInterface.AddOrUpdateApiGwRoute, func(serInfo util.SerInfo) {
-		return
-	})
-	defer patch5.Reset()
-	patch6 := gomonkey.ApplyFunc(util.ApiGWInterface.EnableJwtPlugin, func(serInfo util.SerInfo) {
-		return
-	})
-	defer patch6.Reset()
 
 	// Create http get request
 	getRequest, _ := http.NewRequest("POST",
