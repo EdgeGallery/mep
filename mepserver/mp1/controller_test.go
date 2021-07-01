@@ -2752,12 +2752,13 @@ func TestGetTransportInfo(t *testing.T) {
 	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
 		return "8eb442b7cdfc11eba09314feb5b475da"
 	})
+
+	defer patches.Reset()
+
 	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		resultList := make(map[string][]byte)
 		return resultList, 0
 	})
-
-	defer patches.Reset()
 
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[26].Func(mockWriter, getRequest)
@@ -2794,13 +2795,12 @@ func TestGetTransportInfoDecodeFailed(t *testing.T) {
 	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
 		return "8eb442b7cdfc11eba09314feb5b475da"
 	})
+	defer patches.Reset()
 	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		resultList := make(map[string][]byte)
 		resultList[util.TransportInfoPath] = []byte("[" + writeTransport + "]\n")
 		return resultList, 0
 	})
-
-	defer patches.Reset()
 
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[26].Func(mockWriter, getRequest)
@@ -2837,13 +2837,12 @@ func TestGetTransportInfoList(t *testing.T) {
 	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
 		return "8eb442b7cdfc11eba09314feb5b475da"
 	})
+	defer patches.Reset()
 	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		resultList := make(map[string][]byte)
 		resultList[util.TransportInfoPath] = []byte(writeTransport)
 		return resultList, 0
 	})
-
-	defer patches.Reset()
 
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[26].Func(mockWriter, getRequest)
@@ -2880,7 +2879,7 @@ func TestGetTransportInfoPutRecordFailed(t *testing.T) {
 	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
 		return "8eb442b7cdfc11eba09314feb5b475da"
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
 		resultList := make(map[string][]byte)
 		return resultList, 0
@@ -2889,8 +2888,6 @@ func TestGetTransportInfoPutRecordFailed(t *testing.T) {
 	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
 		return 1
 	})
-
-	defer patches.Reset()
 
 	// 13 is the order of the DNS get all handler in the URLPattern
 	service.URLPatterns()[26].Func(mockWriter, getRequest)
@@ -3006,12 +3003,11 @@ func TestPutTrafficRuleStateDeleteRule(t *testing.T) {
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(service.dataPlane.AddTrafficRule, func(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int,
 		filter []dataplane.TrafficFilter) (err error) {
 		return errors.New("Error")
 	})
-	defer patches.Reset()
 
 	// 23 is the order of the Traffic Rule put handler in the URLPattern
 	service.URLPatterns()[23].Func(mockWriter, getRequest)
@@ -3069,12 +3065,11 @@ func TestPutTrafficRuleStateSetRule(t *testing.T) {
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(service.dataPlane.AddTrafficRule, func(appInfo dataplane.ApplicationInfo, trafficRuleId, filterType, action string, priority int,
 		filter []dataplane.TrafficFilter) (err error) {
 		return errors.New("Error")
 	})
-	defer patches.Reset()
 
 	// 23 is the order of the Traffic Rule put handler in the URLPattern
 	service.URLPatterns()[23].Func(mockWriter, getRequest)
@@ -3132,11 +3127,10 @@ func TestPutTrafficRuleStatePutRecordFailed(t *testing.T) {
 		outBytes, _ := json.Marshal(&entry)
 		return outBytes, 0
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
 		return 1
 	})
-	defer patches.Reset()
 
 	// 23 is the order of the Traffic Rule put handler in the URLPattern
 	service.URLPatterns()[23].Func(mockWriter, getRequest)

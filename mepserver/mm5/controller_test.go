@@ -2168,7 +2168,7 @@ func TestGetAllServices(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 
-	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+	patches := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
 		response := proto.FindInstancesResponse{}
 		response.Instances = make([]*proto.MicroServiceInstance, 0)
 		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
@@ -2186,7 +2186,7 @@ func TestGetAllServices(t *testing.T) {
 		})
 		return &response, nil
 	})
-	defer patch3.Reset()
+	defer patches.Reset()
 
 	// 2 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[11].Func(mockWriter, getRequest)
@@ -2298,7 +2298,7 @@ func TestAppDUpdate(t *testing.T) {
 		}
 
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
 		response := proto.FindInstancesResponse{}
 		response.Instances = make([]*proto.MicroServiceInstance, 0)
@@ -2321,7 +2321,6 @@ func TestAppDUpdate(t *testing.T) {
 	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		return "703e0f3b-b993-4d35-8d93-a469a4909ca3"
 	})
-	defer patches.Reset()
 
 	// 2 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[1].Func(mockWriter, getRequest)
@@ -2432,7 +2431,7 @@ func TestAppDUpdateAppNameIncorrect(t *testing.T) {
 }`), 0
 		}
 	})
-
+	defer patches.Reset()
 	patches.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
 		response := proto.FindInstancesResponse{}
 		response.Instances = make([]*proto.MicroServiceInstance, 0)
@@ -2451,11 +2450,9 @@ func TestAppDUpdateAppNameIncorrect(t *testing.T) {
 		})
 		return &response, nil
 	})
-
 	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		return "703e0f3b-b993-4d35-8d93-a469a4909ca3"
 	})
-	defer patches.Reset()
 
 	// 2 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[1].Func(mockWriter, getRequest)
