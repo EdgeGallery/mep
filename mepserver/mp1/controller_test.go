@@ -3209,9 +3209,15 @@ func TestMp1CvtSrvAuthenDiscover(t *testing.T) {
 		reqServ := make([]string, 0)
 		reqServ = append(reqServ, "service1", "service2")
 		bytes, err := json.Marshal(&reqServ)
-		appInfo := util.AuthInfoRecord{"16384563dca094183778a41ea7701d15", "test", "test", "test", "abc", string(bytes)}
-		bytes, err = json.Marshal(&appInfo)
-		return string(bytes), err
+		log.Infof("err %v", err)
+		authInfo := util.AuthInfoRecord{}
+		authInfo.Ak = "QVUJMSUMgS0VZLS0tLS0"
+		authInfo.Sk = "sk"
+		authInfo.AppInsId = defaultAppInstanceId
+		authInfo.Nonce = "nonce"
+		authInfo.RequiredServices = string(bytes)
+		bytesOut, errOut := json.Marshal(&authInfo)
+		return string(bytesOut), errOut
 	})
 	defer patches.Reset()
 	response := pb.FindInstancesResponse{}
@@ -3230,16 +3236,21 @@ func TestMp1CvtSrvAuthenDiscover(t *testing.T) {
 		},
 	})
 
-	resp, serviceInfos := Mp1CvtSrvAuthenDiscover(&response, "")
+	resp, serviceInfosErr := Mp1CvtSrvAuthenDiscover(&response, defaultAppInstanceId)
+	for _, serviceInfo := range serviceInfosErr {
+		log.Infof("%v %v", resp.GetCode(), serviceInfo.SerName)
+	}
 	os.Setenv(util.EnvMepAuthPort, "3000")
-	resp, serviceInfos = Mp1CvtSrvAuthenDiscover(&response, "")
+	resp, serviceInfosErr2 := Mp1CvtSrvAuthenDiscover(&response, defaultAppInstanceId)
+	for _, serviceInfo := range serviceInfosErr2 {
+		log.Infof("%v %v", resp.GetCode(), serviceInfo.SerName)
+	}
 	os.Setenv(util.EnvMepAuthPort, "3000")
-	os.Setenv(util.EnvMepAuthHost, "127.0.0.1")
-	os.Setenv("MEPSERVER_CERT_DOMAIN_NAME", "www.edegegallery.com")
-	resp, serviceInfos = Mp1CvtSrvAuthenDiscover(&response, "")
+	os.Setenv(util.EnvMepAuthHost, exampleIPAddress)
+	os.Setenv("MEPSERVER_CERT_DOMAIN_NAME", exampleDomainName)
+	resp, serviceInfos := Mp1CvtSrvAuthenDiscover(&response, defaultAppInstanceId)
 	for _, serviceInfo := range serviceInfos {
 		log.Infof("%v %v", resp.GetCode(), serviceInfo.SerName)
 	}
 	assert.Equal(t, []*models.ServiceInfo([]*models.ServiceInfo{}), serviceInfos)
-
 }
