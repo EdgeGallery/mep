@@ -91,17 +91,33 @@ const svcCatName = "serCategory/name"
 const svcCatId = "serCategory/id"
 const svcCatVersion = "serCategory/version"
 
-const respMsg = "[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}]\n"
-const respMsg1 = "{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"}]}\n"
-const writeAllServices = "{\"data\":[{\"serInstanceId\":\"16384563dca094183778a41ea7701d15\",\"serName\":\"FaceRegService6\",\"serCategory\":{\"href\":\"/example/catalogue1\",\"id\":\"id12345\",\"name\":\"RNI\",\"version\":\"v1.1\"},\"version\":\"3.2.1\",\"state\":\"\",\"transportId\":\"\",\"transportInfo\":{\"id\":\"\",\"name\":\"\",\"description\":\"\",\"type\":\"\",\"protocol\":\"\",\"version\":\"\",\"endpoint\":{\"uris\":null,\"addresses\":null,\"alternative\":null},\"security\":{\"oAuth2Info\":{\"grantTypes\":[\"\"],\"tokenEndpoint\":\"\"}}},\"serializer\":\"\",\"scopeOfLocality\":\"\",\"livenessInterval\":0,\"_links\":{\"self\":{},\"appInstanceId\":\"\"}}],\"retCode\":0,\"message\":\"\",\"params\":\"\"}\n"
+const respMsg = "[{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"statu" +
+	"s\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0f" +
+	"d1f\"}]}]\n"
+const respMsg1 = "{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"statu" +
+	"s\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[{\"applicationInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0" +
+	"fd1f\"}]}\n"
+const writeAllServices = "{\"data\":[{\"serInstanceId\":\"16384563dca094183778a41ea7701d15\",\"serName\":\"FaceRegServ" +
+	"ice6\",\"serCategory\":{\"href\":\"/example/catalogue1\",\"id\":\"id12345\",\"name\":\"RNI\",\"version\":\"v1.1\"" +
+	"},\"version\":\"3.2.1\",\"state\":\"\",\"transportId\":\"\",\"transportInfo\":{\"id\":\"\",\"name\":\"\",\"descrip" +
+	"tion\":\"\",\"type\":\"\",\"protocol\":\"\",\"version\":\"\",\"endpoint\":{\"uris\":null,\"addresses\":null,\"alte" +
+	"rnative\":null},\"security\":{\"oAuth2Info\":{\"grantTypes\":[\"\"],\"tokenEndpoint\":\"\"}}},\"serializer\":\"\"," +
+	"\"scopeOfLocality\":\"\",\"livenessInterval\":0,\"_links\":{\"self\":{},\"appInstanceId\":\"\"}}],\"retCode\":0,\"m" +
+	"essage\":\"\",\"params\":\"\"}\n"
 const writeObjectStatusFormat = "{\"taskId\":\"%s\",\"appInstanceId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\"," +
 	"\"configResult\":\"PROCESSING\",\"configPhase\":\"%d\",\"Detailed\":\"%s\"}\n"
 
 const dnsRuleId = "7d71e54e-81f3-47bb-a2fc-b565a326d794"
 const trafficRuleId = "8ft68t22-81f3-47bb-a2fc-56996er4tf37"
 const exampleDomainName = "www.example.com"
-const appUpdateRsp = "{\"taskId\":\"703e0f3b-b993-4d35-8d93-a469a4909ca3\",\"appInstanceId\":\"\",\"configResult\":\"PROCESSING\",\"configPhase\":\"0\",\"Detailed\":\"Operation In progress\"}\n"
-const subscribeInfoRsp = "{\"data\":{\"subscribeNum\":{\"appSubscribeNum\":0,\"serviceSubscribedNum\":0},\"subscribeRelations\":[]},\"retCode\":0,\"message\":\"\",\"params\":\"\"}\n"
+const appUpdateRsp = "{\"taskId\":\"703e0f3b-b993-4d35-8d93-a469a4909ca3\",\"appInstanceId\":\"\",\"configResult\":\"PR" +
+	"OCESSING\",\"configPhase\":\"0\",\"Detailed\":\"Operation In progress\"}\n"
+const subscribeInfoRsp = "{\"data\":{\"subscribeNum\":{\"appSubscribeNum\":0,\"serviceSubscribedNum\":0},\"subscribeRe" +
+	"lations\":[]},\"retCode\":0,\"message\":\"\",\"params\":\"\"}\n"
+const subscribeRecords = "{\"data\":{\"subscribeNum\":{\"appSubscribeNum\":1,\"serviceSubscribedNum\":1},\"subscribe" +
+	"Relations\":[{\"subscribeAppId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\",\"serviceList\":[\"16384563dca094183778a" +
+	"41ea7701d15\",\"16384563dca094183778a41ea7701d15\",\"16384563dca094183778a41ea7701d15\"]}]},\"retCode\":0,\"mes" +
+	"sage\":\"\",\"params\":\"\"}\n"
 
 // Generate test IP, instead of hard coding them
 var exampleIPAddress = fmt.Sprintf(ipAddFormatter, rand.Intn(maxIPVal), rand.Intn(maxIPVal), rand.Intn(maxIPVal),
@@ -2226,7 +2242,7 @@ func TestAppDUpdate(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 200)
 	x := 0
-	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		// To handle two db call for Task Status or taskID-->AppID database.
 
 		if x == 0 {
@@ -2283,8 +2299,7 @@ func TestAppDUpdate(t *testing.T) {
 
 	})
 
-	defer patch1.Reset()
-	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+	patches.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
 		response := proto.FindInstancesResponse{}
 		response.Instances = make([]*proto.MicroServiceInstance, 0)
 		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
@@ -2302,12 +2317,11 @@ func TestAppDUpdate(t *testing.T) {
 		})
 		return &response, nil
 	})
-	defer patch3.Reset()
-	defer patch1.Reset()
-	patch2 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
+
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		return "703e0f3b-b993-4d35-8d93-a469a4909ca3"
 	})
-	defer patch2.Reset()
+	defer patches.Reset()
 
 	// 2 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[1].Func(mockWriter, getRequest)
@@ -2363,7 +2377,7 @@ func TestAppDUpdateAppNameIncorrect(t *testing.T) {
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 400)
 	x := 0
-	patch1 := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
 		// To handle two db call for Task Status or taskID-->AppID database.
 
 		if x == 0 {
@@ -2419,8 +2433,7 @@ func TestAppDUpdateAppNameIncorrect(t *testing.T) {
 		}
 	})
 
-	defer patch1.Reset()
-	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+	patches.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
 		response := proto.FindInstancesResponse{}
 		response.Instances = make([]*proto.MicroServiceInstance, 0)
 		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
@@ -2438,12 +2451,11 @@ func TestAppDUpdateAppNameIncorrect(t *testing.T) {
 		})
 		return &response, nil
 	})
-	defer patch3.Reset()
-	defer patch1.Reset()
-	patch2 := gomonkey.ApplyFunc(util.GenerateUniqueId, func() string {
+
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
 		return "703e0f3b-b993-4d35-8d93-a469a4909ca3"
 	})
-	defer patch2.Reset()
+	defer patches.Reset()
 
 	// 2 is the order of the DNS get one handler in the URLPattern
 	service.URLPatterns()[1].Func(mockWriter, getRequest)
@@ -2484,11 +2496,6 @@ func TestQuerySubscribeStatistic(t *testing.T) {
 
 	mockWriter.AssertExpectations(t)
 }
-
-const subscribeRecords = "{\"data\":{\"subscribeNum\":{\"appSubscribeNum\":1,\"serviceSubscribedNum\":1},\"subscribe" +
-	"Relations\":[{\"subscribeAppId\":\"5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f\",\"serviceList\":[\"16384563dca094183778a" +
-	"41ea7701d15\",\"16384563dca094183778a41ea7701d15\",\"16384563dca094183778a41ea7701d15\"]}]},\"retCode\":0,\"mes" +
-	"sage\":\"\",\"params\":\"\"}\n"
 
 // Query capability
 func TestQuerySubscribeStatisticRecords(t *testing.T) {
