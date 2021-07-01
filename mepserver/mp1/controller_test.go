@@ -19,6 +19,7 @@ package mp1
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +33,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -101,6 +103,12 @@ const writeTransport = "{\"id\":\"8eb442b7cdfc11eba09314feb5b475da\",\"name\":\"
 	"\"tokenEndpoint\":\"/mep/token\"}}}"
 const writeCurTimeFormatVal = "{\"seconds\":%s,\"nanoSeconds\":%s," +
 	"\"timeSourceStatus\":\"TRACEABLE\"}"
+const defCapabilityId = "16384563dca094183778a41ea7701d15"
+const svcCatHref = "serCategory/href"
+const svcCatResponse = "/example/catalogue1"
+const svcCatName = "serCategory/name"
+const svcCatId = "serCategory/id"
+const svcCatVersion = "serCategory/version"
 
 //===========================Services==============================================
 const postSubscribeUrl = "/mec_service_mgmt/v1/applications/%s/services"
@@ -3187,4 +3195,51 @@ func TestPutTrafficRuleStatePutRecordFailed(t *testing.T) {
 		responseCheckFor200)
 
 	mockWriter.AssertExpectations(t)
+}
+
+// Test ServerAuthen discover
+func TestMp1CvtSrvAuthenDiscover(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	patches := gomonkey.ApplyFunc(util.SendRequest, func(url string, method string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
+		reqServ := make([]string, 0)
+		reqServ = append(reqServ, "service1", "service2")
+		bytes, err := json.Marshal(&reqServ)
+		appInfo := util.AuthInfoRecord{"16384563dca094183778a41ea7701d15", "test", "test", "test", "abc", string(bytes)}
+		bytes, err = json.Marshal(&appInfo)
+		return string(bytes), err
+	})
+	defer patches.Reset()
+	response := pb.FindInstancesResponse{}
+	response.Instances = make([]*pb.MicroServiceInstance, 0)
+	response.Instances = append(response.Instances, &pb.MicroServiceInstance{
+		InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+		ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+		Status:     "UP",
+		Version:    "3.2.1",
+		Properties: map[string]string{
+			"serName":     "FaceRegService6",
+			svcCatHref:    svcCatResponse,
+			svcCatId:      "id12345",
+			svcCatName:    "RNI",
+			svcCatVersion: "v1.1",
+		},
+	})
+
+	resp, serviceInfos := Mp1CvtSrvAuthenDiscover(&response, "")
+	os.Setenv(util.EnvMepAuthPort, "3000")
+	resp, serviceInfos = Mp1CvtSrvAuthenDiscover(&response, "")
+	os.Setenv(util.EnvMepAuthPort, "3000")
+	os.Setenv(util.EnvMepAuthHost, "127.0.0.1")
+	os.Setenv("MEPSERVER_CERT_DOMAIN_NAME", "www.edegegallery.com")
+	resp, serviceInfos = Mp1CvtSrvAuthenDiscover(&response, "")
+	for _, serviceInfo := range serviceInfos {
+		log.Infof("%v %v", resp.GetCode(), serviceInfo.SerName)
+	}
+	assert.Equal(t, []*models.ServiceInfo([]*models.ServiceInfo{}), serviceInfos)
+
 }
