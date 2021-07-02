@@ -2544,3 +2544,370 @@ func TestQuerySubscribeStatisticRecords(t *testing.T) {
 
 	mockWriter.AssertExpectations(t)
 }
+
+func TestAppInstanceTerminationErrHandler(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(delAppInstFormat, defaultAppInstanceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+
+		ins1 := &proto.MicroServiceInstance{
+			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
+			Status:         "UP",
+			Version:        "3.2.1",
+			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
+			Properties: map[string]string{
+				"appInstanceId": defaultAppInstanceId,
+				"serName":       "FaceRegService6",
+				"mecState":      "ACTIVE",
+			},
+		}
+
+		json1, _ := json.Marshal(ins1)
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
+
+		return records, 0
+	})
+	defer patches.Reset()
+
+	n := &srv.InstanceService{}
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
+		return nil, nil
+	})
+
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return false
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
+		return 0, ""
+	})
+
+	n1 := &task.Worker{}
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+		return
+	})
+
+	patches.ApplyFunc(backend.GetRecord, func(path string) (record []byte, errorCode int) {
+		TrfSts := models.RuleStatus{Id: "r123", State: 0, Method: 0}
+		DnsSts := models.RuleStatus{Id: "r144", State: 0, Method: 0}
+		status := models.TaskStatus{}
+		status.Progress = 1
+		status.Details = "Status"
+		status.DNSRuleStatusLst = append(status.DNSRuleStatusLst, DnsSts)
+		status.TrafficRuleStatusLst = append(status.TrafficRuleStatusLst, TrfSts)
+
+		outBytes, _ := json.Marshal(&status)
+		return outBytes, 0
+	})
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+
+	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
+
+func TestAppInstanceTerminationErr(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(delAppInstFormat, defaultAppInstanceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+
+		ins1 := &proto.MicroServiceInstance{
+			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
+			Status:         "UP",
+			Version:        "3.2.1",
+			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
+			Properties: map[string]string{
+				"appInstanceId": defaultAppInstanceId,
+				"serName":       "FaceRegService6",
+				"mecState":      "ACTIVE",
+			},
+		}
+
+		json1, _ := json.Marshal(ins1)
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
+
+		return records, 0
+	})
+	defer patches.Reset()
+
+	n := &srv.InstanceService{}
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
+		return nil, nil
+	})
+
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return false
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
+		return 0, ""
+	})
+
+	n1 := &task.Worker{}
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+		return
+	})
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 400)
+
+	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
+
+func TestAppInstanceTerminationErrUnmarshal(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(delAppInstFormat, defaultAppInstanceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+
+		ins1 := &proto.MicroServiceInstance{
+			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
+			Status:         "UP",
+			Version:        "3.2.1",
+			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
+			Properties: map[string]string{
+				"appInstanceId": defaultAppInstanceId,
+				"serName":       "FaceRegService6",
+				"mecState":      "ACTIVE",
+			},
+		}
+
+		json1, _ := json.Marshal(ins1)
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
+
+		return records, 0
+	})
+	defer patches.Reset()
+
+	n := &srv.InstanceService{}
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
+		return nil, nil
+	})
+
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return false
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
+		return 0, ""
+	})
+
+	n1 := &task.Worker{}
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+		return
+	})
+
+	patches.ApplyFunc(backend.GetRecord, func(path string) (record []byte, errorCode int) {
+		outBytes := make([]byte, 0)
+		return outBytes, 0
+	})
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 400)
+
+	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
+
+func TestAppInstanceTerminationNoProgress(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(delAppInstFormat, defaultAppInstanceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+
+		ins1 := &proto.MicroServiceInstance{
+			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
+			Status:         "UP",
+			Version:        "3.2.1",
+			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
+			Properties: map[string]string{
+				"appInstanceId": defaultAppInstanceId,
+				"serName":       "FaceRegService6",
+				"mecState":      "ACTIVE",
+			},
+		}
+
+		json1, _ := json.Marshal(ins1)
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
+
+		return records, 0
+	})
+	defer patches.Reset()
+
+	n := &srv.InstanceService{}
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
+		return nil, nil
+	})
+
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+
+	var appDComm *plans.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return false
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+		*models.AppDConfig) (workspace.ErrCode, string) {
+		return 0, ""
+	})
+
+	n1 := &task.Worker{}
+	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
+		return
+	})
+
+	patches.ApplyFunc(backend.GetRecord, func(path string) (record []byte, errorCode int) {
+		TrfSts := models.RuleStatus{Id: "r123", State: 0, Method: 0}
+		DnsSts := models.RuleStatus{Id: "r144", State: 0, Method: 0}
+		status := models.TaskStatus{}
+		status.Progress = -1
+		status.Details = "Status"
+		status.DNSRuleStatusLst = append(status.DNSRuleStatusLst, DnsSts)
+		status.TrafficRuleStatusLst = append(status.TrafficRuleStatusLst, TrfSts)
+
+		outBytes, _ := json.Marshal(&status)
+		return outBytes, 0
+	})
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 400)
+
+	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
