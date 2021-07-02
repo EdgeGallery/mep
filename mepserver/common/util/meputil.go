@@ -747,40 +747,32 @@ func GetApiGwSerName(instance *proto.MicroServiceInstance) string {
 }
 
 // GetRequiredSerFromMepauth query required services from mepauth
-func GetRequiredSerFromMepauth(appInstanceId string) ([]string, error) {
+func GetRequiredSerFromMepauth(appInstanceId string) (string, error) {
 	authBaseUrl, err := ReadMepAuthEndpoint()
 	if err != nil {
 		log.Error("Get mepauth endpoint failed.", err)
-		return nil, err
+		return "", err
 	}
 	url := fmt.Sprintf(authBaseUrl+"/%s/confs", appInstanceId)
 	config, err := TlsConfig()
 	if err != nil {
 		log.Error("Unable to set the cipher %s.", err)
-		return nil, err
+		return "", err
 	}
 
 	response, err := SendGetRequest(url, config)
 	if err != nil {
 		log.Error("SendGetRequest error", err)
-		return nil, err
+		return "", err
 	}
-	log.Infof("GetRequiredSerFromMepauth response: %s", response)
+	log.Infof("Required service response: %s", response)
 	var appInfo AuthInfoRecord
 	err = json.Unmarshal([]byte(response), &appInfo)
 	if err != nil {
 		log.Error("string convert to appInfo failed", err)
-		return nil, err
+		return "", err
 	}
-	requiredServices := appInfo.RequiredServices
-	var reqServices []string
-	err = json.Unmarshal([]byte(requiredServices), &reqServices)
-	if err != nil {
-		log.Error("string convert to reqServices failed", err)
-		return nil, err
-	}
-
-	return reqServices, nil
+	return appInfo.RequiredServices, nil
 }
 
 // TlsConfig Constructs tls configuration

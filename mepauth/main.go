@@ -101,8 +101,13 @@ func main() {
 		log.Error("Failed to encrypt and save jwt private key password.")
 		return
 	}
+	reqSer, ok := appConfig["REQUIRED_SERVICES"]
+	if !ok {
+		services := []byte("")
+		reqSer = &services
+	}
 	err = controllers.ConfigureAkAndSk(string(*appConfig["APP_INST_ID"]),
-		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"], "initApp","")
+		string(*appConfig["ACCESS_KEY"]), appConfig["SECRET_KEY"], "initApp", string(*reqSer))
 	if err != nil {
 		log.Error("Failed to configure ak sk values")
 		return
