@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/agiledragon/gomonkey"
 	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"mepserver/common/config"
 	"mepserver/common/extif/backend"
@@ -28,6 +29,7 @@ import (
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/common/util"
+	"net/http"
 	"testing"
 )
 
@@ -300,4 +302,144 @@ func TestProcessTrfEntryRevert(t *testing.T) {
 	defer patch1.Reset()
 	defer patch2.Reset()
 	j.processTrfEntryRevert(&trafficRule, &trafficRule, ruleStatus)
+}
+
+func TestHandleConfigDBWriteOnError(t *testing.T) {
+
+	ruleStatus := models.RuleStatus{Id: ruleId, State: 2, Method: 0}
+	var ruleList []models.RuleStatus
+	ruleList = append(ruleList, ruleStatus)
+
+	j := &task{appInstanceId: defaultAppInstanceId, taskId: ruleId, appDJobDb: &appDJobDB{appInstanceId: defaultAppInstanceId,
+		appDConfig: &models.AppDConfig{AppName: "AppName", Operation: http.MethodPost}},
+		statusDb: &statusDB{appInstanceId: defaultAppInstanceId,
+			status: &models.TaskStatus{Progress: 1, DNSRuleStatusLst: ruleList, TrafficRuleStatusLst: ruleList}},
+		dataPlane: &none.NoneDataPlane{}, dnsAgent: dns.NewRestDNSAgent(&config.MepServerConfig{})}
+
+	patch1 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		return 1
+	})
+	defer patch1.Reset()
+	j.handleConfigDBWriteOnSuccess()
+}
+
+func TestHandleTrafficRulesRevert(t *testing.T) {
+	ruleStatus := models.RuleStatus{Id: ruleId, State: 0, Method: 0}
+	var ruleList []models.RuleStatus
+	ruleList = append(ruleList, ruleStatus)
+	trafficRule := dataplane.TrafficRule{TrafficRuleID: ruleId, FilterType: "FLOW", State: "ACTIVE"}
+	var filters []dataplane.TrafficRule
+	filters = append(filters, trafficRule)
+	j := &task{appInstanceId: defaultAppInstanceId, taskId: ruleId, appDJobDb: &appDJobDB{appInstanceId: defaultAppInstanceId,
+		appDConfig: &models.AppDConfig{AppName: "AppName", AppTrafficRule: filters}},
+		statusDb: &statusDB{appInstanceId: defaultAppInstanceId,
+			status: &models.TaskStatus{Progress: 1, DNSRuleStatusLst: ruleList, TrafficRuleStatusLst: ruleList}},
+		dataPlane: &none.NoneDataPlane{}, dnsAgent: dns.NewRestDNSAgent(&config.MepServerConfig{})}
+
+	j.trfStateMachine = [][]*ruleOperation{
+		util.OperCreate: {
+			util.WaitMp2:           &ruleOperation{j.addTrafficOnMp2, j.deleteTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperModify: {
+			util.WaitMp2:           &ruleOperation{j.setTrafficOnMp2, j.setTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperDelete: {
+			util.WaitMp2:           &ruleOperation{j.deleteTrafficOnMp2, j.addTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+	}
+
+	patches := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		return 0
+	})
+	defer patches.Reset()
+	err := j.handleTrafficRules(1)
+	assert.Equal(t, nil, err)
+}
+
+func TestHandleTrafficRulesSet(t *testing.T) {
+	var dnsRule *dataplane.DNSRule
+	var traficRuleNIl *dataplane.TrafficRule
+	ruleStatus := models.RuleStatus{Id: ruleId, State: 0, Method: 0}
+	ruleStatus1 := models.RuleStatus{Id: ruleId, State: 0, Method: 1}
+	var ruleList []models.RuleStatus
+	ruleList = append(ruleList, ruleStatus)
+	ruleList = append(ruleList, ruleStatus1)
+	trafficRule := dataplane.TrafficRule{TrafficRuleID: ruleId, FilterType: "FLOW", State: "ACTIVE"}
+	var filters []dataplane.TrafficRule
+	filters = append(filters, trafficRule)
+
+	j := &task{appInstanceId: defaultAppInstanceId, taskId: ruleId, appDJobDb: &appDJobDB{appInstanceId: defaultAppInstanceId,
+		appDConfig: &models.AppDConfig{AppName: "AppName", AppTrafficRule: filters}},
+		appDConfigDb: &appDConfigDB{appInstanceId: defaultAppInstanceId, appDConfig: &models.AppDConfig{AppName: "AppName", AppTrafficRule: filters}},
+		statusDb: &statusDB{appInstanceId: defaultAppInstanceId,
+			status: &models.TaskStatus{Progress: 1, DNSRuleStatusLst: ruleList, TrafficRuleStatusLst: ruleList}},
+		dataPlane: &none.NoneDataPlane{}, dnsAgent: dns.NewRestDNSAgent(&config.MepServerConfig{})}
+
+	j.trfStateMachine = [][]*ruleOperation{
+		util.OperCreate: {
+			util.WaitMp2:           &ruleOperation{j.addTrafficOnMp2, j.deleteTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperModify: {
+			util.WaitMp2:           &ruleOperation{j.setTrafficOnMp2, j.setTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperDelete: {
+			util.WaitMp2:           &ruleOperation{j.deleteTrafficOnMp2, j.addTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+	}
+
+	patches := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		return 0
+	})
+	defer patches.Reset()
+	err := j.handleTrafficRules(1)
+	trafficRuleGet := j.appDConfigDb.GetTrafficRule(ruleId)
+	trafficRuleNil := j.appDConfigDb.GetTrafficRule(ruleId + "a")
+	dnsRuleGet := j.appDConfigDb.GetDnsRule(ruleId)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, &trafficRule, trafficRuleGet)
+	assert.Equal(t, dnsRule, dnsRuleGet)
+	assert.Equal(t, traficRuleNIl, trafficRuleNil)
+}
+
+func TestHandleTrafficRulesRevertRules(t *testing.T) {
+
+	ruleStatus := models.RuleStatus{Id: ruleId, State: 0, Method: 0}
+	var ruleList []models.RuleStatus
+	ruleList = append(ruleList, ruleStatus)
+	trafficRule := dataplane.TrafficRule{TrafficRuleID: ruleId, FilterType: "FLOW", State: "ACTIVE"}
+	var filters []dataplane.TrafficRule
+	filters = append(filters, trafficRule)
+	j := &task{appInstanceId: defaultAppInstanceId, taskId: ruleId, appDJobDb: &appDJobDB{appInstanceId: defaultAppInstanceId,
+		appDConfig: &models.AppDConfig{AppName: "AppName", AppTrafficRule: filters}},
+		statusDb: &statusDB{appInstanceId: defaultAppInstanceId,
+			status: &models.TaskStatus{Progress: 1, DNSRuleStatusLst: ruleList, TrafficRuleStatusLst: ruleList}},
+		dataPlane: &none.NoneDataPlane{}, dnsAgent: dns.NewRestDNSAgent(&config.MepServerConfig{})}
+
+	j.trfStateMachine = [][]*ruleOperation{
+		util.OperCreate: {
+			util.WaitMp2:           &ruleOperation{j.addTrafficOnMp2, j.deleteTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperModify: {
+			util.WaitMp2:           &ruleOperation{j.setTrafficOnMp2, j.setTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+		util.OperDelete: {
+			util.WaitMp2:           &ruleOperation{j.deleteTrafficOnMp2, j.addTrafficOnMp2, util.WaitConfigDBWrite},
+			util.WaitConfigDBWrite: &ruleOperation{nil, nil, 0},
+		},
+	}
+
+	patch1 := gomonkey.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		return 0
+	})
+	defer patch1.Reset()
+	j.handleTrafficRules(0)
+
 }
