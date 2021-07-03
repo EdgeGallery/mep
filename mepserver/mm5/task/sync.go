@@ -611,7 +611,7 @@ func (t *task) setTrafficOnMp2(ruleId string, newRule interface{}, existingRule 
 	if existingRule == nil {
 		return fmt.Errorf(ExistRuleError)
 	}
-	trExistingRule := existingRule.(*dataplane.DNSRule)
+	trExistingRule := existingRule.(*dataplane.TrafficRule)
 
 	appInfo := dataplane.ApplicationInfo{
 		Id:   t.appInstanceId,
