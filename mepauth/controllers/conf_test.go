@@ -21,8 +21,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"mepauth/adapter"
+	"mepauth/models"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/astaxie/beego"
@@ -183,5 +188,106 @@ func TestSaveAkAndSk(t *testing.T) {
 
 			So(err.Error(), ShouldEqual, "insert fail")
 		})
+	})
+}
+
+func getConfController() *ConfController {
+	c := &ConfController{}
+	c.Init(context.NewContext(), "", "", nil)
+	req, err := http.NewRequest("POST", "http://127.0.0.1", strings.NewReader(""))
+	if err != nil {
+		log.Error("prepare http request failed")
+	}
+
+	c.Ctx.Request = req
+	c.Ctx.Request.Header.Set("X-Real-Ip", "127.0.0.1")
+	c.Ctx.ResponseWriter = &context.Response{}
+	c.Ctx.ResponseWriter.ResponseWriter = httptest.NewRecorder()
+	c.Ctx.Output = context.NewOutput()
+	c.Ctx.Input = context.NewInput()
+	c.Ctx.Output.Reset(c.Ctx)
+	c.Ctx.Input.Reset(c.Ctx)
+	return c
+}
+
+// Test conf PUT
+func TestPutSuccess(t *testing.T) {
+	Convey("Test delete", t, func() {
+		c := getConfController()
+		cred := models.Credentials{}
+		cred.AccessKeyId = "AK"
+		cred.SecretKey = "SK"
+		authInfo := models.AuthInfo{Credentials: cred}
+		appInstanceInfo := &models.AppInstanceInfo{}
+		appInstanceInfo.AuthInfo = authInfo
+
+		adapter.Db = &adapter.PgDb{}
+
+		bytes, _ := json.Marshal(appInstanceInfo)
+		c.Ctx.Input.RequestBody = bytes
+
+		patches := ApplyFunc(ConfigureAkAndSk, func(_ string, _ string, _ *[]byte, _ string, _ string) error {
+			return nil
+		})
+		patches.Reset()
+		c.Put()
+		out := c.Data["json"]
+		So(out, ShouldNotBeNil)
+	})
+}
+
+// Test conf PUT
+func TestDeleteSuccess(t *testing.T) {
+	Convey("Test delete", t, func() {
+		validAppInsID := "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+		c := getConfController()
+		cred := models.Credentials{}
+		cred.AccessKeyId = "AK"
+		cred.SecretKey = "SK"
+		authInfo := models.AuthInfo{Credentials: cred}
+		appInstanceInfo := &models.AppInstanceInfo{}
+		appInstanceInfo.AuthInfo = authInfo
+
+		adapter.Db = &adapter.PgDb{}
+
+		bytes, _ := json.Marshal(appInstanceInfo)
+		c.Ctx.Input.RequestBody = bytes
+		c.Ctx.Input.SetParam(util.UrlApplicationId, validAppInsID)
+		var pgdb *adapter.PgDb
+		patches := ApplyMethod(reflect.TypeOf(pgdb), "DeleteData", func(*adapter.PgDb, interface{}, ...string) error {
+			return nil
+		})
+		defer patches.Reset()
+		c.Delete()
+		out := c.Data["json"]
+		So(out, ShouldEqual, "Delete success.")
+	})
+}
+
+// Test conf PUT
+func TestGetSuccess(t *testing.T) {
+	Convey("Test Get", t, func() {
+		validAppInsID := "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
+		c := getConfController()
+		cred := models.Credentials{}
+		cred.AccessKeyId = "AK"
+		cred.SecretKey = "SK"
+		authInfo := models.AuthInfo{Credentials: cred}
+		appInstanceInfo := &models.AppInstanceInfo{}
+		appInstanceInfo.AuthInfo = authInfo
+
+		adapter.Db = &adapter.PgDb{}
+
+		bytes, _ := json.Marshal(appInstanceInfo)
+		c.Ctx.Input.RequestBody = bytes
+		c.Ctx.Input.SetParam(util.UrlApplicationId, validAppInsID)
+		var pgdb *adapter.PgDb
+		patches := ApplyMethod(reflect.TypeOf(pgdb), "ReadData", func(*adapter.PgDb, interface{}, ...string) error {
+			return nil
+		})
+		defer patches.Reset()
+		c.Get()
+		out := c.Data["json"]
+		So(out, ShouldNotBeNil)
 	})
 }
