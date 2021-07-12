@@ -16,27 +16,48 @@
 
 package controllers
 
-import (
-	"crypto/tls"
-	"encoding/json"
-	"github.com/prometheus/common/log"
-	"healthcheck-m/util"
-	"io/ioutil"
-	"net/http"
-)
+import "github.com/prometheus/common/log"
 
 // Mec host information
 //TODO: check here if it needs full information
 type MecHostInfo struct {
-	MechostIp   string `json:"mechostIp"`
+	MechostIp          string              `json:"mechostIp"`
+	MechostName        string              `json:"mechostName"`
+	ZipCode            string              `json:"zipCode"`
+	City               string              `json:"city"`
+	Address            string              `json:"address"`
+	Affinity           string              `json:"affinity"`
+	UserName           string              `json:"userName"`
+	MepMIp             string              `json:"mepmIp"`
+	Coordinates        string              `json:"coordinates"`
+	Hwcapabilities     []MecHwCapabilities `json:"hwcapabilities"`
+	Vim                string              `json:"vim"`
+	ConfigUploadStatus string              `json:"configUploadStatus"`
+}
+
+// Mec hardware capabilities
+type MecHwCapabilities struct {
+	HwType   string `json:"hwType"`
+	HwVendor string `json:"hwVendor"`
+	HwModel  string `json:"hwModel"`
 }
 
 type MecMController struct {
 	BaseController
 }
 
-var HostList []string
+// @Title Get
+// @Description test connection is ok or not
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /health-check/v1/center/health [get]
+func (c *MecMController) Get() {
+	log.Info("Health Check center side connection is ok.")
+	c.Ctx.WriteString("Health Check center side connection is ok.")
+}
 
+//var HostList []string
+/*
 func (c *MecMController) GetNodeIpList() ([]string, error) {
 	log.Info("Query services request received.")
 	clientIp := c.Ctx.Input.IP()
@@ -79,4 +100,4 @@ func (c *MecMController) GetNodeIpList() ([]string, error) {
 	return nil, nil
 }
 
-
+*/

@@ -34,10 +34,10 @@ const (
 	ClientIpaddressInvalid        = "clientIp address is invalid"
 	MepPort                       = 30443
 	LcmPort                       = 31252
-	EdgeHealthPort                = 33666
+	EdgeHealthPort                = 32759
 
 	FailedToUnmarshal string = "failed to unmarshal request"
-	ErrCallFromMecM   string = "failed to execute rest calling, check if mep service is ready."
+	ErrCallFromMecM   string = "failed to execute rest calling, check if mecm service is ready."
 	ErrCallFromEdge   string = "failed to call edge health check"
 
 	MecMServiceQuery = "https://119.8.63.144:30093/mecm-inventory/inventory/v1/mechosts"

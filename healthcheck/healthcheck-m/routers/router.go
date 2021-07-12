@@ -22,5 +22,5 @@ import (
 
 func init() {
 	beego.Router("/health-check/v1/center/action/start",&controllers.RunController{controllers.BaseController{}})
-
+	beego.Router("/health-check/v1/center/health",&controllers.MecMController{controllers.BaseController{}})
 }

@@ -20,8 +20,8 @@ import (
 	"crypto/tls"
 	"github.com/prometheus/common/log"
 	"healthcheck/util"
-	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 // Edge Controller
@@ -29,7 +29,11 @@ type EdgeController struct {
 	BaseController
 }
 
-func (c *EdgeController) LcmHealthQuery() bool{
+// @Title LcmHealthQuery
+// @Description collect lcm health condition
+// @Success true
+// @Failure false
+func (c *EdgeController) LcmHealthQuery() bool {
 	log.Info("Lcm Health Query request received.")
 	clientIp := c.Ctx.Input.IP()
 	err := util.ValidateSrcAddress(clientIp)
@@ -42,9 +46,10 @@ func (c *EdgeController) LcmHealthQuery() bool{
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
 	client := &http.Client{Transport: tr}
-	response, err := client.Get(util.LcmHealthQuery)
+	LcmHealthQueryUrl := "https://" + util.GetLocalIp() + ":" + strconv.Itoa(util.LcmPort) + util.LcmHealthUri
+
+	response, err := client.Get(LcmHealthQueryUrl)
 	if err != nil {
 		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromLcm)
 		return false
@@ -52,8 +57,6 @@ func (c *EdgeController) LcmHealthQuery() bool{
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK {
 		c.handleLoggingForSuccess(clientIp, "Health Query from lcm is successful")
-		body, _ := ioutil.ReadAll(response.Body)
-		_, _ = c.Ctx.ResponseWriter.Write(body)
 		return true
 	} else {
 		//error code need to be changed
@@ -63,6 +66,10 @@ func (c *EdgeController) LcmHealthQuery() bool{
 
 }
 
+// @Title MepHealthQuery
+// @Description collect mep health condition
+// @Success true
+// @Failure false
 func (c *EdgeController) MepHealthQuery() bool{
 	log.Info("Mep Health Query request received.")
 	clientIp := c.Ctx.Input.IP()
@@ -86,8 +93,6 @@ func (c *EdgeController) MepHealthQuery() bool{
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusOK {
 		c.handleLoggingForSuccess(clientIp, "Health Query from mep is successful")
-		body, _ := ioutil.ReadAll(response.Body)
-		_, _ = c.Ctx.ResponseWriter.Write(body)
 		return true
 	} else {
 		//error code need to be changed
@@ -97,20 +102,16 @@ func (c *EdgeController) MepHealthQuery() bool{
 
 }
 
-// @Title CheckEdge
+// @Title Get
 // @Description collect mep and lcm health condition and decide this edge health
 // @Success 200 ok
-// @Failure 400 bad request
+// @Failure 500 StatusInternalServerError
 // @router /health-check/v1/edge/health [get]
 func (c *EdgeController) Get() {
-	if c.MepHealthQuery() && c.LcmHealthQuery() {
-		_, _ = c.Ctx.ResponseWriter.Write([]byte("ok"))
+	if   c.LcmHealthQuery() || c.MepHealthQuery(){
 		return
-	}else {
+	} else {
+		c.writeErrorResponse(util.ErrCallForEdge,util.StatusInternalServerError)
 		return
 	}
 }
-
-
-
-

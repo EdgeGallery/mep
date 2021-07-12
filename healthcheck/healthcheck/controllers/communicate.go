@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/common/log"
 	"healthcheck/data"
 	"healthcheck/util"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -32,7 +31,7 @@ type ComController struct {
 }
 
 type MecHostInfo struct {
-	MechostIp string `json:"mechostIp"`
+	MechostIp []string `json:"mechostIp"`
 }
 
 type EdgeHealthResult struct {
@@ -46,6 +45,16 @@ type CheckedEdgeInfo struct {
 }
 
 var MecList []string
+
+// @Title Get
+// @Description test connection is ok or not
+// @Success 200 ok
+// @Failure 400 bad request
+// @router /health-check/v1/edge/action/start [get]
+func (c *ComController) Get() {
+	log.Info("Health Check edge side connection is ok.")
+	c.Ctx.WriteString("Health Check edge side connection is ok.")
+}
 
 // @Title Post
 // @Description start edge side health check
@@ -63,7 +72,7 @@ func (c *ComController) Post() {
 	}
 	c.displayReceivedMsg(clientIp)
 
-	var mecInfo []MecHostInfo
+	var mecInfo MecHostInfo
 
 	err = json.Unmarshal(c.Ctx.Input.RequestBody, &mecInfo)
 	if err != nil {
@@ -73,15 +82,16 @@ func (c *ComController) Post() {
 
 	//we can use HostList in mecm.go, think it twice
 
-	for _, info := range mecInfo {
-		MecList = append(MecList, info.MechostIp)
+	for _, info := range mecInfo.MechostIp {
+		MecList = append(MecList, info)
 	}
 
 	data.EdgeList = data.EdgeList.NewNodeList(MecList)
+	localIp := util.GetLocalIp()
 
 	//TODO: can use go routine to check every edge at same time
 	for _, ip := range MecList {
-		if ip == util.LocalIp {
+		if ip == localIp {
 			err = data.EdgeList.SetResult(ip)
 			if err != nil {
 				c.HandleLoggingForError(ip, util.StatusInternalServerError, util.ErrSetResult)
@@ -93,9 +103,13 @@ func (c *ComController) Post() {
 		}
 
 		client := &http.Client{Transport: tr}
-		response, err := client.Get(ip + ":" + strconv.Itoa(util.EdgeHealthPort) + "/health-check/v1/edge/health") // 192.168.1.1:33666/health
+		tmpUrl := "http://"+ ip + ":" + strconv.Itoa(util.EdgeHealthPort) + "/health-check/v1/edge/health"
+		response, err := client.Get(tmpUrl) // 119.8.47.5:32759/health-check/v1/edge/health
 		if err != nil {
-			c.HandleLoggingForError(ip, util.StatusNotFound, util.ErrCallForEdge)
+			err = data.EdgeList.SetBadResult(ip)
+			if err != nil {
+				c.HandleLoggingForError(ip, util.StatusInternalServerError, util.ErrSetResult)
+			}
 			continue
 		}
 		if response.StatusCode == http.StatusOK {
@@ -105,28 +119,25 @@ func (c *ComController) Post() {
 			if err != nil {
 				c.HandleLoggingForError(ip, util.StatusInternalServerError, util.ErrSetResult)
 			}
-			body, _ := ioutil.ReadAll(response.Body)
-			_, _ = c.Ctx.ResponseWriter.Write(body)
 		} else {
 			//TODO:check here if it should return error code when the checked edge is unhealthy
 			c.HandleLoggingForError(ip, util.StatusInternalServerError, "this edge is unhealthy")
+
 			err = data.EdgeList.SetBadResult(ip)
 			if err != nil {
 				c.HandleLoggingForError(ip, util.StatusInternalServerError, util.ErrSetResult)
 			}
-			body, _ := ioutil.ReadAll(response.Body)
-			_, _ = c.Ctx.ResponseWriter.Write(body)
 		}
 		response.Body.Close()
 	}
 
 	edgeResultMap := make(map[string]map[string]bool)
 
-	edgeResultMap[util.LocalIp] = data.EdgeList.NodeList
+	edgeResultMap[localIp] = data.EdgeList.NodeList
 
 	var edgeResult EdgeHealthResult
 
-	edgeResult.CheckerIp = util.LocalIp
+	edgeResult.CheckerIp = localIp
 	for checkedIp, condition := range data.EdgeList.NodeList {
 		edgeHealthResult := CheckedEdgeInfo{
 			CheckedIp: checkedIp,
@@ -142,5 +153,4 @@ func (c *ComController) Post() {
 	}
 
 	_, _ = c.Ctx.ResponseWriter.Write(jsonResp)
-
 }
