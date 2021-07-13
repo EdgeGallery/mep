@@ -765,7 +765,6 @@ func GetRequiredSerFromMepauth(appInstanceId string) (string, error) {
 		log.Error("SendGetRequest error", err)
 		return "", err
 	}
-	log.Infof("Required service response: %s", response)
 	var appInfo AuthInfoRecord
 	err = json.Unmarshal([]byte(response), &appInfo)
 	if err != nil {
