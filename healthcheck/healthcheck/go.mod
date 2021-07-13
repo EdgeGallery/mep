@@ -17,8 +17,8 @@ module healthcheck
 go 1.14
 
 require (
-    github.com/astaxie/beego v1.12.3
-    github.com/go-playground/validator/v10 v10.6.1
-    github.com/prometheus/common v0.10.0
-    github.com/smartystreets/goconvey v1.6.4
+	github.com/astaxie/beego v1.12.0
+	github.com/go-playground/validator/v10 v10.4.1
+	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
+	github.com/sirupsen/logrus v1.6.0
 )

@@ -17,9 +17,10 @@
 package controllers
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"healthcheck-m/util"
 	"io/ioutil"
 	"net/http"
@@ -40,6 +41,9 @@ type CheckedEdgeInfo struct {
 	Condition bool   `json:"condition"`
 }
 
+type RequestBody struct {
+	MechostIpList []string `json:"mechostIp"`
+}
 
 // @Title Get
 // @Description start total health check for this mec-m
@@ -63,6 +67,7 @@ func (c *RunController) Get() {
 	//get mecList from mec-m
 	client := &http.Client{Transport: tr}
 	response, err := client.Get(util.MecMServiceQuery)
+
 	if err != nil {
 		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
 		return
@@ -78,20 +83,30 @@ func (c *RunController) Get() {
 		return
 	}
 
+	var hostList []string
+	var requestBody RequestBody
+
 	for _, info := range mecMInfo {
-		HostList = append(HostList, info.MechostIp)
+		hostList = append(hostList, info.MechostIp)
+		requestBody.MechostIpList = append(requestBody.MechostIpList, info.MechostIp)
 	}
 
 	var VoteMap map[string]map[string]bool
 	VoteMap = make(map[string]map[string]bool)
 
 	//after get mec list, tell every edge to get health check result from every edge
-	for _, mecIp := range HostList {
+	for _, mecIp := range hostList {
 		client := &http.Client{Transport: tr}
-		response, err := client.Get("https://" + mecIp + ":" + strconv.Itoa(util.EdgeHealthPort) + util.EdgeHealthCheck)
+
+		requestJson, err := json.Marshal(requestBody)
+		requestBody := bytes.NewReader(requestJson)
+		tmpUrl := "http://" + mecIp + ":" + strconv.Itoa(util.EdgeHealthPort) + util.EdgeHealthCheck
+
+		//	response, err := client.Get(tmpUrl )
+		response, err := client.Post(tmpUrl, "application/json", requestBody)
 		if err != nil {
-			c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
-			return
+		//	c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
+			continue
 		}
 		defer response.Body.Close()
 		body, err := ioutil.ReadAll(response.Body)
@@ -100,12 +115,12 @@ func (c *RunController) Get() {
 		err = json.Unmarshal(body, &edgeResult)
 		if err != nil {
 			c.writeErrorResponse(util.FailedToUnmarshal, util.BadRequest)
-			return
+			continue
 		}
 		checkerIp := edgeResult.CheckerIp
 		if checkerIp != mecIp {
 			c.HandleLoggingForError(mecIp, util.StatusInternalServerError, util.ErrCallFromEdge)
-			return
+			continue
 		}
 
 		//TODO: determine if it needs to check checkerIp map already have or not
@@ -127,7 +142,7 @@ func (c *RunController) Get() {
 		}
 	}
 
-	totalNum := len(HostList)
+	//totalNum := len(hostList)
 	VoteCountMap := make(map[string]int)
 	ResultMap := make(map[string]bool)
 
@@ -153,7 +168,7 @@ func (c *RunController) Get() {
 
 	//here is how we vote
 	for checkedIp, voteNum := range VoteCountMap {
-		if voteNum >= totalNum/2 {
+		if voteNum >= 1 {
 			ResultMap[checkedIp] = true
 		} else {
 			ResultMap[checkedIp] = false
@@ -172,10 +187,9 @@ func (c *RunController) Get() {
 	resp, err := json.Marshal(result)
 
 	if err != nil {
-		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, "fail to return upload details")
+		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, "fail to marshal details")
 		return
 	}
 
 	_, _ = c.Ctx.ResponseWriter.Write(resp)
-
 }

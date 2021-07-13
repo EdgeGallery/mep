@@ -77,6 +77,6 @@ COPY --from=builder --chown=$USER_NAME:$GROUP_NAME $HOME/views/ $HOME/views/
 
 USER $USER_NAME
 
-EXPOSE 9528
+EXPOSE 9527
 
 CMD ["./bin/healthcheck"]
