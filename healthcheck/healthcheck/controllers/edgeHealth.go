@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"crypto/tls"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"healthcheck/util"
 	"net/http"
 	"strconv"

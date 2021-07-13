@@ -16,7 +16,7 @@
 
 package controllers
 
-import "github.com/prometheus/common/log"
+import log "github.com/sirupsen/logrus"
 
 // Mec host information
 //TODO: check here if it needs full information

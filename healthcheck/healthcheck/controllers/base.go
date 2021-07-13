@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"healthcheck/util"
 )
 

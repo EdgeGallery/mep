@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 	"healthcheck-m/util"
 	"io/ioutil"
 	"net/http"
