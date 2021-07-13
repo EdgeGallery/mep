@@ -19,7 +19,7 @@ package models
 
 // LogPluginInfo http log plugin information
 type LogPluginInfo struct {
-	Name   string `json:"name"`
+	Name   string     `json:"name"`
 	Config ConfigInfo `json:"config"`
 }
 

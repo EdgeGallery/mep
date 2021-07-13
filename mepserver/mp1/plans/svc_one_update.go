@@ -93,5 +93,3 @@ func (t *UpdateInstance) OnRequest(data string) workspace.TaskCode {
 	t.HttpRsp = mp1Ser
 	return workspace.TaskFinish
 }
-
-

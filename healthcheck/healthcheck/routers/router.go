@@ -16,12 +16,12 @@
 package routers
 
 import (
-	"healthcheck/controllers"
 	"github.com/astaxie/beego"
+	"healthcheck/controllers"
 )
 
 func init() {
-	beego.Router("/health-check/v1/edge/health",&controllers.EdgeController{controllers.BaseController{}})
-	beego.Router("/health-check/v1/edge/action/start",&controllers.ComController{controllers.BaseController{}})
+	beego.Router("/health-check/v1/edge/health", &controllers.EdgeController{controllers.BaseController{}})
+	beego.Router("/health-check/v1/edge/action/start", &controllers.ComController{controllers.BaseController{}})
 
 }

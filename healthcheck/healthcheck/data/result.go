@@ -28,7 +28,3 @@ func NewEdgeResultData() EdgeResult { //for init later
 	}
 	return LocalResultMap
 }*/
-
-
-
-

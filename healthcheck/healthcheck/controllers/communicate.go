@@ -103,7 +103,7 @@ func (c *ComController) Post() {
 		}
 
 		client := &http.Client{Transport: tr}
-		tmpUrl := "http://"+ ip + ":" + strconv.Itoa(util.EdgeHealthPort) + "/health-check/v1/edge/health"
+		tmpUrl := "http://" + ip + ":" + strconv.Itoa(util.EdgeHealthPort) + "/health-check/v1/edge/health"
 		response, err := client.Get(tmpUrl) // 119.8.47.5:32759/health-check/v1/edge/health
 		if err != nil {
 			err = data.EdgeList.SetBadResult(ip)
