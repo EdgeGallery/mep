@@ -70,7 +70,7 @@ func (c *EdgeController) LcmHealthQuery() bool {
 // @Description collect mep health condition
 // @Success true
 // @Failure false
-func (c *EdgeController) MepHealthQuery() bool{
+func (c *EdgeController) MepHealthQuery() bool {
 	log.Info("Mep Health Query request received.")
 	clientIp := c.Ctx.Input.IP()
 	err := util.ValidateSrcAddress(clientIp)
@@ -108,10 +108,10 @@ func (c *EdgeController) MepHealthQuery() bool{
 // @Failure 500 StatusInternalServerError
 // @router /health-check/v1/edge/health [get]
 func (c *EdgeController) Get() {
-	if   c.LcmHealthQuery() || c.MepHealthQuery(){
+	if c.LcmHealthQuery() || c.MepHealthQuery() {
 		return
 	} else {
-		c.writeErrorResponse(util.ErrCallForEdge,util.StatusInternalServerError)
+		c.writeErrorResponse(util.ErrCallForEdge, util.StatusInternalServerError)
 		return
 	}
 }

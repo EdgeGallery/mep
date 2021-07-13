@@ -38,13 +38,13 @@ const (
 	EdgeHealthPort                = 32759
 	LcmHealthUri                  = "/lcmcontroller/v1/health"
 
-	ErrCallFromLcm         string = "failed to execute rest calling, check if lcm service is ready."
-	ErrCallFromMep         string = "failed to execute rest calling, check if mep service is ready."
-	ErrCallForEdge         string = "mep and lcm in this edge is failed, check if lcm and mep are ready"
-	ErrSetResult           string = "fail to set communicate result from other edge"
-	FailedToUnmarshal      string = "failed to unmarshal request"
-	LcmHealthQuery         string = "https://119.8.47.5:31252/lcmcontroller/v1/health"
-	MepHealthQuery         string = "https://mep-mm5.mep/healthcheck"
+	ErrCallFromLcm    string = "failed to execute rest calling, check if lcm service is ready."
+	ErrCallFromMep    string = "failed to execute rest calling, check if mep service is ready."
+	ErrCallForEdge    string = "mep and lcm in this edge is failed, check if lcm and mep are ready"
+	ErrSetResult      string = "fail to set communicate result from other edge"
+	FailedToUnmarshal string = "failed to unmarshal request"
+	LcmHealthQuery    string = "https://119.8.47.5:31252/lcmcontroller/v1/health"
+	MepHealthQuery    string = "https://mep-mm5.mep/healthcheck"
 )
 
 //var LocalIp string

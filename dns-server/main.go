@@ -48,7 +48,7 @@ type InputParameters struct {
 // Input flag parameters registration.
 func registerInputParameters(inParam *InputParameters) {
 	if inParam == nil {
-		log.Fatalf( "Input config is not ready yet.")
+		log.Fatalf("Input config is not ready yet.")
 		return
 	}
 	inParam.dbName = flag.String("db", "dbEgDns", "Database name")
@@ -76,65 +76,65 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	if strings.ContainsAny(*inParam.dbName, util.DBStringExceptions) {
 		err := fmt.Errorf("error: db name should be a single world and should not have \"%s\"",
 			util.DBStringExceptions)
-		log.Fatalf( "Failed to parse db name(%s). %s", *inParam.dbName, err.Error())
+		log.Fatalf("Failed to parse db name(%s). %s", *inParam.dbName, err.Error())
 	}
 
 	// Validate DNS port range
 	if *inParam.port > util.MaxPortNumber || *inParam.port == 0 {
 		err := fmt.Errorf("error: port number not in valid range")
-		log.Fatalf( "Failed to parse port number(%s).", err.Error())
+		log.Fatalf("Failed to parse port number(%s).", err.Error())
 	}
 
 	// Validate DNS management port range
 	if *inParam.mgmtPort > util.MaxPortNumber || *inParam.mgmtPort == 0 {
 		err := fmt.Errorf("error: management port number not in valid range")
-		log.Fatalf( "Failed to parse management port number(%s).", err.Error())
+		log.Fatalf("Failed to parse management port number(%s).", err.Error())
 	}
 	if *inParam.port == *inParam.mgmtPort {
 		err := fmt.Errorf("error: cannot use same port number for dns and management")
-		log.Fatalf( "Port number conflict(%s).", err.Error())
+		log.Fatalf("Port number conflict(%s).", err.Error())
 	}
 
 	// Validate connTimeOut range
 	if *inParam.connTimeOut > util.MaxConnTimeout || *inParam.connTimeOut < util.MinConnTimeout {
 		err := fmt.Errorf("error: connection timeout not in valid range(2~50)")
-		log.Fatalf( "Failed to parse connection timeout input(%s).", err.Error())
+		log.Fatalf("Failed to parse connection timeout input(%s).", err.Error())
 	}
 
 	// Validate IP address
 	ipAdd := net.ParseIP(*inParam.ipAddString)
-	if ipAdd == nil  {
+	if ipAdd == nil {
 		err := fmt.Errorf("error: parsing ip address failed, not in ipv4/ipv6 format")
-		log.Fatalf( "Failed to parse ip address(%s). %s", *inParam.ipAddString, err.Error())
+		log.Fatalf("Failed to parse ip address(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
 	if ipAdd != nil && (ipAdd.IsMulticast() || ipAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.ipAddString, err.Error())
+		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.ipAddString, err.Error())
 	}
 
 	// Validate Management IP address
 	ipMgmtAdd := net.ParseIP(*inParam.ipMgmtAddString)
 	if ipMgmtAdd == nil {
 		err := fmt.Errorf("error: parsing management ip address failed, not in ipv4/ipv6 format")
-		log.Fatalf( "Failed to parse management ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
+		log.Fatalf("Failed to parse management ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
 	if ipMgmtAdd != nil && (ipMgmtAdd.IsMulticast() || ipMgmtAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
+		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
 	}
 
 	// Validate forwarder
 	forwarderAdd := net.ParseIP(*inParam.forwarder)
 	if forwarderAdd == nil {
 		err := fmt.Errorf("error: parsing forwarder failed, not in ipv4/ipv6 format")
-		log.Fatalf( "Failed to parse forwarder address(%s). %s", *inParam.forwarder, err.Error())
+		log.Fatalf("Failed to parse forwarder address(%s). %s", *inParam.forwarder, err.Error())
 	}
 
-	if forwarderAdd !=nil && (forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast)) {
+	if forwarderAdd != nil && (forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast)) {
 		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf( "Multicast or broadcast ip address(%s). %s", *inParam.forwarder, err.Error())
+		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.forwarder, err.Error())
 	}
 
 	return &Config{dbName: *inParam.dbName,

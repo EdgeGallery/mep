@@ -123,7 +123,7 @@ func (sig *Sign) getCanonicalQueryString(req *http.Request) string {
 	for key, values := range req.URL.Query() {
 		for _, value := range values {
 			// canonical query string with each value
-			params = append(params, url.QueryEscape(key) + "=" + url.QueryEscape(value))
+			params = append(params, url.QueryEscape(key)+"="+url.QueryEscape(value))
 		}
 	}
 	sort.Strings(params)

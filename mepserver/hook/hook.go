@@ -59,7 +59,7 @@ func timerTask() {
 	go func() {
 		for {
 			select {
-			case  <-TimeTicker.C:
+			case <-TimeTicker.C:
 				go refreshAPIGwAddr()
 			}
 		}

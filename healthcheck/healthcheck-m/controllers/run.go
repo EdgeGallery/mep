@@ -105,7 +105,7 @@ func (c *RunController) Get() {
 		//	response, err := client.Get(tmpUrl )
 		response, err := client.Post(tmpUrl, "application/json", requestBody)
 		if err != nil {
-		//	c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
+			//	c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
 			continue
 		}
 		defer response.Body.Close()

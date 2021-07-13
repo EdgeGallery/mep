@@ -209,7 +209,7 @@ func DecryptByAES256GCM(ciphertext []byte, key []byte, nonce []byte) ([]byte, er
 func TLSConfig(crtName string) (*tls.Config, error) {
 	certNameConfig := GetAppConfig(crtName)
 	if len(certNameConfig) == 0 {
-		log.Error( "Certificate name is not set")
+		log.Error("Certificate name is not set")
 		return nil, errors.New("certificate name configuration is not set")
 	}
 

@@ -15,6 +15,7 @@
  */
 
 package controllers
+
 /*
 type MecMController struct {
 	NodeList []string  // to figure out to maintain it or not
@@ -34,6 +35,3 @@ this is for edge side
 /*func (c *MecMController) GetNodeIpList() []string {
 	return c.NodeList
 }*/
-
-
-

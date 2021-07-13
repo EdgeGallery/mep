@@ -38,7 +38,7 @@ func init() {
 			MaxSize:    util.MaxSize, // megabytes
 			MaxBackups: util.MaxBackups,
 			MaxAge:     util.MaxAge, // days
-			Compress:   true, // compress
+			Compress:   true,        // compress
 		}
 		logrus.SetOutput(ioWriter)
 	} else {

@@ -33,11 +33,11 @@ import (
 
 const (
 	// ZoneConfig Zone constant.
-	ZoneConfig  = "zone"
+	ZoneConfig = "zone"
 	// DefaultZone default zone constant.
 	DefaultZone = "."
 	// DBPath DataBase Path.
-	DBPath      = "data"
+	DBPath = "data"
 )
 
 // DNSConfigRRKey RR Config key.
@@ -107,7 +107,7 @@ func (b *BoltDB) Close() error {
 	if b.db != nil {
 		err := b.db.Close()
 		if err != nil {
-			log.Errorf( "Failed to close the bolt db(%s).", b.FileName)
+			log.Errorf("Failed to close the bolt db(%s).", b.FileName)
 
 			return err
 		}

@@ -167,7 +167,7 @@ func ValidateInputArgs(appConfig AppConfigProperties) bool {
 func ValidateKeyComponentUserInput(keyComponentUserStr *[]byte) error {
 	if len(*keyComponentUserStr) < componentSize {
 		log.Error("Key component user string length is not valid")
-		return  fmt.Errorf("key component user string length is not valid")
+		return fmt.Errorf("key component user string length is not valid")
 	}
 	return nil
 }

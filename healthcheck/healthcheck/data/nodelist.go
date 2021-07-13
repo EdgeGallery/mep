@@ -30,7 +30,7 @@ func (c *NodeList) NewNodeList(ipList []string) NodeList {
 	EdgeList = NodeList{
 		NodeList: make(map[string]bool),
 	}
-	for _, edge := range ipList {       //set EdgeList by HostList from MecM
+	for _, edge := range ipList { //set EdgeList by HostList from MecM
 		EdgeList.NodeList[edge] = false
 	}
 	return EdgeList

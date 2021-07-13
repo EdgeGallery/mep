@@ -19,31 +19,31 @@ package util
 
 const (
 	// DBStringExceptions .
-	DBStringExceptions    = "/.\\"
+	DBStringExceptions = "/.\\"
 	// DefaultDNSPort  Default DNS port.
-	DefaultDNSPort        = 53
+	DefaultDNSPort = 53
 	// DefaultManagementPort Default Management port.
 	DefaultManagementPort = 8080
 	// DefaultConnTimeout  Default connection timeout.
-	DefaultConnTimeout    = 2
+	DefaultConnTimeout = 2
 	// MinConnTimeout  Minimum connection timeout.
-	MinConnTimeout        = 2
+	MinConnTimeout = 2
 	// MaxConnTimeout  Maximum connection timeout.
-	MaxConnTimeout        = 50
+	MaxConnTimeout = 50
 	// MaxDBNameLength  Maximum Database name length.
-	MaxDBNameLength       = 256
+	MaxDBNameLength = 256
 	// MaxPortNumber  Maximum port number.
-	MaxPortNumber         = 65535
+	MaxPortNumber = 65535
 	// DefaultTTL  Default TTL value.
-	DefaultTTL            = 30
+	DefaultTTL = 30
 	// DNSUDPPacketSize  DNS UDP packet size.
-	DNSUDPPacketSize      = 65535
+	DNSUDPPacketSize = 65535
 	// ForwardRetryCount  Max Forward retry count.
-	ForwardRetryCount     = 3
+	ForwardRetryCount = 3
 	// DefaultIP  default ip.
-	DefaultIP             = "0.0.0.0"
+	DefaultIP = "0.0.0.0"
 	// MaxPacketSize  Maximum packet size.
-	MaxPacketSize         = "4K"
+	MaxPacketSize = "4K"
 )
 
 const MaxDNSFQDNLength = 253

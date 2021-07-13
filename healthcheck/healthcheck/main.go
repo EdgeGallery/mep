@@ -17,11 +17,10 @@
 package main
 
 import (
-	_ "healthcheck/routers"
 	"github.com/astaxie/beego"
+	_ "healthcheck/routers"
 )
 
 func main() {
 	beego.Run()
 }
-
