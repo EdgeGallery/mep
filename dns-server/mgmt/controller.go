@@ -45,8 +45,11 @@ func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, 
 	e.echo.Use(middleware.BodyLimit(util.MaxPacketSize))
 
 	// Routes
-	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord", e.handleSetResourceRecords)
-	e.echo.DELETE("/mep/dns_server_mgmt/v1/rrecord/:fqdn/:rrtype", e.handleDeleteResourceRecord)
+	e.echo.POST("/mep/dns_server_mgmt/v1/rrecord/:zone", e.handleAddResourceRecords)
+	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleSetResourceRecords)
+	e.echo.DELETE("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleDeleteResourceRecord)
+	//e.echo.GET("/mep/dns_server_mgmt/v1/rrecord/:zone", e.handleHealthResult) // TODO
+	//e.echo.GET("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleHealthResult)// TODO
 	e.echo.GET("/health", e.handleHealthResult)
 
 	e.dataStore = *store
@@ -64,86 +67,129 @@ func (e *Controller) StopController() error {
 	return e.echo.Close()
 }
 
-func (e *Controller) handleSetResourceRecords(c echo.Context) error {
+func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 	// Input Example:
-	// 	[
-	// 	{
-	// 		"zone": ".",
-	// 		"rr": [
-	// 		{
-	// 			"name": "www.example.com.",
-	// 			"type": "A",
-	// 			"class": "IN",
-	// 			"ttl": 30,
-	// 			"rData": [
-	// 				"172.168.15.101"
-	// 		]
-	// 		}
-	// 	]
-	// 	}
-	// ]
+	//{
+	//	"name": "www.example.com.",
+	//	"type": "A",
+	//	"class": "IN",
+	//	"ttl": 30,
+	//	"rData": [
+	//      "172.168.15.101"
+	//     ]
+	//}
 
-	zrs := new([]datastore.ZoneEntry)
-	if nil != c.Bind(zrs) {
+	zone := c.Param("zone")
+
+	rr := datastore.ResourceRecord{}
+	if nil != c.Bind(&rr) {
 		log.Error("Error in parsing the rr post request body.", nil)
-
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
-
-	err := e.validateSetRecordInput(zrs)
+	err := e.validateSetRecordInput(zone, &rr)
 	if err != nil {
 		log.Error("Error in validating the rr post request body.", err)
-
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
 
-	// Store in DB
-	for _, zr := range *zrs {
-		if len(zr.Zone) == 0 {
-			zr.Zone = "."
-		}
-		for _, rr := range *zr.RR {
-			err := e.dataStore.SetResourceRecord(zr.Zone, &rr)
-			if err != nil {
-				log.Error("Failed to set the zone entries.", nil)
-
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-			log.Debugf("New resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
-				zr.Zone, rr.Name, rr.Type, rr.Class, rr.TTL)
-		}
+	if len(zone) == 0 {
+		zone = "."
 	}
+
+	// Check already exists, then no need to add again
+	exists := e.dataStore.IsResourceRecordExists(zone, &rr)
+	if exists == true {
+		log.Error("Record already exist.")
+		return c.String(http.StatusBadRequest, "record already exists!")
+	}
+
+	err = e.dataStore.SetResourceRecord(zone, &rr)
+	if err != nil {
+		log.Error("Failed to set the zone entries.")
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	log.Debugf("Added new resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
+		zone, rr.Name, rr.Type, rr.Class, rr.TTL)
 
 	return c.String(http.StatusOK, "success in adding/updating rr entry.")
 }
 
-func (e *Controller) validateSetRecordInput(zrs *[]datastore.ZoneEntry) error {
-	// Validate input
-	// 	[
-	// 	{
-	// 		"zone": ".",
-	// 		"rr": [
-	// 		{
-	// 			"name": "www.example.com.",
-	// 			"type": "A",
-	// 			"class": "IN",
-	// 			"ttl": 30,
-	// 			"rData": [
-	// 				"172.168.15.101"
-	// 		]
-	// 		}
-	// 	]
-	// 	}
-	// ]
-	for _, zr := range *zrs {
-		if len(zr.Zone) >= util.MaxDNSFQDNLength {
-			return fmt.Errorf("invalid zone value")
-		}
-		for _, rr := range *zr.RR {
-			if err := e.validateResourceRecords(&rr); err != nil {
-				return err
-			}
-		}
+func (e *Controller) handleSetResourceRecords(c echo.Context) error {
+	// Input Example:
+	//{
+	//	"name": "www.example.com.",
+	//	"type": "A",
+	//	"class": "IN",
+	//	"ttl": 30,
+	//	"rData": [
+	//      "172.168.15.101"
+	//     ]
+	//}
+	zone := c.Param("zone")
+	fqdn := c.Param("fqdn")
+	rrtype := c.Param("rrtype")
+
+	rr := datastore.ResourceRecord{}
+	if nil != c.Bind(&rr) {
+		log.Error("Error in parsing the rr post request body.", nil)
+		return c.String(http.StatusBadRequest, "invalid input!")
+	}
+
+	if len(fqdn) == 0 || len(rrtype) == 0 {
+		return c.String(http.StatusBadRequest, "invalid input parameters!")
+	}
+
+	if fqdn != rr.Name || rrtype != rr.Type {
+		return c.String(http.StatusBadRequest, "input not match with rr resource")
+	}
+
+	//Update the input param
+	err := e.validateSetRecordInput(zone, &rr)
+	if err != nil {
+		log.Error("Error in validating the rr post request body.", err)
+		return c.String(http.StatusBadRequest, "invalid input!")
+	}
+
+	if len(zone) == 0 {
+		zone = "."
+	}
+
+	// Check already exists, if not exist then cant update
+	exists := e.dataStore.IsResourceRecordExists(zone, &rr)
+	if exists != true {
+		log.Error("Record not exist, cannot update.", nil)
+		return c.String(http.StatusBadRequest, "Record not exist, cannot update!")
+	}
+	// Store in DB
+	err = e.dataStore.SetResourceRecord(zone, &rr)
+	if err != nil {
+		log.Error("Failed to set the zone entries.", nil)
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	log.Debugf("Updated new resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
+		zone, rr.Name, rr.Type, rr.Class, rr.TTL)
+
+	return c.String(http.StatusOK, "success in updating rr entry.")
+}
+
+func (e *Controller) validateSetRecordInput(zone string, rr *datastore.ResourceRecord) error {
+	// Input Example:
+	//{
+	//	"name": "www.example.com.",
+	//	"type": "A",
+	//	"class": "IN",
+	//	"ttl": 30,
+	//	"rData": [
+	//      "172.168.15.101"
+	//     ]
+	//}
+
+	if len(zone) >= util.MaxDNSFQDNLength {
+		return fmt.Errorf("invalid zone value")
+	}
+
+	if err := e.validateResourceRecords(rr); err != nil {
+		return err
 	}
 
 	return nil
@@ -169,15 +215,15 @@ func (e *Controller) validateResourceRecords(rr *datastore.ResourceRecord) error
 }
 
 func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
+	zone := c.Param("zone")
 	fqdn := c.Param("fqdn")
 	rrtype := c.Param("rrtype")
 	if len(fqdn) == 0 || len(rrtype) == 0 {
 		return c.String(http.StatusBadRequest, "invalid input parameters!")
 	}
-	err := e.dataStore.DelResourceRecord(fqdn, rrtype)
+	err := e.dataStore.DelResourceRecord(zone, fqdn, rrtype)
 	if err != nil {
 		log.Error("Failed to Delete Resource.", nil)
-
 		return c.String(http.StatusInternalServerError, "Error in retrieving the data.")
 	}
 

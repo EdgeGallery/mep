@@ -38,8 +38,10 @@ func NewRuleRecord(domainName string, ipAddressType string, ipAddress string, TT
 
 // DNSAgent interface
 type DNSAgent interface {
-	// SetResourceRecordTypeA Set/Add DNS entry
-	SetResourceRecordTypeA(host, rrType, class string, pointTo []string, ttl uint32) error
-	// DeleteResourceRecordTypeA Delete DNS entry
-	DeleteResourceRecordTypeA(host, rrType string) error
+	// AddResourceRecord Set/Add DNS entry
+	AddResourceRecord(host, rrType, class string, pointTo []string, ttl uint32) error
+	// SetResourceRecord Set/Add DNS entry
+	SetResourceRecord(host, rrType, class string, pointTo []string, ttl uint32) error
+	// DeleteResourceRecord  DNS entry
+	DeleteResourceRecord(host, rrType string) error
 }

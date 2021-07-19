@@ -268,7 +268,7 @@ func (b *BoltDB) GetResourceRecord(question *dns.Question) (*[]dns.RR, error) {
 	return &records, nil
 }
 
-func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
+func (b *BoltDB) DelResourceRecord(zone string, host string, rrtypestr string) error {
 	// panic("implement me")
 	var found bool
 	rrType, ok := rrTypeMap[rrtypestr]
@@ -298,10 +298,8 @@ func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
 
 				return zoneBkt.Delete(dnsCfgKeyBytes)
 			}
-
 			return nil
 		})
-
 		return err
 	})
 	if err != nil {
@@ -312,4 +310,54 @@ func (b *BoltDB) DelResourceRecord(host string, rrtypestr string) error {
 	}
 
 	return nil
+}
+
+func (b *BoltDB) IsResourceRecordExists(zone string, rr *ResourceRecord) bool {
+	var found bool
+	rrType, ok := rrTypeMap[rr.Type]
+	if !ok {
+		log.Error("unsupported rrtype entry", nil)
+		return false
+	}
+	if rr.TTL == 0 {
+		log.Error("DNS TTL value 0 is not supported.", nil)
+		return false
+	}
+
+	host := strings.ToLower(rr.Name)
+
+	dnsCfgKey := DNSConfigRRKey{Host: host, RRType: rrType}
+	confKeyBytes, err := json.Marshal(dnsCfgKey)
+	if err != nil {
+		log.Error("internal error, could not parse dns config json")
+		return false
+	}
+
+	// Check bucket exists or not
+	err = b.db.Update(func(tx *bolt.Tx) error {
+		var zoneBkt *bolt.Bucket
+		err := tx.Bucket([]byte(ZoneConfig)).ForEach(func(zone, _ []byte) error {
+			if found {
+				return nil
+			}
+			zoneBkt = tx.Bucket([]byte(ZoneConfig)).Bucket(zone)
+			if zoneBkt == nil {
+				// Zone not available in the db
+				return fmt.Errorf("failed to read the zone entry")
+			}
+			if zoneBkt.Get(confKeyBytes) != nil {
+				found = true
+			}
+			return nil
+		})
+
+		return err
+	})
+
+	if !found || err != nil {
+		log.Infof("Not found for %s", zone)
+		return false
+	}
+
+	return true
 }

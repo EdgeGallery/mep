@@ -33,18 +33,20 @@ type ZoneEntry struct {
 }
 
 type DataStore interface {
-	// Initialize the DB by creating the database
+	// Open - Initialize the DB by creating the database
 	Open() error
 
-	// Cleanup the db
+	// Close - Cleanup the db
 	Close() error
 
-	// Add or modify a A type record
+	// SetResourceRecord - Add or modify a A type record
 	SetResourceRecord(zone string, rr *ResourceRecord) error
 
-	// Get A type record
+	// GetResourceRecord - Get A type record
 	GetResourceRecord(question *dns.Question) (*[]dns.RR, error)
 
-	// Delete A type record
-	DelResourceRecord(host string, rrtype string) error
+	// DelResourceRecord - Delete A type record
+	DelResourceRecord(zone string, host string, rrtype string) error
+	// IsResourceRecordExists - check the record exists
+	IsResourceRecordExists(zone string, rr *ResourceRecord) bool
 }
