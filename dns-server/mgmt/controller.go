@@ -45,11 +45,9 @@ func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, 
 	e.echo.Use(middleware.BodyLimit(util.MaxPacketSize))
 
 	// Routes
-	e.echo.POST("/mep/dns_server_mgmt/v1/rrecord/:zone", e.handleAddResourceRecords)
-	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleSetResourceRecords)
-	e.echo.DELETE("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleDeleteResourceRecord)
-	//e.echo.GET("/mep/dns_server_mgmt/v1/rrecord/:zone", e.handleHealthResult) // TODO
-	//e.echo.GET("/mep/dns_server_mgmt/v1/rrecord/:zone/:fqdn/:rrtype", e.handleHealthResult)// TODO
+	e.echo.POST("/mep/dns_server_mgmt/v1/rrecord", e.handleAddResourceRecords)
+	e.echo.PUT("/mep/dns_server_mgmt/v1/rrecord/:fqdn/:rrtype", e.handleSetResourceRecords)
+	e.echo.DELETE("/mep/dns_server_mgmt/v1/rrecord/:fqdn/:rrtype", e.handleDeleteResourceRecord)
 	e.echo.GET("/health", e.handleHealthResult)
 
 	e.dataStore = *store
@@ -79,7 +77,7 @@ func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 	//     ]
 	//}
 
-	zone := c.Param("zone")
+	zone := c.QueryParam("zone")
 
 	rr := datastore.ResourceRecord{}
 	if nil != c.Bind(&rr) {
@@ -125,7 +123,7 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 	//      "172.168.15.101"
 	//     ]
 	//}
-	zone := c.Param("zone")
+	zone := c.QueryParam("zone")
 	fqdn := c.Param("fqdn")
 	rrtype := c.Param("rrtype")
 
@@ -215,12 +213,17 @@ func (e *Controller) validateResourceRecords(rr *datastore.ResourceRecord) error
 }
 
 func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
-	zone := c.Param("zone")
+	zone := c.QueryParam("zone")
 	fqdn := c.Param("fqdn")
 	rrtype := c.Param("rrtype")
 	if len(fqdn) == 0 || len(rrtype) == 0 {
 		return c.String(http.StatusBadRequest, "invalid input parameters!")
 	}
+
+	if len(zone) == 0 {
+		zone = "."
+	}
+
 	err := e.dataStore.DelResourceRecord(zone, fqdn, rrtype)
 	if err != nil {
 		log.Error("Failed to Delete Resource.", nil)

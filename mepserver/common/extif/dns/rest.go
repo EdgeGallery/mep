@@ -123,7 +123,7 @@ func (d *RestDNSAgent) AddResourceRecord(host, rrType, class string, pointTo []s
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPost, d.BuildDNSEndpoint("rrecord", "."),
+	httpReq, err := http.NewRequest(http.MethodPost, d.BuildDNSEndpoint("rrecord")+"?zone=.",
 		bytes.NewBuffer(rrJSON))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS update failed.")
@@ -162,7 +162,7 @@ func (d *RestDNSAgent) SetResourceRecord(host, rrType, class string, pointTo []s
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord", hostName, rrType),
+	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord", hostName, rrType)+"?zone=.",
 		bytes.NewBuffer(rrJSON))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS update failed.")
@@ -194,7 +194,7 @@ func (d *RestDNSAgent) DeleteResourceRecord(host, rrtype string) error {
 		hostName = host + "."
 	}
 
-	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype),
+	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype)+"?zone=.",
 		bytes.NewBuffer([]byte("{}")))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS delete failed.")
