@@ -258,7 +258,7 @@ func TestSetDNSOnLocalDns(t *testing.T) {
 	dnsRule := dataplane.DNSRule{DNSRuleID: ruleId, IPAddressType: "IP_V6", IPAddress: exampleIPAddress, State: "ACTIVE"}
 
 	j := &task{appInstanceId: defaultAppInstanceId, taskId: ruleId, dnsAgent: dns.NewRestDNSAgent(&config.MepServerConfig{})}
-	patch1 := gomonkey.ApplyFunc(dns.NewRestDNSAgent(&config.MepServerConfig{}).SetResourceRecordTypeA, func(host, rrtype, class string, pointTo []string, ttl uint32) error {
+	patch1 := gomonkey.ApplyFunc(dns.NewRestDNSAgent(&config.MepServerConfig{}).SetResourceRecord, func(host, rrtype, class string, pointTo []string, ttl uint32) error {
 		return nil
 	})
 	defer patch1.Reset()
