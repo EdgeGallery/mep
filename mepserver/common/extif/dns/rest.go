@@ -126,19 +126,19 @@ func (d *RestDNSAgent) AddResourceRecord(host, rrType, class string, pointTo []s
 	httpReq, err := http.NewRequest(http.MethodPost, d.BuildDNSEndpoint("rrecord")+"?zone=.",
 		bytes.NewBuffer(rrJSON))
 	if err != nil {
-		log.Errorf(nil, "Http request creation for DNS update failed.")
+		log.Errorf(nil, "Http request creation for DNS add failed.")
 		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
-		log.Errorf(nil, "Request to DNS server failed in update.")
+		log.Errorf(nil, "Request to DNS server failed in add.")
 		return err
 	}
 	if !meputil.IsHttpStatusOK(httpResp.StatusCode) {
-		log.Errorf(nil, "DNS rule update failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
-		return fmt.Errorf("update request to dns server failed")
+		log.Errorf(nil, "DNS rule add failed on server(%d: %s).", httpResp.StatusCode, httpResp.Status)
+		return fmt.Errorf("add request to dns server failed")
 	}
 	return nil
 }

@@ -84,14 +84,15 @@ func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 		log.Error("Error in parsing the rr post request body.", nil)
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
+
+	if len(zone) == 0 {
+		zone = "."
+	}
+
 	err := e.validateSetRecordInput(zone, &rr)
 	if err != nil {
 		log.Error("Error in validating the rr post request body.", err)
 		return c.String(http.StatusBadRequest, "invalid input!")
-	}
-
-	if len(zone) == 0 {
-		zone = "."
 	}
 
 	// Check already exists, then no need to add again
@@ -109,7 +110,7 @@ func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 	log.Debugf("Added new resource record entry(zone: %s, name: %s, type: %s, class: %s, ttl: %d).",
 		zone, rr.Name, rr.Type, rr.Class, rr.TTL)
 
-	return c.String(http.StatusOK, "success in adding/updating rr entry.")
+	return c.String(http.StatusOK, "success in adding rr entry.")
 }
 
 func (e *Controller) handleSetResourceRecords(c echo.Context) error {
@@ -141,6 +142,9 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "input not match with rr resource")
 	}
 
+	if len(zone) == 0 {
+		zone = "."
+	}
 	//Update the input param
 	err := e.validateSetRecordInput(zone, &rr)
 	if err != nil {
@@ -148,15 +152,11 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid input!")
 	}
 
-	if len(zone) == 0 {
-		zone = "."
-	}
-
 	// Check already exists, if not exist then cant update
 	exists := e.dataStore.IsResourceRecordExists(zone, &rr)
 	if exists != true {
 		log.Error("Record not exist, cannot update.", nil)
-		return c.String(http.StatusBadRequest, "Record not exist, cannot update!")
+		return c.String(http.StatusBadRequest, "record not exist, cannot update!")
 	}
 	// Store in DB
 	err = e.dataStore.SetResourceRecord(zone, &rr)
@@ -216,7 +216,8 @@ func (e *Controller) handleDeleteResourceRecord(c echo.Context) error {
 	zone := c.QueryParam("zone")
 	fqdn := c.Param("fqdn")
 	rrtype := c.Param("rrtype")
-	if len(fqdn) == 0 || len(rrtype) == 0 {
+
+	if len(fqdn) == 0 || len(rrtype) == 0 || len(zone) >= util.MaxDNSFQDNLength {
 		return c.String(http.StatusBadRequest, "invalid input parameters!")
 	}
 

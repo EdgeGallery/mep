@@ -140,9 +140,9 @@ func TestBasicDataStoreOperations(t *testing.T) {
 	})
 
 	t.Run("DeleteNonExistingRecord", func(t *testing.T) {
-		err = store.DelResourceRecord("", exampleDomain, "A")
+		err = store.DelResourceRecord("cloud", exampleDomain, "A")
 		assert.NotEqual(t, nil, err, "Error in deleting the db")
-		assert.EqualError(t, err, "not found", errorSettingMessage)
+		assert.EqualError(t, err, "not found for the zone cloud", errorSettingMessage)
 	})
 
 	t.Run("DeleteWithInvalidRRType", func(t *testing.T) {

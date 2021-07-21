@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Package data store
+// Package datastore
 package datastore
 
 import (
@@ -306,7 +306,7 @@ func (b *BoltDB) DelResourceRecord(zone string, host string, rrtypestr string) e
 		return fmt.Errorf("failed to delete dns entry")
 	}
 	if !found {
-		return fmt.Errorf("not found")
+		return fmt.Errorf("not found for the zone %v", zone)
 	}
 
 	return nil
@@ -316,7 +316,7 @@ func (b *BoltDB) IsResourceRecordExists(zone string, rr *ResourceRecord) bool {
 	var found bool
 	rrType, ok := rrTypeMap[rr.Type]
 	if !ok {
-		log.Error("unsupported rrtype entry", nil)
+		log.Error("Unsupported rrtype entry", nil)
 		return false
 	}
 	if rr.TTL == 0 {
@@ -329,12 +329,12 @@ func (b *BoltDB) IsResourceRecordExists(zone string, rr *ResourceRecord) bool {
 	dnsCfgKey := DNSConfigRRKey{Host: host, RRType: rrType}
 	confKeyBytes, err := json.Marshal(dnsCfgKey)
 	if err != nil {
-		log.Error("internal error, could not parse dns config json")
+		log.Error("Internal error, could not parse dns config json")
 		return false
 	}
 
 	// Check bucket exists or not
-	err = b.db.Update(func(tx *bolt.Tx) error {
+	err = b.db.View(func(tx *bolt.Tx) error {
 		var zoneBkt *bolt.Bucket
 		err := tx.Bucket([]byte(ZoneConfig)).ForEach(func(zone, _ []byte) error {
 			if found {
@@ -355,7 +355,7 @@ func (b *BoltDB) IsResourceRecordExists(zone string, rr *ResourceRecord) bool {
 	})
 
 	if !found || err != nil {
-		log.Infof("Not found for %s", zone)
+		log.Infof("Record not found for the zone %s", zone)
 		return false
 	}
 
