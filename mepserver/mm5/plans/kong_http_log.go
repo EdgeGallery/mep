@@ -92,6 +92,8 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	log.Info("request body: " + string(msg))
+
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
 	if err != nil {
 		log.Error("Create doc fail in es.", err)
