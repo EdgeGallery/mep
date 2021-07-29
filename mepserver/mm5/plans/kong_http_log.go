@@ -19,6 +19,8 @@ package plans
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/models"
@@ -27,6 +29,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	es "github.com/olivere/elastic/v7"
@@ -35,6 +38,39 @@ import (
 const startedAt = "started_at"
 
 const esHost = "http://mep-elasticsearch:9200"
+
+type GetKongHttpLog struct {
+	workspace.TaskBase
+	R       *http.Request `json:"r,in"`
+	HttpRsp interface{}   `json:"httpRsp,out"`
+}
+
+// CreateKongHttpLog step to create kong http log request
+type CreateKongHttpLog struct {
+	workspace.TaskBase
+	R       *http.Request `json:"r,in"`
+	HttpRsp interface{}   `json:"httpRsp,out"`
+}
+
+type ReqHeaders struct {
+	Host          string `json:"host"`
+	ContentType   string `json:"content-type"`
+	Authorization string `json:"authorization"`
+}
+
+type ReqBody struct {
+	Querystring interface{} `json:"querystring"`
+	uri         string      `json:"uri"`
+	url         string      `json:"url"`
+	Method      string      `json:"method"`
+	Headers     ReqHeaders  `json:"headers"`
+}
+
+type AppInfo struct {
+	AppInsId string `json:"app_ins_id"`
+	Ak       string `json:"ak"`
+	AppName  string `json:"app_name"`
+}
 
 var EsClient *es.Client
 
@@ -74,25 +110,28 @@ func createEsClient() *es.Client {
 	return esClient
 }
 
-// CreateKongHttpLog step to create kong http log request
-type CreateKongHttpLog struct {
-	workspace.TaskBase
-	R       *http.Request `json:"r,in"`
-	HttpRsp interface{}   `json:"httpRsp,out"`
-}
-
 // OnRequest When call the api through kong api gateway, the kong http-log plugin will send message to this interface.
 // The interface will store the data to elasticsearch for search by other api.
 func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	log.Info("Request to create api gw http log.")
 	msg, err := ioutil.ReadAll(t.R.Body)
 	if err != nil {
-		log.Error("Read request body failed.", nil)
+		log.Error("Read request body failed.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "Read request body error.")
 		return workspace.TaskFinish
 	}
 
 	log.Info("request body: " + string(msg))
+	var temp map[string]interface{}
+	err = json.Unmarshal(msg, &temp)
+	if err != nil {
+		log.Error("Json Unmarshal failed.", err)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "Json Unmarshal error.")
+		return workspace.TaskFinish
+	}
+
+	appInfo := parseRequest(temp)
+	log.Infof("appInfo: %s", appInfo)
 
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
 	if err != nil {
@@ -103,10 +142,33 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	return workspace.TaskFinish
 }
 
-type GetKongHttpLog struct {
-	workspace.TaskBase
-	R       *http.Request `json:"r,in"`
-	HttpRsp interface{}   `json:"httpRsp,out"`
+func parseRequest(temp map[string]interface{}) interface{} {
+	req := temp["request"]
+	reqJson, err := json.Marshal(req)
+	if err != nil {
+		log.Errorf(err, "parseRequest: Invalid map to json.")
+		return nil
+	}
+
+	var headers ReqHeaders
+	err = json.Unmarshal(reqJson, &headers)
+	if err != nil {
+		log.Error("parseRequest: json Unmarshal fail.", err)
+		return nil
+	}
+	//var appInfo AppInfo
+	authorization := headers.Authorization
+	if strings.HasPrefix(authorization, "Bearer") {
+		token, _ := jwt.Parse(authorization, func(token *jwt.Token) (interface{}, error) {
+			return nil, nil
+		})
+		claims := token.Claims.(jwt.StandardClaims)
+		appInsId := claims.Subject
+		log.Info("appInsId: " + appInsId)
+	} else if strings.HasPrefix(authorization, "SDK") {
+
+	}
+	return headers
 }
 
 // OnRequest The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
