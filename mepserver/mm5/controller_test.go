@@ -24,6 +24,7 @@ import (
 	"github.com/ghodss/yaml"
 	uuid "github.com/satori/go.uuid"
 	"math/rand"
+	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/config"
 	"mepserver/common/extif/dataplane"
@@ -53,7 +54,6 @@ import (
 
 	"mepserver/common/extif/backend"
 	"mepserver/common/util"
-	"mepserver/mm5/plans"
 )
 
 const defaultAppInstanceId = "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
@@ -427,8 +427,8 @@ func TestDeleteConfigRules(t *testing.T) {
 		return 0
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -518,14 +518,14 @@ func TestDeleteConfigRulesOperationInProgress(t *testing.T) {
 	mockWriter.On("Write").Return(0, nil)
 	mockWriter.On("WriteHeader", 403)
 
-	var appDComm *plans.AppDCommon
-	patches := gomonkey.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches := gomonkey.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
 	defer patches.Reset()
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
@@ -1934,18 +1934,18 @@ func TestAppInstanceTermination(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2022,18 +2022,18 @@ func TestAppInstanceTermination1(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2110,18 +2110,18 @@ func TestAppInstanceTermination2(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2598,18 +2598,18 @@ func TestAppInstanceTerminationErrHandler(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2695,18 +2695,18 @@ func TestAppInstanceTerminationErr(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2779,18 +2779,18 @@ func TestAppInstanceTerminationErrUnmarshal(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2868,18 +2868,18 @@ func TestAppInstanceTerminationNoProgress(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -2965,18 +2965,18 @@ func TestAppInstanceTerminationStatusDbErr(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})
@@ -3049,18 +3049,18 @@ func TestAppInstanceTerminationStatusDbErrhandle(t *testing.T) {
 		return "edgegallery"
 	})
 
-	var appDComm *plans.AppDCommon
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *plans.AppDCommon,
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return true
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *plans.AppDCommon,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
 		appInstanceId string) bool {
 		// Return Success.
 		return false
 	})
-	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*plans.AppDCommon, string, string,
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
 		*models.AppDConfig) (workspace.ErrCode, string) {
 		return 0, ""
 	})

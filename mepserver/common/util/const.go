@@ -84,6 +84,7 @@ const (
 	Liveness           = "/liveness"
 	CurrentTIme        = "/current_time"
 	TimingCaps         = "/timing_caps"
+	ConfirmReady       = "confirm_ready"
 )
 
 // Resource state

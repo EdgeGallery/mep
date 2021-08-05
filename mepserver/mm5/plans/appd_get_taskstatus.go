@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/pkg/util"
+	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/models"
@@ -66,7 +67,7 @@ func (t *DecodeTaskRestReq) getParam(r *http.Request) error {
 // TaskStatusGet step to get the task status
 type TaskStatusGet struct {
 	workspace.TaskBase
-	AppDCommon
+	appd.AppDCommon
 	R       *http.Request       `json:"r,in"`
 	W       http.ResponseWriter `json:"w,in"`
 	TaskId  string              `json:"taskId,in"`
@@ -113,7 +114,7 @@ func (t *TaskStatusGet) OnRequest(inputData string) workspace.TaskCode {
 		progress = 0
 	}
 
-	t.HttpRsp = t.generateTaskResponse(t.TaskId, appInstInStore, state,
+	t.HttpRsp = t.GenerateTaskResponse(t.TaskId, appInstInStore, state,
 		strconv.Itoa(progress), taskStatusInStore.Details)
 
 	return workspace.TaskFinish

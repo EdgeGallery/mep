@@ -20,6 +20,7 @@ package plans
 import (
 	"encoding/json"
 	"github.com/apache/servicecomb-service-center/pkg/log"
+	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/models"
@@ -29,7 +30,7 @@ import (
 // AppDConfigGet step to get the appd config
 type AppDConfigGet struct {
 	workspace.TaskBase
-	AppDCommon
+	appd.AppDCommon
 	AppInstanceId string      `json:"appInstanceId,in"`
 	HttpRsp       interface{} `json:"httpRsp,out"`
 }
