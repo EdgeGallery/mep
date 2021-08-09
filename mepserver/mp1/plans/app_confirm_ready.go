@@ -44,7 +44,7 @@ func (t *DecodeConfirmReadyReq) OnRequest(data string) workspace.TaskCode {
 
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("Parameters validation failed on Confirm ready request.", err)
+		log.Error("Parameters validation failed on confirm ready request.", err)
 		return workspace.TaskFinish
 	}
 
@@ -87,14 +87,15 @@ func (t *DecodeConfirmReadyReq) ParseBody(r *http.Request) error {
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
-	newMsg, err := t.validateParam(msg)
+
+	err = t.validateParam(msg)
 	if err != nil {
 		log.Error("Confirm ready validate param failed.", err)
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "validate param failed")
 		return err
 	}
 
-	err = json.Unmarshal(newMsg, t.RestBody)
+	err = json.Unmarshal(msg, t.RestBody)
 	if err != nil {
 		log.Errorf(nil, "Service register request unmarshalling failed.")
 		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
@@ -104,19 +105,19 @@ func (t *DecodeConfirmReadyReq) ParseBody(r *http.Request) error {
 	return nil
 }
 
-func (t *DecodeConfirmReadyReq) validateParam(msg []byte) ([]byte, error) {
+func (t *DecodeConfirmReadyReq) validateParam(msg []byte) error {
 
 	var confirmReady models.ConfirmReady
 	err := json.Unmarshal(msg, &confirmReady)
 	if err != nil {
-		return nil, errors.New("unmarshal msg error")
+		return errors.New("unmarshal msg error")
 	}
 
 	if confirmReady.Indication != "READY" {
-		return nil, errors.New("invalid msg error")
+		return errors.New("invalid msg error")
 	}
 
-	return msg, nil
+	return nil
 }
 
 // WithBody set body and return DecodeConfirmReadyReq
@@ -138,14 +139,13 @@ type ConfirmReady struct {
 // OnRequest handles service delete request
 func (t *ConfirmReady) OnRequest(data string) workspace.TaskCode {
 	appInstanceId := t.AppInstanceId
-	log.Infof("Confirm ready recieved for %s .", appInstanceId)
+	log.Debugf("Confirm ready received for %s.", appInstanceId)
 	/*
-		1. Check if AppInstanceId already exist and return error if not exist.(query from db)
-		2. Check if any other ongoing operation for this AppInstance Id in the system.
-		3. Send the response
+		1. Check if any other ongoing operation for this AppInstance Id in the system.
+		2. Send the response
 	*/
 
-	// Check if any other ongoing operation for this AppInstance Id in the system.
+	// 1. Check if any other ongoing operation for this AppInstance Id in the system.
 	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
 		log.Errorf(nil, "App instance has other operation in progress.")
 		t.SetFirstErrorCode(meputil.ServiceInactive, "app instance has other operation in progress")
@@ -153,7 +153,6 @@ func (t *ConfirmReady) OnRequest(data string) workspace.TaskCode {
 	}
 
 	t.HttpRsp = ""
-	log.Debugf("Confirm ready recieved for %s .", appInstanceId)
-
+	log.Debugf("Confirm ready received for %s.", appInstanceId)
 	return workspace.TaskFinish
 }
