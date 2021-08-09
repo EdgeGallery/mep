@@ -1,11 +1,15 @@
 package plans
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
-	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
+	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"net/http"
 )
@@ -30,6 +34,7 @@ type DecodeConfirmReadyReq struct {
 	workspace.TaskBase
 	R             *http.Request `json:"r,in"`
 	AppInstanceId string        `json:"appInstanceId,out"`
+	RestBody      interface{}   `json:"restBody,out"`
 }
 
 // OnRequest decodes the service request messages
@@ -39,8 +44,13 @@ func (t *DecodeConfirmReadyReq) OnRequest(data string) workspace.TaskCode {
 
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("Parameters validation failed on service register request.", err)
+		log.Error("Parameters validation failed on Confirm ready request.", err)
 		return workspace.TaskFinish
+	}
+
+	err = t.ParseBody(t.R)
+	if err != nil {
+		log.Error("Confirm ready request body parse failed.", err)
 	}
 
 	return workspace.TaskFinish
@@ -60,6 +70,61 @@ func (t *DecodeConfirmReadyReq) getParam(r *http.Request) error {
 	return nil
 }
 
+// ParseBody Parse request body
+func (t *DecodeConfirmReadyReq) ParseBody(r *http.Request) error {
+	if t.RestBody == nil {
+		return nil
+	}
+	msg, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Error("Confirm ready request read failed.", nil)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
+		return errors.New("read failed")
+	}
+	if len(msg) > meputil.RequestBodyLength {
+		err = errors.New("request body too large")
+		log.Errorf(err, "Confirm ready request body too large %d.", len(msg))
+		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
+		return err
+	}
+	newMsg, err := t.validateParam(msg)
+	if err != nil {
+		log.Error("Confirm ready validate param failed.", err)
+		t.SetFirstErrorCode(meputil.ParseInfoErr, "validate param failed")
+		return err
+	}
+
+	err = json.Unmarshal(newMsg, t.RestBody)
+	if err != nil {
+		log.Errorf(nil, "Service register request unmarshalling failed.")
+		t.SetFirstErrorCode(meputil.ParseInfoErr, "unmarshal request body error")
+		return errors.New("json unmarshalling failed")
+	}
+
+	return nil
+}
+
+func (t *DecodeConfirmReadyReq) validateParam(msg []byte) ([]byte, error) {
+
+	var confirmReady models.ConfirmReady
+	err := json.Unmarshal(msg, &confirmReady)
+	if err != nil {
+		return nil, errors.New("unmarshal msg error")
+	}
+
+	if confirmReady.Indication != "READY" {
+		return nil, errors.New("invalid msg error")
+	}
+
+	return msg, nil
+}
+
+// WithBody set body and return DecodeConfirmReadyReq
+func (t *DecodeConfirmReadyReq) WithBody(body interface{}) *DecodeConfirmReadyReq {
+	t.RestBody = body
+	return t
+}
+
 // ConfirmReady to confirm the application is up and running
 type ConfirmReady struct {
 	workspace.TaskBase
@@ -73,27 +138,20 @@ type ConfirmReady struct {
 // OnRequest handles service delete request
 func (t *ConfirmReady) OnRequest(data string) workspace.TaskCode {
 	appInstanceId := t.AppInstanceId
-
+	log.Infof("Confirm ready recieved for %s .", appInstanceId)
 	/*
 		1. Check if AppInstanceId already exist and return error if not exist.(query from db)
 		2. Check if any other ongoing operation for this AppInstance Id in the system.
 		3. Send the response
 	*/
 
-	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
-		log.Errorf("App instance not found.")
-		t.SetFirstErrorCode(meputil.SerInstanceNotFound, "app instance not found")
-		return workspace.TaskFinish
-	}
-
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf("App instance has other operation in progress.")
-		t.SetFirstErrorCode(meputil.ForbiddenOperation, "app instance has other operation in progress")
+		log.Errorf(nil, "App instance has other operation in progress.")
+		t.SetFirstErrorCode(meputil.ServiceInactive, "app instance has other operation in progress")
 		return workspace.TaskFinish
 	}
 
-	//t.HttpErrInf.Code =
 	t.HttpRsp = ""
 	log.Debugf("Confirm ready recieved for %s .", appInstanceId)
 

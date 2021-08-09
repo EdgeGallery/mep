@@ -66,6 +66,7 @@ const (
 	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
 	TimingPath          = RootPath + MecAppSupportPath + "/timing"
 	TransportPath       = RootPath + MecServicePath + "/transports"
+	ConfirmReadyPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_ready"
 
 	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
 	AppDConfigPath        = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
@@ -84,7 +85,6 @@ const (
 	Liveness           = "/liveness"
 	CurrentTIme        = "/current_time"
 	TimingCaps         = "/timing_caps"
-	ConfirmReady       = "confirm_ready"
 )
 
 // Resource state
