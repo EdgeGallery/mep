@@ -3566,7 +3566,7 @@ func TestConfirmReadyOngoingExist(t *testing.T) {
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"app instance has other operation in progress\"}\n")).
+	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"configuration sync for application is in progress on confirm ready\"}\n")).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 409)
 
@@ -3658,7 +3658,7 @@ func TestConfirmReadBodyFailed(t *testing.T) {
 	mockWriter := &mockHttpWriter{}
 	responseHeader := http.Header{} // Create http response header
 	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"app instance has other operation in progress\"}\n")).
+	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"configuration sync for application is in progress on confirm ready\"}\n")).
 		Return(0, nil)
 	mockWriter.On("WriteHeader", 409)
 
