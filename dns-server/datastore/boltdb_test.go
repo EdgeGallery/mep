@@ -73,7 +73,7 @@ func TestBasicDataStoreOperations(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf(exampleRspFormatter, dnsConfigTestIP1),
 		(*rrResponse)[0].String(), "Error")
 
-	err = store.DelResourceRecord(exampleDomain, "A")
+	err = store.DelResourceRecord("", exampleDomain, "A")
 	assert.Equal(t, nil, err, errorDeleteMessage)
 
 	t.Run("QueryNonExistingRecord", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestBasicDataStoreOperations(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("WWW.example.COM.\t30\tIN\tA\t%s", dnsConfigTestIP1), (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord(exampleDomain, "A")
+		err = store.DelResourceRecord("", exampleDomain, "A")
 		assert.Equal(t, nil, err, errorDeleteMessage)
 	})
 
@@ -135,25 +135,25 @@ func TestBasicDataStoreOperations(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf(exampleRspFormatter, dnsConfigTestIP2), (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord(exampleDomain, "A")
+		err = store.DelResourceRecord("", exampleDomain, "A")
 		assert.Equal(t, nil, err, errorDeleteMessage)
 	})
 
 	t.Run("DeleteNonExistingRecord", func(t *testing.T) {
-		err = store.DelResourceRecord(exampleDomain, "A")
+		err = store.DelResourceRecord("cloud", exampleDomain, "A")
 		assert.NotEqual(t, nil, err, "Error in deleting the db")
-		assert.EqualError(t, err, "not found", errorSettingMessage)
+		assert.EqualError(t, err, "not found for the zone cloud", errorSettingMessage)
 	})
 
 	t.Run("DeleteWithInvalidRRType", func(t *testing.T) {
 		_ = store.SetResourceRecord(".", &ResourceRecord{Name: exampleDomain, Type: "A",
 			Class: "IN", TTL: 30, RData: []string{dnsConfigTestIP1}})
 
-		err = store.DelResourceRecord(exampleDomain, "None")
+		err = store.DelResourceRecord("", exampleDomain, "None")
 		assert.NotEqual(t, nil, err, "Error in deleting the db")
 		assert.EqualError(t, err, "unsupported rrtype(None) entry", "Error in deleting record")
 
-		err = store.DelResourceRecord(exampleDomain, "A")
+		err = store.DelResourceRecord("", exampleDomain, "A")
 		assert.Equal(t, nil, err, errorDeleteMessage)
 	})
 
@@ -166,7 +166,7 @@ func TestBasicDataStoreOperations(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf(abcExampleRspFormatter, dnsConfigTestIP3), (*rrResponse)[0].String(),
 			"Error")
 
-		err = store.DelResourceRecord(exampleAbcDomain, "A")
+		err = store.DelResourceRecord("", exampleAbcDomain, "A")
 		assert.Equal(t, nil, err, errorDeleteMessage)
 	})
 
@@ -184,7 +184,7 @@ func TestBasicDataStoreOperations(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf(abcExampleRspFormatter, dnsConfigTestIP5), (*rrResponse)[2].String(),
 			"Error")
 
-		err = store.DelResourceRecord(exampleAbcDomain, "A")
+		err = store.DelResourceRecord("", exampleAbcDomain, "A")
 		assert.Equal(t, nil, err, errorDeleteMessage)
 	})
 

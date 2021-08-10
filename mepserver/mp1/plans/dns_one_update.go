@@ -271,17 +271,17 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	dnsOnStore *dataplane.DNSRule, dataOnStoreBytes []byte) (int, string) {
 
 	// E-Tag check need to be done before parsing, hence added parsing here
-	dnsConfigInPut, ok := t.RestBody.(*dataplane.DNSRule)
+	dnsConfigInput, ok := t.RestBody.(*dataplane.DNSRule)
 	if !ok {
 		return meputil.ParseInfoErr, "input parsing failed"
 	}
 
-	errorString, errorCode := t.validateInputs(dnsConfigInPut, dnsOnStore)
+	errorString, errorCode := t.validateInputs(dnsConfigInput, dnsOnStore)
 	if errorCode != 0 {
 		return 1, errorString
 	}
 
-	if dnsOnStore.State == dnsConfigInPut.State {
+	if dnsOnStore.State == dnsConfigInput.State {
 		t.W.Header().Set("ETag", meputil.GenerateStrongETag(dataOnStoreBytes))
 		t.HttpRsp = dnsOnStore
 		return -1, ""
@@ -291,8 +291,8 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	// Backing up state data for reconfigure in case of failure
 	oldState := dnsOnStore.State
 
-	dnsOnStore.State = dnsConfigInPut.State
-	appDConfig.AppDNSRule[ruleIndex].State = dnsConfigInPut.State
+	dnsOnStore.State = dnsConfigInput.State
+	appDConfig.AppDNSRule[ruleIndex].State = dnsConfigInput.State
 	errCode, errString := t.updateDnsRecordOnDataStore(appDConfig)
 	if errCode != 0 {
 		return errCode, errString
@@ -304,11 +304,11 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 	}
 
 	// Update the DNS server as per the new configurations
-	if dnsConfigInPut.State == meputil.ActiveState {
-		err = t.dnsAgent.SetResourceRecordTypeA(dnsOnStore.DomainName, rrType, meputil.RRClassIN,
+	if dnsConfigInput.State == meputil.ActiveState {
+		err = t.dnsAgent.AddResourceRecord(dnsOnStore.DomainName, rrType, meputil.RRClassIN,
 			[]string{dnsOnStore.IPAddress}, dnsOnStore.TTL)
 	} else {
-		err = t.dnsAgent.DeleteResourceRecordTypeA(dnsOnStore.DomainName, rrType)
+		err = t.dnsAgent.DeleteResourceRecord(dnsOnStore.DomainName, rrType)
 	}
 	if err != nil {
 		log.Errorf(err, "Dns rule(app-id: %s, dns-rule-id: %s) update fail on dns server.",
@@ -326,13 +326,13 @@ func (t *DNSRuleUpdate) updateDnsRecordToRemoteServer(appDConfig models.AppDConf
 		Name: t.AppName,
 	}
 
-	err = t.updateDNSToDataPlane(dnsConfigInPut, dnsOnStore, appInfo, rrType)
+	err = t.updateDNSToDataPlane(dnsConfigInput, dnsOnStore, appInfo, rrType)
 
 	if err != nil {
 		log.Errorf(err, "Dns rule(app-id: %s, dns-rule-id: %s) update fail on data-plane.",
 			t.AppInstanceId, t.DNSRuleId)
 		// Revert the entry in dns server
-		t.revertEntryFromDNSServer(dnsConfigInPut.State, dnsOnStore.DomainName, rrType, dnsOnStore.IPAddress,
+		t.revertEntryFromDNSServer(dnsConfigInput.State, dnsOnStore.DomainName, rrType, dnsOnStore.IPAddress,
 			dnsOnStore.TTL)
 		// Revert the update in the data store in failure case
 		appDConfig.AppDNSRule[ruleIndex].State = oldState
@@ -363,9 +363,9 @@ func (t *DNSRuleUpdate) revertEntryFromDB(appDConfig *models.AppDConfig) {
 func (t *DNSRuleUpdate) revertEntryFromDNSServer(state, domainName, rrType, ipAddress string, ttl uint32) {
 	var err error
 	if state == meputil.ActiveState {
-		err = t.dnsAgent.DeleteResourceRecordTypeA(domainName, rrType)
+		err = t.dnsAgent.DeleteResourceRecord(domainName, rrType)
 	} else {
-		err = t.dnsAgent.SetResourceRecordTypeA(domainName, rrType, meputil.RRClassIN,
+		err = t.dnsAgent.AddResourceRecord(domainName, rrType, meputil.RRClassIN,
 			[]string{ipAddress}, ttl)
 	}
 	if err != nil {
@@ -395,7 +395,7 @@ func (t *DNSRuleUpdate) updateDNSToDataPlane(dnsConfigInput *dataplane.DNSRule, 
 		err = t.dataPlane.AddDNSRule(appInfo, t.DNSRuleId, dnsOnStore.DomainName,
 			dnsOnStore.IPAddressType, dnsOnStore.IPAddress, dnsOnStore.TTL)
 		if err != nil {
-			if err1 := t.dnsAgent.DeleteResourceRecordTypeA(dnsOnStore.DomainName, rrType); err1 != nil {
+			if err1 := t.dnsAgent.DeleteResourceRecord(dnsOnStore.DomainName, rrType); err1 != nil {
 				log.Errorf(err1, "Failed to revert the configuration(oper: delete, app-id: %s, "+
 					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency.",
 					t.AppInstanceId, t.DNSRuleId)
@@ -404,7 +404,7 @@ func (t *DNSRuleUpdate) updateDNSToDataPlane(dnsConfigInput *dataplane.DNSRule, 
 	} else {
 		err = t.dataPlane.DeleteDNSRule(appInfo, t.DNSRuleId)
 		if err != nil {
-			if err1 := t.dnsAgent.SetResourceRecordTypeA(dnsOnStore.DomainName, rrType, meputil.RRClassIN,
+			if err1 := t.dnsAgent.AddResourceRecord(dnsOnStore.DomainName, rrType, meputil.RRClassIN,
 				[]string{dnsOnStore.IPAddress}, dnsOnStore.TTL); err1 != nil {
 				log.Errorf(err1, "Failed to revert the configuration(oper: create, app-id: %s, "+
 					"dns-rule-id: %s) from dns-server, this might lead to data inconsistency.",

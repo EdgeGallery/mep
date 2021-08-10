@@ -548,18 +548,42 @@ func (t *task) addDNSOnLocalDns(ruleId string, newRule interface{}, existingRule
 	if dnsRule.IPAddressType == util.IPv6Type {
 		rrType = util.RRTypeAAAA
 	}
-	err := t.dnsAgent.SetResourceRecordTypeA(
+	err := t.dnsAgent.AddResourceRecord(
 		dnsRule.DomainName, rrType, util.RRClassIN, []string{dnsRule.IPAddress},
 		dnsRule.TTL)
-	if err != nil {
-		return err
-	}
-
 	return err
 }
 
 func (t *task) setDNSOnLocalDns(ruleId string, newRule interface{}, existingRule interface{}) error {
-	return t.addDNSOnLocalDns(ruleId, newRule, existingRule)
+	dnsRule := newRule.(*dataplane.DNSRule)
+	if existingRule == nil {
+		return fmt.Errorf(ExistRuleError)
+	}
+	dnsExistingRule := existingRule.(*dataplane.DNSRule)
+	rrType := util.RRTypeA
+	if dnsRule.IPAddressType == util.IPv6Type {
+		rrType = util.RRTypeAAAA
+	}
+	if dnsRule.State == "" {
+		dnsRule.State = util.ActiveState
+	}
+	if dnsExistingRule.State == "" {
+		dnsExistingRule.State = util.ActiveState
+	}
+
+	if dnsExistingRule.State == util.InactiveState && dnsRule.State == util.ActiveState {
+		// Add rule
+		return t.dnsAgent.AddResourceRecord(
+			dnsRule.DomainName, rrType, util.RRClassIN, []string{dnsRule.IPAddress},
+			dnsRule.TTL)
+	} else if dnsExistingRule.State == util.ActiveState && dnsRule.State == util.InactiveState {
+		// Delete rule
+		return t.dnsAgent.DeleteResourceRecord(dnsRule.DomainName, rrType)
+	}
+
+	return t.dnsAgent.SetResourceRecord(
+		dnsRule.DomainName, rrType, util.RRClassIN, []string{dnsRule.IPAddress},
+		dnsRule.TTL)
 }
 
 func (t *task) deleteDNSOnLocalDns(ruleId string, newRule interface{}, existingRule interface{}) error {
@@ -580,7 +604,7 @@ func (t *task) deleteDNSOnLocalDns(ruleId string, newRule interface{}, existingR
 	if dnsRule.IPAddressType == util.IPv6Type {
 		rrType = util.RRTypeAAAA
 	}
-	err := t.dnsAgent.DeleteResourceRecordTypeA(dnsRule.DomainName, rrType)
+	err := t.dnsAgent.DeleteResourceRecord(dnsRule.DomainName, rrType)
 	if err != nil {
 		return err
 	}
