@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Huawei Technologies Co., Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package plans
 
 import (
@@ -13,22 +29,6 @@ import (
 	meputil "mepserver/common/util"
 	"net/http"
 )
-
-/*
- * Copyright 2020 Huawei Technologies Co., Ltd.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 type DecodeConfirmReadyReq struct {
 	workspace.TaskBase
@@ -147,12 +147,11 @@ func (t *ConfirmReady) OnRequest(data string) workspace.TaskCode {
 
 	// 1. Check if any other ongoing operation for this AppInstance Id in the system.
 	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
-		log.Errorf(nil, "App instance has other operation in progress.")
-		t.SetFirstErrorCode(meputil.ServiceInactive, "app instance has other operation in progress")
+		log.Warnf("Configuration sync for application is in progress on confirm ready.")
+		t.SetFirstErrorCode(meputil.ServiceInactive, "configuration sync for application is in progress on confirm ready")
 		return workspace.TaskFinish
 	}
 
 	t.HttpRsp = ""
-	log.Debugf("Confirm ready received for %s.", appInstanceId)
 	return workspace.TaskFinish
 }
