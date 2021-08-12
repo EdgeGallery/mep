@@ -134,8 +134,9 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	appInsId := parseRequest(temp)
 	log.Infof("appInsId: %s", appInsId)
 	temp["appInstanceId"] = appInsId
+	mesStr, err := json.Marshal(temp)
 
-	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
+	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(mesStr)).Do(context.Background())
 	if err != nil {
 		log.Error("Create doc fail in es.", err)
 	}
