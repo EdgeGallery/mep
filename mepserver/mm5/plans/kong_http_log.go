@@ -19,8 +19,9 @@ package plans
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go/v4"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/models"
@@ -45,13 +46,6 @@ type GetKongHttpLog struct {
 	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
-// CreateKongHttpLog step to create kong http log request
-type CreateKongHttpLog struct {
-	workspace.TaskBase
-	R       *http.Request `json:"r,in"`
-	HttpRsp interface{}   `json:"httpRsp,out"`
-}
-
 type ReqHeaders struct {
 	Host          string `json:"host"`
 	ContentType   string `json:"content-type"`
@@ -60,8 +54,8 @@ type ReqHeaders struct {
 
 type ReqBody struct {
 	Querystring interface{} `json:"querystring"`
-	uri         string      `json:"uri"`
-	url         string      `json:"url"`
+	Uri         string      `json:"uri"`
+	Url         string      `json:"url"`
 	Method      string      `json:"method"`
 	Headers     ReqHeaders  `json:"headers"`
 }
@@ -110,6 +104,13 @@ func createEsClient() *es.Client {
 	return esClient
 }
 
+// CreateKongHttpLog step to create kong http log request
+type CreateKongHttpLog struct {
+	workspace.TaskBase
+	R       *http.Request `json:"r,in"`
+	HttpRsp interface{}   `json:"httpRsp,out"`
+}
+
 // OnRequest When call the api through kong api gateway, the kong http-log plugin will send message to this interface.
 // The interface will store the data to elasticsearch for search by other api.
 func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
@@ -130,8 +131,9 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	appInfo := parseRequest(temp)
-	log.Infof("appInfo: %s", appInfo)
+	appInsId := parseRequest(temp)
+	log.Infof("appInsId: %s", appInsId)
+	temp["appInstanceId"] = appInsId
 
 	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
 	if err != nil {
@@ -150,25 +152,44 @@ func parseRequest(temp map[string]interface{}) interface{} {
 		return nil
 	}
 
+	var headerMap map[string]interface{}
+	err = json.Unmarshal(reqJson, &headerMap)
+	if err != nil {
+		log.Error("parseRequest: json Unmarshal fail.", err)
+		return nil
+	}
+
+	headerStr, err := json.Marshal(headerMap["headers"])
+	if err != nil {
+		log.Errorf(err, "parseRequest: Invalid map to json.")
+		return nil
+	}
+
 	var headers ReqHeaders
-	err = json.Unmarshal(reqJson, &headers)
+	err = json.Unmarshal(headerStr, &headers)
 	if err != nil {
 		log.Error("parseRequest: json Unmarshal fail.", err)
 		return nil
 	}
 	//var appInfo AppInfo
+	var appInsId string
 	authorization := headers.Authorization
 	if strings.HasPrefix(authorization, "Bearer") {
-		token, _ := jwt.Parse(authorization, func(token *jwt.Token) (interface{}, error) {
-			return nil, nil
-		})
-		claims := token.Claims.(jwt.StandardClaims)
-		appInsId := claims.Subject
+		start := strings.Index(authorization, ".")
+		subStr := string([]byte(authorization)[start+1:])
+		end := strings.Index(subStr, ".")
+		subStr = string([]byte(subStr)[:end])
+		decode, err := base64.RawStdEncoding.DecodeString(subStr)
+		if err != nil {
+			log.Error("parseRequest: base64 decode fail.", err)
+			return nil
+		}
+		var claims jwt.StandardClaims
+		json.Unmarshal(decode, &claims)
+		appInsId = claims.Subject
 		log.Info("appInsId: " + appInsId)
-	} else if strings.HasPrefix(authorization, "SDK") {
-
 	}
-	return headers
+	return appInsId
 }
 
 // OnRequest The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
