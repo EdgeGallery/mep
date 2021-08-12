@@ -30,6 +30,7 @@ import (
 	"github.com/apache/servicecomb-service-center/server/core/proto"
 	scerr "github.com/apache/servicecomb-service-center/server/error"
 	"io/ioutil"
+	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/models"
@@ -246,7 +247,7 @@ func (t *DeleteFromMepauth) TlsConfig() (*tls.Config, error) {
 // DeleteAppDConfigWithSync step to delete the appd config asynchronously
 type DeleteAppDConfigWithSync struct {
 	workspace.TaskBase
-	AppDCommon
+	appd.AppDCommon
 	Ctx           context.Context `json:"ctx,in"`
 	AppInstanceId string          `json:"appInstanceId,in"`
 	HttpRsp       interface{}     `json:"httpRsp,out"`

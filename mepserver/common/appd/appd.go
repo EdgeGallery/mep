@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package plans
+package appd
 
 import (
 	"encoding/json"
@@ -83,7 +83,7 @@ func (a *AppDCommon) IsAnyOngoingOperationExist(appInstanceId string) (isExists 
 	return false
 }
 
-func (a *AppDCommon) generateTaskResponse(taskId string, appInstanceId string, result string, percent string,
+func (a *AppDCommon) GenerateTaskResponse(taskId string, appInstanceId string, result string, percent string,
 	details string) (progress models.TaskProgress) {
 	return models.TaskProgress{
 		TaskId: taskId, AppInstanceId: appInstanceId, ConfigResult: result, ConfigPhase: percent, Details: details,
