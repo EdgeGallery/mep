@@ -172,13 +172,18 @@ func parseRequest(temp map[string]interface{}) interface{} {
 		subStr := string([]byte(authorization)[start+1:])
 		end := strings.Index(subStr, ".")
 		subStr = string([]byte(subStr)[:end])
-		decode, err := base64.RawStdEncoding.DecodeString(subStr)
+		var decode []byte
+		decode, err = base64.RawStdEncoding.DecodeString(subStr)
 		if err != nil {
 			log.Error("parseRequest: base64 decode fail.", err)
 			return nil
 		}
 		var claims jwt.StandardClaims
-		json.Unmarshal(decode, &claims)
+		err = json.Unmarshal(decode, &claims)
+		if err != nil {
+			log.Error("claims: json Unmarshal fail.", err)
+			return nil
+		}
 		appInsId = claims.Subject
 		log.Info("appInsId: " + appInsId)
 	}
