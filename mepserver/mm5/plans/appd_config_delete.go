@@ -19,6 +19,7 @@ package plans
 
 import (
 	"context"
+	"mepserver/common/appd"
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/task"
@@ -31,7 +32,7 @@ import (
 // DeleteAppDConfig steps to delete appd cpnfig
 type DeleteAppDConfig struct {
 	workspace.TaskBase
-	AppDCommon
+	appd.AppDCommon
 	Ctx           context.Context     `json:"ctx,in"`
 	W             http.ResponseWriter `json:"w,in"`
 	AppInstanceId string              `json:"appInstanceId,in"`
@@ -80,6 +81,6 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	t.worker.StartNewTask(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	t.HttpRsp = t.generateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
+	t.HttpRsp = t.GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

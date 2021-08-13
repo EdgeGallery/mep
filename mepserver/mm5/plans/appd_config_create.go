@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mepserver/common/appd"
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"mepserver/mm5/task"
@@ -157,7 +158,7 @@ func (t *DecodeAppDRestReq) checkParam(msg []byte) ([]byte, error) {
 // CreateAppDConfig handle appd config create
 type CreateAppDConfig struct {
 	workspace.TaskBase
-	AppDCommon
+	appd.AppDCommon
 	Ctx           context.Context     `json:"ctx,in"`
 	W             http.ResponseWriter `json:"w,in"`
 	AppInstanceId string              `json:"appInstanceId,in"`
@@ -229,6 +230,6 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	t.worker.StartNewTask(appDConfigInput.AppName, t.AppInstanceId, taskId)
 
-	t.HttpRsp = t.generateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
+	t.HttpRsp = t.GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

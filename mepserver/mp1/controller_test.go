@@ -140,6 +140,7 @@ const getTiming = "/mec_app_support/v1/applications/timing/%s"
 const getCurrentTIme = "currentTime"
 const getCaps = "timing_caps"
 const getTransport = "transports"
+const confirm_ready = "/mec_app_support/v1/applications/%s/confirm_ready"
 
 //=====================================COMMON====================================================================
 const restApi = "REST API"
@@ -3448,4 +3449,337 @@ func TestGetsTrafficRulesInvalidAppInstace(t *testing.T) {
 
 	mockWriter.AssertExpectations(t)
 
+}
+
+// Check confirm ready app instances
+func TestConfirmReady(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("\"\""+"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 204)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return nil, 0
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// // Check confirm ready app instances
+func TestConfirmReadyInvalidBody(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"NREADY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":4,\"detail\":\"validate param failed\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return nil, 0
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmReadyOngoingExist(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"configuration sync for application is in progress on confirm ready\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 409)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return resultList, 0
+	})
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "409", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmIndiactionWrong(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	//confirmReady := models.ConfirmReady{"READY"}
+	//body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader([]byte("indicatio: READY")))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":4,\"detail\":\"validate param failed\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return resultList, 0
+	})
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmReadBodyFailed(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader([]byte(body)))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Service is in INACTIVE state\",\"status\":18,\"detail\":\"configuration sync for application is in progress on confirm ready\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 409)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return resultList, 0
+	})
+
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
+		return []byte("8eb442b7cdfc11eba09314feb5b475da"), fmt.Errorf("error")
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "409", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmReadBodyLenExeeds(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader([]byte(body)))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("\"\"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 204)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return nil, 0
+	})
+
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
+		bs := make([]byte, 4097)
+		return bs, nil
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmReadyInvalidAppInstaces(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader(body))
+	//getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"UnAuthorization\",\"status\":11,\"detail\":\"invalid app instance id\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 401)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return nil, 0
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+
+	mockWriter.AssertExpectations(t)
 }
