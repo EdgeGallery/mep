@@ -19,6 +19,9 @@ package plans
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"github.com/dgrijalva/jwt-go/v4"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/models"
@@ -27,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	es "github.com/olivere/elastic/v7"
@@ -35,6 +39,26 @@ import (
 const startedAt = "started_at"
 
 const esHost = "http://mep-elasticsearch:9200"
+
+type ReqHeaders struct {
+	Host          string `json:"host"`
+	ContentType   string `json:"content-type"`
+	Authorization string `json:"authorization"`
+}
+
+type ReqBody struct {
+	Querystring interface{} `json:"querystring"`
+	Uri         string      `json:"uri"`
+	Url         string      `json:"url"`
+	Method      string      `json:"method"`
+	Headers     ReqHeaders  `json:"headers"`
+}
+
+type AppInfo struct {
+	AppInsId string `json:"app_ins_id"`
+	Ak       string `json:"ak"`
+	AppName  string `json:"app_name"`
+}
 
 var EsClient *es.Client
 
@@ -87,18 +111,83 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	log.Info("Request to create api gw http log.")
 	msg, err := ioutil.ReadAll(t.R.Body)
 	if err != nil {
-		log.Error("Read request body failed.", nil)
+		log.Error("Read request body failed.", err)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "Read request body error.")
 		return workspace.TaskFinish
 	}
 
-	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(msg)).Do(context.Background())
+	var temp map[string]interface{}
+	err = json.Unmarshal(msg, &temp)
+	if err != nil {
+		log.Error("Json Unmarshal failed.", err)
+		t.SetFirstErrorCode(meputil.SerErrFailBase, "Json Unmarshal error.")
+		return workspace.TaskFinish
+	}
+
+	appInsId := parseRequest(temp)
+	temp["appInstanceId"] = appInsId
+	mesStr, err := json.Marshal(temp)
+
+	resp, err := EsClient.Index().Index(meputil.KongHttpLogIndex).BodyString(string(mesStr)).Do(context.Background())
 	if err != nil {
 		log.Error("Create doc fail in es.", err)
 	}
 	t.HttpRsp = resp
 
 	return workspace.TaskFinish
+}
+
+func parseRequest(temp map[string]interface{}) interface{} {
+	req := temp["request"]
+	reqJson, err := json.Marshal(req)
+	if err != nil {
+		log.Errorf(err, "parseRequest: Invalid map to json.")
+		return nil
+	}
+
+	var headerMap map[string]interface{}
+	err = json.Unmarshal(reqJson, &headerMap)
+	if err != nil {
+		log.Error("parseRequest: json Unmarshal fail.", err)
+		return nil
+	}
+
+	headerStr, err := json.Marshal(headerMap["headers"])
+	if err != nil {
+		log.Errorf(err, "parseRequest: Invalid map to json.")
+		return nil
+	}
+
+	var headers ReqHeaders
+	err = json.Unmarshal(headerStr, &headers)
+	if err != nil {
+		log.Error("parseRequest: json Unmarshal fail.", err)
+		return nil
+	}
+	//var appInfo AppInfo
+	var appInsId string
+	authorization := headers.Authorization
+	if strings.HasPrefix(authorization, "Bearer") {
+		start := strings.Index(authorization, ".")
+		subStr := string([]byte(authorization)[start+1:])
+		end := strings.Index(subStr, ".")
+		subStr = string([]byte(subStr)[:end])
+		var decode []byte
+		decode, err = base64.RawStdEncoding.DecodeString(subStr)
+		if err != nil {
+			log.Error("parseRequest: base64 decode fail.", err)
+			return nil
+		}
+		var claims jwt.StandardClaims
+		err = json.Unmarshal(decode, &claims)
+		if err != nil {
+			log.Error("claims: json Unmarshal fail.", err)
+			return nil
+		}
+		appInsId = claims.Subject
+		log.Info("appInsId: " + appInsId)
+	}
+	return appInsId
 }
 
 type GetKongHttpLog struct {
