@@ -40,12 +40,6 @@ const startedAt = "started_at"
 
 const esHost = "http://mep-elasticsearch:9200"
 
-type GetKongHttpLog struct {
-	workspace.TaskBase
-	R       *http.Request `json:"r,in"`
-	HttpRsp interface{}   `json:"httpRsp,out"`
-}
-
 type ReqHeaders struct {
 	Host          string `json:"host"`
 	ContentType   string `json:"content-type"`
@@ -122,7 +116,6 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Info("request body: " + string(msg))
 	var temp map[string]interface{}
 	err = json.Unmarshal(msg, &temp)
 	if err != nil {
@@ -132,7 +125,6 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 	}
 
 	appInsId := parseRequest(temp)
-	log.Infof("appInsId: %s", appInsId)
 	temp["appInstanceId"] = appInsId
 	mesStr, err := json.Marshal(temp)
 
@@ -191,6 +183,12 @@ func parseRequest(temp map[string]interface{}) interface{} {
 		log.Info("appInsId: " + appInsId)
 	}
 	return appInsId
+}
+
+type GetKongHttpLog struct {
+	workspace.TaskBase
+	R       *http.Request `json:"r,in"`
+	HttpRsp interface{}   `json:"httpRsp,out"`
 }
 
 // OnRequest The interface is query called times of the 3rd app registered services and mep self capability from elasticsearch.
