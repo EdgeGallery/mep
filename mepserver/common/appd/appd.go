@@ -17,7 +17,11 @@
 package appd
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	registry_backend "github.com/apache/servicecomb-service-center/server/core/backend"
+	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 	"mepserver/common/arch/workspace"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
@@ -25,8 +29,6 @@ import (
 	meputil "mepserver/common/util"
 	"net/http"
 	"reflect"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
 )
 
 const DBFailure = "put app config rule to data-store failed"
@@ -269,6 +271,9 @@ func (a *AppDCommon) handleRuleCreateOrDelete(method meputil.OperType, appDConfi
 		}
 		taskStatus.TrafficRuleStatusLst = append(taskStatus.TrafficRuleStatusLst, state)
 	}
+	if method == meputil.OperDelete {
+		taskStatus.TerminationStatus = meputil.TerminationInProgress
+	}
 }
 
 type ruleData struct {
@@ -362,4 +367,37 @@ func (a *AppDCommon) processRulesFromIDMap(idInputMap, idStoreMap map[string]*ru
 	}
 
 	return ruleStatusList
+}
+
+// IsTerminationNotificationSubscribed check app gracefully termination is subscribed or not
+func (a *AppDCommon) IsTerminationNotificationSubscribed(appInstanceId string) (bool, string) {
+
+	log.Infof("Check notification subscription for appInstanceId %s.", appInstanceId)
+
+	opts := []registry.PluginOp{
+		registry.OpGet(registry.WithStrKey(meputil.GetSubscribeKeyPath(meputil.AppTerminationNotificationSubscription) +
+			appInstanceId + "/")),
+	}
+
+	resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
+	if err != nil {
+		log.Errorf(nil, "Get subscription from etcd failed.")
+		return false, ""
+	}
+
+	if len(resp.Kvs) == 0 {
+		log.Errorf(nil, "Subscription doesn't exist.")
+		return false, ""
+	}
+
+	sub := &models.AppTerminationNotificationSubscription{}
+	jsonErr := json.Unmarshal(resp.Kvs[0].Value, sub)
+	if jsonErr != nil {
+		log.Error("Subscription parsed failed.", nil)
+		return false, ""
+	}
+
+	callback := sub.CallbackReference
+	log.Infof("Subscription callback is %s", callback)
+	return true, callback
 }

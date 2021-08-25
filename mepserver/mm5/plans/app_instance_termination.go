@@ -270,6 +270,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
+	// TODO - is need to check the app instance created ???
 	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		return workspace.TaskFinish
@@ -286,21 +287,15 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 	appDConfig.Operation = http.MethodDelete
 
 	taskId := meputil.GenerateUniqueId()
+
 	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish
 	}
-	t.Worker.ProcessDataPlaneSync(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	err := task.CheckForStatusDBError(t.AppInstanceId, taskId)
-	if err != nil {
-		log.Errorf(nil, err.Error())
-		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, err.Error())
-		return workspace.TaskFinish
-	}
+	t.Worker.StartNewTask(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	log.Info("Successfully deleted DNS and traffic rule.")
-
+	t.HttpRsp = t.GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

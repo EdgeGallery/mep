@@ -17,18 +17,26 @@
 package task
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	registry_backend "github.com/apache/servicecomb-service-center/server/core/backend"
+	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
+	"io/ioutil"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/common/util"
 	"net/http"
+	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	"time"
 )
 
 // Worker keeps the asynchronous task parameters
@@ -84,6 +92,24 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 		}
 		return
 	}
+	// check the operation type and send app termination request
+	taskStatus := newStatusDB(appInstanceId, taskId)
+	if taskStatus != nil {
+		taskStatus.status.Progress = util.TaskProgressFailure
+		taskStatus.setFailureReason("Unexpected error in processing.")
+		_ = taskStatus.pushDB()
+	}
+
+	if taskStatus.status.TerminationStatus == util.TerminationInProgress {
+		// Send confirm termination to app and wait for response
+		err := w.handleTerminationNotification(appInstanceId)
+		if err != nil {
+			log.Error("Failed to handle termination notification.", err)
+			taskStatus.status.TerminationStatus = util.TerminationFailed
+		}
+		taskStatus.status.TerminationStatus = util.TerminationFinish
+	}
+
 	err := syncJob.handleDNSRules(util.ApplyFunc)
 	if err != nil {
 		log.Error("Failed to process the task in dns rules.", err)
@@ -753,6 +779,139 @@ func (t *task) handleErrorOnProcessing() error {
 func (t *task) cleanProcessingCache() error {
 	if errCode := backend.DeletePaths([]string{util.AppDLCMJobsPath + t.appInstanceId}, false); errCode != 0 {
 		return fmt.Errorf("delete paths returned error(%d)", errCode)
+	}
+	return nil
+}
+
+// TlsConfig Constructs tls configuration
+func tlsConfig() (*tls.Config, error) {
+	rootCAs := x509.NewCertPool()
+	domainName := os.Getenv("MEPSERVER_CERT_DOMAIN_NAME")
+	if util.ValidateDomainName(domainName) != nil {
+		return nil, fmt.Errorf("domain name validation failed")
+	}
+	return &tls.Config{
+		RootCAs:            rootCAs,
+		ServerName:         domainName,
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	}, nil
+}
+
+func (w *Worker) sendTerminateNotification(callbackUrl string, subsribeId string, appInstanceId string) error {
+	log.Info("Send termination notification to application .")
+	//Create Body
+	body := models.TerminationNotification{}
+	body.NotificationType = "AppTerminationNotification"
+	body.OperationAction = util.TERMINATING
+	body.MaxGracefulTimeout = util.MaxGracefulTimeout
+	body.Links.Subscription = subsribeId          // fill complete link
+	body.Links.ConfirmTermination = appInstanceId // fill complete link
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		log.Errorf(nil, "Marshal failed with error %s.", err.Error())
+		return fmt.Errorf("marshal failed with error(%d)", err)
+	}
+	// Create request
+	req, err := http.NewRequest("POST", callbackUrl, strings.NewReader(string(reqBody)))
+	if err != nil {
+		log.Errorf(nil, "Not able to send the request to application %s.", err.Error())
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+	config, err := tlsConfig()
+	if err != nil {
+		log.Errorf(nil, "Unable to set the cipher %s.", err.Error())
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+	tr := &http.Transport{
+		TLSClientConfig: config,
+	}
+	client := &http.Client{Transport: tr}
+	req.Header.Add(util.XRealIp, util.GetLocalIP())
+	// Fetch Request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Errorf(nil, "app terminate request failed.", err.Error())
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusBadRequest {
+		log.Error("Mep-auth reported failure.", nil)
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+
+	// Read Response Body
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Error("Couldn't read the response body.", nil)
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+	log.Info("Successfully send the termination notification to app.")
+	return nil
+}
+
+// handleTerminationNotification check app gracefully termination is subscribed or not
+func (w *Worker) handleTerminationNotification(appInstanceId string) error {
+
+	log.Infof("Check notification subscription for appInstanceId %s.", appInstanceId)
+
+	opts := []registry.PluginOp{
+		registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) +
+			appInstanceId + "/")),
+	}
+
+	resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
+	if err != nil {
+		log.Errorf(nil, "Get subscription from etcd failed.")
+		return fmt.Errorf("get subscription from etcd failed")
+	}
+
+	if len(resp.Kvs) == 0 {
+		log.Errorf(nil, "Subscription doesn't exist.")
+		return fmt.Errorf("get subscription from etcd failed")
+	}
+
+	sub := &models.AppTerminationNotificationSubscription{}
+	jsonErr := json.Unmarshal(resp.Kvs[0].Value, sub)
+	if jsonErr != nil {
+		log.Error("Subscription parsed failed.", nil)
+		return fmt.Errorf("get subscription from etcd failed")
+	}
+
+	callback := sub.CallbackReference
+	log.Infof("Subscription callback is %s", callback)
+
+	err = w.sendTerminateNotification(callback, sub.SubscriptionId, appInstanceId)
+	if err != nil {
+		log.Error("Send termination notification failed, continue free resource", err)
+		return nil
+	}
+	// sleep for 100ms, check for response everytime for 5 seconds
+	count := 0
+	for count <= util.AppTerminationTimeout {
+		opts := []registry.PluginOp{
+			registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(util.AppTerminationConfirmation) +
+				appInstanceId + "/")),
+		}
+
+		resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
+		if err != nil {
+			log.Errorf(nil, "Get subscription from etcd failed.")
+			return fmt.Errorf("get subscription from etcd failed")
+		}
+
+		if len(resp.Kvs) != 0 {
+			sub := &models.AppTerminationNotificationSubscription{}
+			jsonErr := json.Unmarshal(resp.Kvs[0].Value, sub)
+			if jsonErr != nil {
+				log.Error("Subscription parsed failed.", nil)
+				return fmt.Errorf("get subscription from etcd failed")
+			}
+		} else {
+			count++
+			time.Sleep(util.AppTerminationSleepDuration * time.Millisecond) // Sleep for 100 millisecond
+		}
 	}
 	return nil
 }
