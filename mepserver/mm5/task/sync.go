@@ -17,14 +17,12 @@
 package task
 
 import (
-	"context"
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	registry_backend "github.com/apache/servicecomb-service-center/server/core/backend"
-	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 	"io/ioutil"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
@@ -92,22 +90,16 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 		}
 		return
 	}
-	// check the operation type and send app termination request
-	taskStatus := newStatusDB(appInstanceId, taskId)
-	if taskStatus != nil {
-		taskStatus.status.Progress = util.TaskProgressFailure
-		taskStatus.setFailureReason("Unexpected error in processing.")
-		_ = taskStatus.pushDB()
-	}
 
-	if taskStatus.status.TerminationStatus == util.TerminationInProgress {
+	if syncJob.statusDb.status.TerminationStatus == util.TerminationInProgress {
 		// Send confirm termination to app and wait for response
 		err := w.handleTerminationNotification(appInstanceId)
 		if err != nil {
 			log.Error("Failed to handle termination notification.", err)
-			taskStatus.status.TerminationStatus = util.TerminationFailed
+			syncJob.statusDb.status.TerminationStatus = util.TerminationFailed
+		} else {
+			syncJob.statusDb.status.TerminationStatus = util.TerminationFinish
 		}
-		taskStatus.status.TerminationStatus = util.TerminationFinish
 	}
 
 	err := syncJob.handleDNSRules(util.ApplyFunc)
@@ -798,15 +790,20 @@ func tlsConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func (w *Worker) sendTerminateNotification(callbackUrl string, subsribeId string, appInstanceId string) error {
+func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId string, appInstanceId string) error {
 	log.Info("Send termination notification to application .")
+
+	subscribeUri := bytes.ReplaceAll([]byte(util.AppSubscribePath), []byte(":appInstanceId"), []byte(appInstanceId))
+	confirmUri := bytes.ReplaceAll([]byte(util.ConfirmTerminationPath), []byte(":appInstanceId"), []byte(appInstanceId))
+
 	//Create Body
 	body := models.TerminationNotification{}
 	body.NotificationType = "AppTerminationNotification"
 	body.OperationAction = util.TERMINATING
 	body.MaxGracefulTimeout = util.MaxGracefulTimeout
-	body.Links.Subscription = subsribeId          // fill complete link
-	body.Links.ConfirmTermination = appInstanceId // fill complete link
+	body.Links.Subscription = string(subscribeUri) + "/" + subscribeId
+	body.Links.ConfirmTermination = string(confirmUri)
+
 	reqBody, err := json.Marshal(body)
 	if err != nil {
 		log.Errorf(nil, "Marshal failed with error %s.", err.Error())
@@ -854,64 +851,90 @@ func (w *Worker) sendTerminateNotification(callbackUrl string, subsribeId string
 // handleTerminationNotification check app gracefully termination is subscribed or not
 func (w *Worker) handleTerminationNotification(appInstanceId string) error {
 
-	log.Infof("Check notification subscription for appInstanceId %s.", appInstanceId)
-
-	opts := []registry.PluginOp{
-		registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) +
-			appInstanceId + "/")),
-	}
-
-	resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
-	if err != nil {
-		log.Errorf(nil, "Get subscription from etcd failed.")
-		return fmt.Errorf("get subscription from etcd failed")
-	}
-
-	if len(resp.Kvs) == 0 {
-		log.Errorf(nil, "Subscription doesn't exist.")
-		return fmt.Errorf("get subscription from etcd failed")
+	log.Infof("Check notification subscription for appInstanceId %s.", appInstanceId) //Testing
+	path := util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) + appInstanceId + "/"
+	resp, errCode := backend.GetRecord(path)
+	if errCode != 0 {
+		log.Warnf("App termination subscription not found.")
+		return nil
 	}
 
 	sub := &models.AppTerminationNotificationSubscription{}
-	jsonErr := json.Unmarshal(resp.Kvs[0].Value, sub)
+	jsonErr := json.Unmarshal(resp, sub)
 	if jsonErr != nil {
 		log.Error("Subscription parsed failed.", nil)
 		return fmt.Errorf("get subscription from etcd failed")
 	}
 
 	callback := sub.CallbackReference
-	log.Infof("Subscription callback is %s", callback)
+	log.Infof("Subscription callback is %s", callback) // Testing
 
-	err = w.sendTerminateNotification(callback, sub.SubscriptionId, appInstanceId)
+	err := w.sendTerminateNotification(callback, sub.SubscriptionId, appInstanceId)
 	if err != nil {
 		log.Error("Send termination notification failed, continue free resource", err)
 		return nil
 	}
-	// sleep for 100ms, check for response everytime for 5 seconds
-	count := 0
-	for count <= util.AppTerminationTimeout {
-		opts := []registry.PluginOp{
-			registry.OpGet(registry.WithStrKey(util.GetSubscribeKeyPath(util.AppTerminationConfirmation) +
-				appInstanceId + "/")),
+	// Persist the data in the backend
+	err = w.writeConfirmTerminateToDb(appInstanceId)
+	if err != nil {
+		log.Error("Send termination notification failed, continue free resource", err)
+		return nil
+	}
+	// Wait for the response or timeout
+	err = w.handleResponseFromAppInstance(appInstanceId)
+	if err != nil {
+		log.Error("Send termination notification failed, continue free resource", err)
+	}
+	// Clean up the resource
+	errCode = backend.DeleteRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete confirm termination from etcd failed.")
+		return fmt.Errorf("delete confirm termination from etcd failed")
+	}
+	return nil
+}
+
+func (w *Worker) writeConfirmTerminateToDb(appInstanceId string) error {
+	terminationConfirm := models.ConfirmTerminationRecord{}
+	terminationConfirm.OperationAction = util.TERMINATING
+	terminationConfirm.TerminationStatus = util.TerminationInProgress
+	termConfirmBytes, jsonErr := json.Marshal(terminationConfirm)
+	if jsonErr != nil {
+		log.Error("Json marshalling failed.", nil)
+		return nil
+	}
+
+	errCode := backend.PutRecord(util.AppConfirmTerminationPath+appInstanceId+"/", termConfirmBytes)
+	if errCode != 0 {
+		log.Error("Put record failed for confirm termination.", nil)
+		return nil
+	}
+	return nil
+}
+
+func (w *Worker) handleResponseFromAppInstance(appInstanceId string) error {
+	var count uint32 = 0
+	for count < util.AppTerminationTimeout {
+		log.Debugf("Confirm termination is waiting from app to respond.")
+		resp, errCode := backend.GetRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
+		if errCode != 0 {
+			log.Errorf(nil, "Get confirm termination from etcd failed.")
+			return fmt.Errorf("get confirm termination from etcd failed")
 		}
 
-		resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
-		if err != nil {
-			log.Errorf(nil, "Get subscription from etcd failed.")
-			return fmt.Errorf("get subscription from etcd failed")
+		confirm := &models.ConfirmTerminationRecord{}
+		jsonErr := json.Unmarshal(resp, confirm)
+		if jsonErr != nil {
+			log.Error("Confirm termination unmarshal failed.", nil)
+			return fmt.Errorf("confirm unmarshal parsed failed")
 		}
 
-		if len(resp.Kvs) != 0 {
-			sub := &models.AppTerminationNotificationSubscription{}
-			jsonErr := json.Unmarshal(resp.Kvs[0].Value, sub)
-			if jsonErr != nil {
-				log.Error("Subscription parsed failed.", nil)
-				return fmt.Errorf("get subscription from etcd failed")
-			}
-		} else {
-			count++
-			time.Sleep(util.AppTerminationSleepDuration * time.Millisecond) // Sleep for 100 millisecond
+		if confirm.TerminationStatus == util.TerminationFinish {
+			log.Infof("Confirm termination is completed from app for %s in %v.", appInstanceId, count*100)
+			break
 		}
+		count++
+		time.Sleep(util.AppTerminationSleepDuration * time.Millisecond) // Sleep for 100 millisecond
 	}
 	return nil
 }

@@ -270,7 +270,6 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	// TODO - is need to check the app instance created ???
 	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
 		log.Errorf(nil, "App instance not found.")
 		return workspace.TaskFinish
@@ -296,6 +295,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 
 	t.Worker.StartNewTask(appDConfig.AppName, t.AppInstanceId, taskId)
 
+	log.Info("Successfully deleted DNS and traffic rule.")
 	t.HttpRsp = t.GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

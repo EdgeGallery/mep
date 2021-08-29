@@ -17,6 +17,13 @@
 // Package models implements mep server object models
 package models
 
-type ConfirmTerminate struct {
+import "mepserver/common/util"
+
+type ConfirmTermination struct {
 	OperationAction string `json:"operationAction" validate:"required,oneof=STOPPPING TERMINATING"`
+}
+
+type ConfirmTerminationRecord struct {
+	OperationAction   string                  `json:"operationAction"`
+	TerminationStatus util.AppTerminateStatus `json:"TerminationStatus"`
 }

@@ -17,17 +17,15 @@
 package plans
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	registry_backend "github.com/apache/servicecomb-service-center/server/core/backend"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
-	"github.com/apache/servicecomb-service-center/server/plugin/pkg/registry"
 	"io/ioutil"
 	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
+	"mepserver/common/extif/backend"
 	"mepserver/common/models"
 	meputil "mepserver/common/util"
 	"net/http"
@@ -73,6 +71,35 @@ func (t *DecodeConfirmTerminateReq) getParam(r *http.Request) error {
 	return nil
 }
 
+func (t *DecodeConfirmTerminateReq) validateParam(msg []byte) error {
+
+	var confirmTermination models.ConfirmTermination
+	err := json.Unmarshal(msg, &confirmTermination)
+	if err != nil {
+		return errors.New("unmarshal msg error")
+	}
+
+	resp, errCode := backend.GetRecord(meputil.AppConfirmTerminationPath + t.AppInstanceId + "/")
+	if errCode != 0 {
+		t.SetFirstErrorCode(meputil.ServiceInactive, "no termination is going on")
+		return errors.New("no termination is going on for this instance")
+	}
+
+	terminationConfirmRec := &models.ConfirmTerminationRecord{}
+	jsonErr := json.Unmarshal(resp, terminationConfirmRec)
+	if jsonErr != nil {
+		log.Error("Subscription parsed failed.", nil)
+		t.SetFirstErrorCode(meputil.RequestParamErr, "operation action is not matching")
+		return errors.New("subscription parsed failed")
+	}
+
+	if confirmTermination.OperationAction != terminationConfirmRec.OperationAction {
+		t.SetFirstErrorCode(meputil.RequestParamErr, "operation action is not matching")
+		return errors.New("operation action is not matching")
+	}
+	return nil
+}
+
 // ParseBody Parse request body
 func (t *DecodeConfirmTerminateReq) ParseBody(r *http.Request) error {
 	if t.RestBody == nil {
@@ -88,6 +115,12 @@ func (t *DecodeConfirmTerminateReq) ParseBody(r *http.Request) error {
 		err = errors.New("request body too large")
 		log.Errorf(err, "Confirm ready request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
+		return err
+	}
+
+	err = t.validateParam(msg)
+	if err != nil {
+		log.Error("Confirm ready validate param failed.", err)
 		return err
 	}
 
@@ -120,40 +153,44 @@ type ConfirmTermination struct {
 // OnRequest handles service delete request
 func (t *ConfirmTermination) OnRequest(data string) workspace.TaskCode {
 	appInstanceId := t.AppInstanceId
-	log.Debugf("Confirm terminate received for %s.", appInstanceId)
+	log.Infof("Confirm terminate received for %s.", appInstanceId)
 
 	/*
 	 1. Get the record from DB and match the operation type, if match, update the record.
 	 2. Send the response
 	*/
 
-	opts := []registry.PluginOp{
-		registry.OpGet(registry.WithStrKey(meputil.GetSubscribeKeyPath(meputil.AppTerminationConfirmation) +
-			appInstanceId + "/")),
-	}
-
-	resp, err := registry_backend.Registry().TxnWithCmp(context.Background(), opts, nil, nil)
-	if err != nil {
-		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "get record failed for confirm termination")
+	resp, err := backend.GetRecord(meputil.AppConfirmTerminationPath + appInstanceId + "/")
+	if err != 0 {
+		t.SetFirstErrorCode(meputil.ServiceInactive, "no termination is going on")
+		log.Warnf("No termination is going on for %s.", appInstanceId)
 		return workspace.TaskFinish
 	}
 
-	if len(resp.Kvs) == 0 {
-		log.Warnf("Subscription doesn't exist.")
-		t.SetFirstErrorCode(meputil.SubscriptionNotFound, "get record failed for confirm termination")
-		return workspace.TaskFinish
-	}
-
-	terminationConfirm := &models.ConfirmTerminate{}
-	jsonErr := json.Unmarshal(resp.Kvs[0].Value, terminationConfirm)
+	terminationConfirm := &models.ConfirmTerminationRecord{}
+	jsonErr := json.Unmarshal(resp, terminationConfirm)
 	if jsonErr != nil {
-		log.Error("Subscription parsed failed.", nil)
+		log.Error("json unmarshalling failed.", nil)
 		return workspace.TaskFinish
 	}
-	// TODO check the operateAction with DB and msg
-	log.Infof("from Db (%v)", terminationConfirm.OperationAction)  // tobe removed
-	log.Infof("from msg (%v)", terminationConfirm.OperationAction) //  tobe removed
 
+	log.Infof("TerminationStatus %v.", meputil.TerminationFinish) // Testing
+
+	// Update the status
+	terminationConfirm.TerminationStatus = meputil.TerminationFinish
+
+	termConfirmBytes, jsonErr := json.Marshal(terminationConfirm)
+	if jsonErr != nil {
+		log.Error("Json marshalling failed.", nil)
+		return workspace.TaskFinish
+	}
+
+	err = backend.PutRecord(meputil.AppConfirmTerminationPath+appInstanceId+"/", termConfirmBytes)
+	if err != 0 {
+		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "put record failed for confirm termination")
+		return workspace.TaskFinish
+	}
+	log.Infof("Confirm terminate added to record successfully for %s.", appInstanceId)
 	t.HttpRsp = ""
 	return workspace.TaskFinish
 }

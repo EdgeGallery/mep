@@ -148,7 +148,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.TimingCaps, Func: m.getTimingCaps},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TransportPath, Func: m.getTransports},
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.ConfirmReadyPath, Func: m.confirmReady},
-		{Method: rest.HTTP_METHOD_POST, Path: meputil.ConfirmTerminationPath, Func: m.confirmReady},
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.ConfirmTerminationPath, Func: m.confirmTermination},
 	}
 }
 
@@ -425,7 +425,7 @@ func (m *Mp1Service) confirmReady(w http.ResponseWriter, r *http.Request) {
 func (m *Mp1Service) confirmTermination(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
-	workPlan.Try((&plans.DecodeConfirmTerminateReq{}).WithBody(&models.ConfirmTerminate{}),
+	workPlan.Try((&plans.DecodeConfirmTerminateReq{}).WithBody(&models.ConfirmTermination{}),
 		&plans.ConfirmTermination{})
 	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 

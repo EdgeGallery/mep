@@ -102,13 +102,14 @@ const (
 
 const DBRootPath = "/cse-sr/etsi/"
 const (
-	EndAppSubKeyPath      = DBRootPath + "app-end-subscribe/"
-	AvailAppSubKeyPath    = DBRootPath + "subscribe/"
-	AppDConfigKeyPath     = DBRootPath + "appd/"
-	AppDLCMJobsPath       = DBRootPath + "mep/applcm/jobs/"
-	AppDLCMTasksPath      = DBRootPath + "mep/applcm/tasks/"
-	AppDLCMTaskStatusPath = DBRootPath + "mep/applcm/taskstatus/"
-	TransportInfoPath     = DBRootPath + "transports/"
+	EndAppSubKeyPath          = DBRootPath + "app-end-subscribe/"
+	AvailAppSubKeyPath        = DBRootPath + "subscribe/"
+	AppDConfigKeyPath         = DBRootPath + "appd/"
+	AppDLCMJobsPath           = DBRootPath + "mep/applcm/jobs/"
+	AppDLCMTasksPath          = DBRootPath + "mep/applcm/tasks/"
+	AppDLCMTaskStatusPath     = DBRootPath + "mep/applcm/taskstatus/"
+	TransportInfoPath         = DBRootPath + "transports/"
+	AppConfirmTerminationPath = DBRootPath + "app-confirm-termination/"
 )
 
 const (
@@ -131,9 +132,6 @@ const SuccessRetCode = 0
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"
-const AppTerminationConfirmation string = "AppTerminationConfirmation"
-const AppTerminationSleepDuration time.Duration = 100
-const AppTerminationTimeout = 50
 const RequestBodyLength = 4096
 const ServicesMaxCount = 50
 const AppSubscriptionCount = 50
@@ -304,3 +302,5 @@ const (
 )
 
 const MaxGracefulTimeout uint32 = 5
+const AppTerminationSleepDuration = 100
+const AppTerminationTimeout = MaxGracefulTimeout * 10
