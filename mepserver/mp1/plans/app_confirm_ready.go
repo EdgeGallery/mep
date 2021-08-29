@@ -67,7 +67,7 @@ func (t *DecodeConfirmReadyReq) getParam(r *http.Request) error {
 		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
 		return err
 	}
-	log.Infof("Confirm ready received for %s.", t.AppInstanceId)
+
 	return nil
 }
 
@@ -140,7 +140,7 @@ type ConfirmReady struct {
 // OnRequest handles service delete request
 func (t *ConfirmReady) OnRequest(data string) workspace.TaskCode {
 	appInstanceId := t.AppInstanceId
-	log.Infof("Confirm ready received for %s.", appInstanceId)
+	log.Debugf("Confirm ready received for %s.", appInstanceId)
 	/*
 		1. Check if any other ongoing operation for this AppInstance Id in the system.
 		2. Send the response
