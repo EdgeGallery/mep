@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
-	"io/ioutil"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	"mepserver/common/extif/dns"
@@ -96,10 +95,8 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 		err := w.handleTerminationNotification(appInstanceId)
 		if err != nil {
 			log.Error("Failed to handle termination notification.", err)
-			syncJob.statusDb.status.TerminationStatus = util.TerminationFailed
-		} else {
-			syncJob.statusDb.status.TerminationStatus = util.TerminationFinish
 		}
+		syncJob.statusDb.status.TerminationStatus = util.TerminationFinish
 	}
 
 	err := syncJob.handleDNSRules(util.ApplyFunc)
@@ -791,14 +788,12 @@ func tlsConfig() (*tls.Config, error) {
 }
 
 func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId string, appInstanceId string) error {
-	log.Info("Send termination notification to application .")
-
-	subscribeUri := bytes.ReplaceAll([]byte(util.AppSubscribePath), []byte(":appInstanceId"), []byte(appInstanceId))
+	subscribeUri := bytes.ReplaceAll([]byte(util.EndAppSubscribePath), []byte(":appInstanceId"), []byte(appInstanceId))
 	confirmUri := bytes.ReplaceAll([]byte(util.ConfirmTerminationPath), []byte(":appInstanceId"), []byte(appInstanceId))
 
 	//Create Body
 	body := models.TerminationNotification{}
-	body.NotificationType = "AppTerminationNotification"
+	body.NotificationType = util.AppTerminateNotification
 	body.OperationAction = util.TERMINATING
 	body.MaxGracefulTimeout = util.MaxGracefulTimeout
 	body.Links.Subscription = string(subscribeUri) + "/" + subscribeId
@@ -813,7 +808,7 @@ func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId strin
 	req, err := http.NewRequest("POST", callbackUrl, strings.NewReader(string(reqBody)))
 	if err != nil {
 		log.Errorf(nil, "Not able to send the request to application %s.", err.Error())
-		return fmt.Errorf("send termication notifcation error(%d)", err)
+		return fmt.Errorf("not able to send the request to application(%d)", err)
 	}
 	config, err := tlsConfig()
 	if err != nil {
@@ -828,22 +823,16 @@ func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId strin
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Errorf(nil, "app terminate request failed.", err.Error())
-		return fmt.Errorf("send termication notifcation error(%d)", err)
+		log.Errorf(nil, "App terminate request failed.", err.Error())
+		return fmt.Errorf("app terminate request failed(%d)", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusBadRequest {
-		log.Error("Mep-auth reported failure.", nil)
-		return fmt.Errorf("send termication notifcation error(%d)", err)
+	if !util.IsHttpStatusOK(resp.StatusCode) {
+		log.Error("App terminate response failure.", nil)
+		return fmt.Errorf("app terminate response failed(%d)", resp.StatusCode)
 	}
 
-	// Read Response Body
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Error("Couldn't read the response body.", nil)
-		return fmt.Errorf("send termication notifcation error(%d)", err)
-	}
 	log.Info("Successfully send the termination notification to app.")
 	return nil
 }
@@ -851,25 +840,34 @@ func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId strin
 // handleTerminationNotification check app gracefully termination is subscribed or not
 func (w *Worker) handleTerminationNotification(appInstanceId string) error {
 
-	log.Infof("Check notification subscription for appInstanceId %s.", appInstanceId) //Testing
-	path := util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) + appInstanceId + "/"
-	resp, errCode := backend.GetRecord(path)
+	log.Infof("Check notification subscription for %s.", appInstanceId) //Testing
+	path := util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) + appInstanceId
+	records, errCode := backend.GetRecords(path)
 	if errCode != 0 {
+		log.Warnf("App termination subscription get record failed.")
+		return nil
+	}
+	sub := &models.AppTerminationNotificationSubscription{}
+
+	if len(records) == 0 {
 		log.Warnf("App termination subscription not found.")
 		return nil
 	}
 
-	sub := &models.AppTerminationNotificationSubscription{}
-	jsonErr := json.Unmarshal(resp, sub)
-	if jsonErr != nil {
-		log.Error("Subscription parsed failed.", nil)
-		return fmt.Errorf("get subscription from etcd failed")
+	for subId, record := range records {
+		jsonErr := json.Unmarshal(record, sub)
+		if jsonErr != nil {
+			log.Error("Subscription parsed failed.", nil)
+			return fmt.Errorf("get subscription from etcd failed")
+		}
+		sub.SubscriptionId = subId
+		// check matching subscription type
+		if sub.SubscriptionType == util.AppTerminationNotificationSubscription {
+			break
+		}
 	}
 
-	callback := sub.CallbackReference
-	log.Infof("Subscription callback is %s", callback) // Testing
-
-	err := w.sendTerminateNotification(callback, sub.SubscriptionId, appInstanceId)
+	err := w.sendTerminateNotification(sub.CallbackReference, sub.SubscriptionId, appInstanceId)
 	if err != nil {
 		log.Error("Send termination notification failed, continue free resource", err)
 		return nil
@@ -877,13 +875,13 @@ func (w *Worker) handleTerminationNotification(appInstanceId string) error {
 	// Persist the data in the backend
 	err = w.writeConfirmTerminateToDb(appInstanceId)
 	if err != nil {
-		log.Error("Send termination notification failed, continue free resource", err)
+		log.Error("Persist the current state failed, continue free resource", err)
 		return nil
 	}
 	// Wait for the response or timeout
 	err = w.handleResponseFromAppInstance(appInstanceId)
 	if err != nil {
-		log.Error("Send termination notification failed, continue free resource", err)
+		log.Error("Handle termination notification response failed, continue free resource", err)
 	}
 	// Clean up the resource
 	errCode = backend.DeleteRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
@@ -891,6 +889,7 @@ func (w *Worker) handleTerminationNotification(appInstanceId string) error {
 		log.Errorf(nil, "Delete confirm termination from etcd failed.")
 		return fmt.Errorf("delete confirm termination from etcd failed")
 	}
+
 	return nil
 }
 
@@ -930,11 +929,12 @@ func (w *Worker) handleResponseFromAppInstance(appInstanceId string) error {
 		}
 
 		if confirm.TerminationStatus == util.TerminationFinish {
-			log.Infof("Confirm termination is completed from app for %s in %v.", appInstanceId, count*100)
+			log.Infof("Confirm termination is success for app instance %s.", appInstanceId)
 			break
 		}
 		count++
-		time.Sleep(util.AppTerminationSleepDuration * time.Millisecond) // Sleep for 100 millisecond
+		time.Sleep(time.Duration(util.AppTerminationSleepDuration) * time.Millisecond) // Sleep for 100 millisecond
 	}
+
 	return nil
 }

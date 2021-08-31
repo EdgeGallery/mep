@@ -301,6 +301,7 @@ const (
 	STOPPING    = "STOPPING"
 )
 
+const AppTerminateNotification = "AppTerminationNotification"
 const MaxGracefulTimeout uint32 = 5
 const AppTerminationSleepDuration = 100
 const AppTerminationTimeout = MaxGracefulTimeout * 10

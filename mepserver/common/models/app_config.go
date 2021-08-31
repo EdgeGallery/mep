@@ -64,15 +64,3 @@ type TaskProgress struct {
 	Status   int      `json:"status"`
 	Detail   string   `json:"detail"`
 }*/
-
-type TerminationNotification struct {
-	NotificationType   string                  `json:"notificationType"`
-	OperationAction    meputil.OperationAction `json:"operationAction"`
-	MaxGracefulTimeout uint32                  `json:"maxGracefulTimeout"`
-	Links              _Links                  `json:"_links"`
-}
-
-type _Links struct {
-	Subscription       string `json:"subscription"`
-	ConfirmTermination string `json:"confirmTermination"`
-}

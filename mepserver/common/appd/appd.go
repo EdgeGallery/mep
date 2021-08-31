@@ -192,6 +192,7 @@ func (a *AppDCommon) buildTaskStatus(appDConfigInput *models.AppDConfig,
 	} else if appDConfigInput.Operation == http.MethodDelete {
 		// delete works with the in-store data only
 		a.handleRuleCreateOrDelete(meputil.OperDelete, appDInStore, &taskStatus)
+		taskStatus.TerminationStatus = meputil.TerminationInProgress
 	} else if appDConfigInput.Operation == http.MethodPut {
 		// modify works on both new and old data
 		a.handleRuleUpdate(appDConfigInput, appDInStore, &taskStatus)
@@ -267,9 +268,6 @@ func (a *AppDCommon) handleRuleCreateOrDelete(method meputil.OperType, appDConfi
 			Method: method,
 		}
 		taskStatus.TrafficRuleStatusLst = append(taskStatus.TrafficRuleStatusLst, state)
-	}
-	if method == meputil.OperDelete {
-		taskStatus.TerminationStatus = meputil.TerminationInProgress
 	}
 }
 

@@ -89,7 +89,7 @@ func (t *DecodeConfirmTerminateReq) validateParam(msg []byte) error {
 	jsonErr := json.Unmarshal(resp, terminationConfirmRec)
 	if jsonErr != nil {
 		log.Error("Subscription parsed failed.", nil)
-		t.SetFirstErrorCode(meputil.RequestParamErr, "operation action is not matching")
+		t.SetFirstErrorCode(meputil.RequestParamErr, "subscription parsed failed")
 		return errors.New("subscription parsed failed")
 	}
 
@@ -174,8 +174,6 @@ func (t *ConfirmTermination) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	log.Infof("TerminationStatus %v.", meputil.TerminationFinish) // Testing
-
 	// Update the status
 	terminationConfirm.TerminationStatus = meputil.TerminationFinish
 
@@ -190,7 +188,7 @@ func (t *ConfirmTermination) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, "put record failed for confirm termination")
 		return workspace.TaskFinish
 	}
-	log.Infof("Confirm terminate added to record successfully for %s.", appInstanceId)
+
 	t.HttpRsp = ""
 	return workspace.TaskFinish
 }
