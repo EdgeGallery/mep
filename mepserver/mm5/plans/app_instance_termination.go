@@ -136,9 +136,8 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 				return workspace.TaskFinish
 			}
 
-			apiGwSerName := meputil.GetApiGwSerName(ins)
-			if apiGwSerName != "" {
-				cleanUpApiGwEntry(apiGwSerName)
+			for _, serName := range meputil.GetApiGwSerName(ins) {
+				meputil.ApiGWInterface.CleanUpApiGwEntry(serName)
 			}
 		}
 	}
@@ -150,15 +149,6 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 	log.Info("Successfully terminated application services.")
 	t.HttpRsp = ""
 	return workspace.TaskFinish
-}
-
-func cleanUpApiGwEntry(apiGwServiceName string) {
-	// delete service route from apiGw
-	meputil.ApiGWInterface.DeleteApiGwRoute(apiGwServiceName)
-	// delete service plugin from apiGw
-	meputil.ApiGWInterface.DeleteJwtPlugin(apiGwServiceName)
-	// delete service from apiGw
-	meputil.ApiGWInterface.DeleteApiGwService(apiGwServiceName)
 }
 
 func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, string) {

@@ -735,15 +735,13 @@ func ValidateDomainName(name string) error {
 }
 
 // GetApiGwSerName query endpoint info from MicroServiceInstance
-func GetApiGwSerName(instance *proto.MicroServiceInstance) string {
-	// only support one endpoint now
-	endpoints := instance.Endpoints
-	var apiGwSerName string
-	if len(endpoints) > 0 {
-		arr := strings.Split(endpoints[0], "/")
-		apiGwSerName = arr[len(arr)-1]
+func GetApiGwSerName(instance *proto.MicroServiceInstance) []string {
+	var serNameList []string
+	for _, endpoint := range instance.Endpoints {
+		arr := strings.Split(endpoint, "/")
+		serNameList = append(serNameList, arr[len(arr)-1])
 	}
-	return apiGwSerName
+	return serNameList
 }
 
 // GetRequiredSerFromMepauth query required services from mepauth

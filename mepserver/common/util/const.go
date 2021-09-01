@@ -124,6 +124,8 @@ const (
 	Alternatives = "alternative"
 )
 
+const EndPointPropPrefix = "endpoint/"
+
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
 const FormatIntBase = 10
