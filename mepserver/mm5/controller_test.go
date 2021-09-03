@@ -1946,7 +1946,7 @@ func TestAppInstanceTermination(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2030,7 +2030,7 @@ func TestAppInstanceTermination1(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2114,7 +2114,7 @@ func TestAppInstanceTermination2(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2598,7 +2598,7 @@ func TestAppInstanceTerminationErrHandler(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2695,7 +2695,7 @@ func TestAppInstanceTerminationErr(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2779,7 +2779,7 @@ func TestAppInstanceTerminationErrUnmarshal(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2868,7 +2868,7 @@ func TestAppInstanceTerminationNoProgress(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2965,7 +2965,7 @@ func TestAppInstanceTerminationStatusDbErr(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -3049,7 +3049,7 @@ func TestAppInstanceTerminationStatusDbErrhandle(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 

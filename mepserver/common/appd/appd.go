@@ -89,10 +89,55 @@ func (a *AppDCommon) GenerateTaskResponse(taskId string, appInstanceId string, r
 	}
 }
 
+func (a *AppDCommon) stageAppTerminationProgress(appInstanceId string, taskId string, isTerminate bool) (bool, bool) {
+	subscribed := false
+	// Check app termination is subscribed
+	if isTerminate {
+		subscribed, _ = a.AppTerminationIsSubscribed(appInstanceId)
+	}
+
+	//check app Config exists or not
+	if !a.IsAppInstanceAlreadyCreated(appInstanceId) && isTerminate {
+		log.Infof("App config not found exist for app termination.")
+		var taskStatus = models.TaskStatus{}
+		taskStatus.Progress = 0
+		if subscribed {
+			taskStatus.TerminationStatus = meputil.TerminationInProgress
+			a.writeStatusToStore(&taskStatus, appInstanceId, taskId)
+		}
+		return subscribed, true
+	}
+	return subscribed, false
+}
+
+func (a *AppDCommon) addJobsToDb(appInstanceId string, taskId string, appDConfigBytes []byte) int {
+	// Add to Jobs DB
+	errCode := backend.PutRecord(meputil.AppDLCMJobsPath+appInstanceId, appDConfigBytes)
+	if errCode != 0 {
+		log.Errorf(nil, "App config (appId: %s) insertion on data-store failed.", appInstanceId)
+		return errCode
+	}
+
+	errCode = backend.PutRecord(meputil.AppDLCMTasksPath+taskId, []byte(appInstanceId))
+	if errCode != 0 {
+		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId}, true)
+		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
+		return errCode
+	}
+
+	return 0
+}
+
 // StageNewTask stages new tasks for operation
 func (a *AppDCommon) StageNewTask(appInstanceId string, taskId string,
-	appDConfigInput *models.AppDConfig) (code workspace.ErrCode, msg string) {
+	appDConfigInput *models.AppDConfig, isTerminate bool) (code workspace.ErrCode, msg string) {
 	appDInStore := &models.AppDConfig{}
+
+	subscribed, isNoConfig := a.stageAppTerminationProgress(appInstanceId, taskId, isTerminate)
+	if isNoConfig {
+		return
+	}
+
 	// Table already exists for modify and delete request, hence reading db for non post scenarios
 	if appDConfigInput.Operation != http.MethodPost {
 		appDConfigEntry, errCode := backend.GetRecord(meputil.AppDConfigKeyPath + appInstanceId)
@@ -128,21 +173,13 @@ func (a *AppDCommon) StageNewTask(appInstanceId string, taskId string,
 		return meputil.ParseInfoErr, "can not marshal appDConfig info"
 	}
 
-	// Add to Jobs DB
-	errCode := backend.PutRecord(meputil.AppDLCMJobsPath+appInstanceId, appDConfigBytes)
+	errCode := a.addJobsToDb(appInstanceId, taskId, appDConfigBytes)
 	if errCode != 0 {
-		log.Errorf(nil, "App config (appId: %s) insertion on data-store failed.", appInstanceId)
+		log.Errorf(nil, "Adding jobs to DB failed(%).", errCode)
 		return workspace.ErrCode(errCode), DBFailure
 	}
 
-	errCode = backend.PutRecord(meputil.AppDLCMTasksPath+taskId, []byte(appInstanceId))
-	if errCode != 0 {
-		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId}, true)
-		log.Errorf(nil, "App config (taskId: %s) insertion on data-store failed.", appInstanceId)
-		return workspace.ErrCode(errCode), DBFailure
-	}
-
-	taskStatus := a.buildTaskStatus(appDConfigInput, appDInStore)
+	taskStatus := a.buildTaskStatus(appDConfigInput, appDInStore, subscribed)
 	if taskStatus.TrafficRuleStatusLst == nil && taskStatus.DNSRuleStatusLst == nil {
 		_ = backend.DeletePaths([]string{meputil.AppDLCMJobsPath + appInstanceId, meputil.AppDLCMTasksPath + taskId},
 			true)
@@ -182,7 +219,7 @@ func (a *AppDCommon) writeStatusToStore(taskStatus *models.TaskStatus, appInstan
 }
 
 func (a *AppDCommon) buildTaskStatus(appDConfigInput *models.AppDConfig,
-	appDInStore *models.AppDConfig) *models.TaskStatus {
+	appDInStore *models.AppDConfig, terminateStarted bool) *models.TaskStatus {
 	var taskStatus = models.TaskStatus{}
 	taskStatus.Progress = 0
 
@@ -192,7 +229,9 @@ func (a *AppDCommon) buildTaskStatus(appDConfigInput *models.AppDConfig,
 	} else if appDConfigInput.Operation == http.MethodDelete {
 		// delete works with the in-store data only
 		a.handleRuleCreateOrDelete(meputil.OperDelete, appDInStore, &taskStatus)
-		taskStatus.TerminationStatus = meputil.TerminationInProgress
+		if terminateStarted {
+			taskStatus.TerminationStatus = meputil.TerminationInProgress
+		}
 	} else if appDConfigInput.Operation == http.MethodPut {
 		// modify works on both new and old data
 		a.handleRuleUpdate(appDConfigInput, appDInStore, &taskStatus)
@@ -362,4 +401,34 @@ func (a *AppDCommon) processRulesFromIDMap(idInputMap, idStoreMap map[string]*ru
 	}
 
 	return ruleStatusList
+}
+
+func (a *AppDCommon) AppTerminationIsSubscribed(appInstanceId string) (isSubscribed bool,
+	sub *models.AppTerminationNotificationSubscription) {
+	path := meputil.GetSubscribeKeyPath(meputil.AppTerminationNotificationSubscription) + appInstanceId
+	records, errCode := backend.GetRecords(path)
+	if errCode != 0 {
+		log.Warnf("App termination subscription get record failed.")
+		return false, nil
+	}
+	subscription := &models.AppTerminationNotificationSubscription{}
+
+	if len(records) == 0 {
+		log.Warnf("App termination subscription not found.")
+		return false, nil
+	}
+
+	for subId, record := range records {
+		jsonErr := json.Unmarshal(record, subscription)
+		if jsonErr != nil {
+			log.Error("Subscription parsed failed.", nil)
+			return false, nil
+		}
+		subscription.SubscriptionId = subId
+		// check matching subscription type
+		if subscription.SubscriptionType == meputil.AppTerminationNotificationSubscription {
+			return true, subscription
+		}
+	}
+	return false, nil
 }

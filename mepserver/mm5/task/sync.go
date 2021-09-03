@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/servicecomb-service-center/pkg/log"
+	"mepserver/common/appd"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	"mepserver/common/extif/dns"
@@ -42,6 +43,7 @@ type Worker struct {
 	dnsTypeConfig    string
 	dataPlane        dataplane.DataPlane
 	dnsAgent         dns.DNSAgent
+	appd.AppDCommon
 }
 
 const dataInconsistentError = "Failed to revert the data, this will lead to data inconsistency."
@@ -76,6 +78,10 @@ func (w *Worker) ProcessAppDConfigSync(appName, appInstanceId, taskId string) {
 
 // ProcessDataPlaneSync Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
 func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
+	isNoConfig := w.handleAppTermination(appInstanceId, taskId)
+	if isNoConfig {
+		return
+	}
 
 	syncJob := newTask(appName, appInstanceId, taskId, w.dataPlane, w.dnsAgent, w.dnsTypeConfig)
 	if syncJob == nil {
@@ -88,15 +94,6 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 			_ = taskStatus.pushDB()
 		}
 		return
-	}
-
-	if syncJob.statusDb.status.TerminationStatus == util.TerminationInProgress {
-		// Send confirm termination to app and wait for response
-		err := w.handleTerminationNotification(appInstanceId)
-		if err != nil {
-			log.Error("Failed to handle termination notification.", err)
-		}
-		syncJob.statusDb.status.TerminationStatus = util.TerminationFinish
 	}
 
 	err := syncJob.handleDNSRules(util.ApplyFunc)
@@ -839,33 +836,7 @@ func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId strin
 
 // handleTerminationNotification check app gracefully termination is subscribed or not
 func (w *Worker) handleTerminationNotification(appInstanceId string) error {
-
-	log.Infof("Check notification subscription for %s.", appInstanceId) //Testing
-	path := util.GetSubscribeKeyPath(util.AppTerminationNotificationSubscription) + appInstanceId
-	records, errCode := backend.GetRecords(path)
-	if errCode != 0 {
-		log.Warnf("App termination subscription get record failed.")
-		return nil
-	}
-	sub := &models.AppTerminationNotificationSubscription{}
-
-	if len(records) == 0 {
-		log.Warnf("App termination subscription not found.")
-		return nil
-	}
-
-	for subId, record := range records {
-		jsonErr := json.Unmarshal(record, sub)
-		if jsonErr != nil {
-			log.Error("Subscription parsed failed.", nil)
-			return fmt.Errorf("get subscription from etcd failed")
-		}
-		sub.SubscriptionId = subId
-		// check matching subscription type
-		if sub.SubscriptionType == util.AppTerminationNotificationSubscription {
-			break
-		}
-	}
+	_, sub := w.AppTerminationIsSubscribed(appInstanceId)
 
 	err := w.sendTerminateNotification(sub.CallbackReference, sub.SubscriptionId, appInstanceId)
 	if err != nil {
@@ -884,12 +855,28 @@ func (w *Worker) handleTerminationNotification(appInstanceId string) error {
 		log.Error("Handle termination notification response failed, continue free resource", err)
 	}
 	// Clean up the resource
-	errCode = backend.DeleteRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
+	errCode := backend.DeleteRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
 	if errCode != 0 {
 		log.Errorf(nil, "Delete confirm termination from etcd failed.")
 		return fmt.Errorf("delete confirm termination from etcd failed")
 	}
+	//Clear the terminate subscription
+	subscribeType := util.AppTerminationNotificationSubscription
+	errCode = backend.DeleteRecord(util.GetSubscribeKeyPath(subscribeType) + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete termination notification subscription from etcd failed.")
+		return fmt.Errorf("delete termination notification subscription from etcd failed")
+	}
 
+	//Clear the availability subscription subscription
+	subscribeType = util.SerAvailabilityNotificationSubscription
+	errCode = backend.DeleteRecord(util.GetSubscribeKeyPath(subscribeType) + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete availability subscription  from etcd failed.")
+		return fmt.Errorf("availability subscription  from etcd failed")
+	}
+
+	log.Infof("Handle termination is completed for for %s.", appInstanceId) //Testing
 	return nil
 }
 
@@ -937,4 +924,28 @@ func (w *Worker) handleResponseFromAppInstance(appInstanceId string) error {
 	}
 
 	return nil
+}
+
+func (w *Worker) handleAppTermination(appInstanceId string, taskId string) bool {
+	isTerminate := false
+	taskStatus := newStatusDB(appInstanceId, taskId)
+	if taskStatus != nil && taskStatus.status.TerminationStatus == util.TerminationInProgress {
+		isTerminate = true
+		err := w.handleTerminationNotification(appInstanceId)
+		if err != nil {
+			log.Error("Failed to handle termination notification.", err)
+		}
+		taskStatus.status.TerminationStatus = util.TerminationFinish
+	}
+
+	if !w.IsAppInstanceAlreadyCreated(appInstanceId) && isTerminate {
+		syncJob := &task{}
+		log.Infof("Appd config not exists, termination is finished.")
+		if taskStatus != nil && taskStatus.status.TerminationStatus == util.TerminationFinish {
+			_ = syncJob.cleanProcessingCache()
+		}
+		return true
+	}
+
+	return false
 }

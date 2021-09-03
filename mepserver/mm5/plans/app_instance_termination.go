@@ -270,10 +270,6 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
-		log.Errorf(nil, "App instance not found.")
-		return workspace.TaskFinish
-	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
@@ -287,7 +283,7 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig, true)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish

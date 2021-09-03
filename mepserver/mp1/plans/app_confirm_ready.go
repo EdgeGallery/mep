@@ -111,7 +111,7 @@ func (t *DecodeConfirmReadyReq) validateParam(msg []byte) error {
 	var confirmReady models.ConfirmReady
 	err := json.Unmarshal(msg, &confirmReady)
 	if err != nil {
-		return errors.New("unmarshal msg error")
+		return errors.New("unmarshal msg error " + err.Error())
 	}
 
 	if confirmReady.Indication != "READY" {

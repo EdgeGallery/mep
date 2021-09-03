@@ -45,13 +45,13 @@ func (t *DecodeConfirmTerminateReq) OnRequest(data string) workspace.TaskCode {
 
 	err := t.getParam(t.R)
 	if err != nil {
-		log.Error("Parameters validation failed on confirm ready request.", err)
+		log.Error("Parameters validation failed on confirm termination request.", err)
 		return workspace.TaskFinish
 	}
 
 	err = t.ParseBody(t.R)
 	if err != nil {
-		log.Error("Confirm ready request body parse failed.", err)
+		log.Error("Confirm terminate request body parse failed.", err)
 	}
 
 	return workspace.TaskFinish
@@ -107,20 +107,20 @@ func (t *DecodeConfirmTerminateReq) ParseBody(r *http.Request) error {
 	}
 	msg, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Error("Confirm ready request read failed.", nil)
+		log.Error("Confirm termination request read failed.", nil)
 		t.SetFirstErrorCode(meputil.SerErrFailBase, "read request body error")
 		return errors.New("read failed")
 	}
 	if len(msg) > meputil.RequestBodyLength {
 		err = errors.New("request body too large")
-		log.Errorf(err, "Confirm ready request body too large %d.", len(msg))
+		log.Errorf(err, "Confirm termination request body too large %d.", len(msg))
 		t.SetFirstErrorCode(meputil.RequestParamErr, "request body too large")
 		return err
 	}
 
 	err = t.validateParam(msg)
 	if err != nil {
-		log.Error("Confirm ready validate param failed.", err)
+		log.Error("Confirm terminate validate param failed.", err)
 		return err
 	}
 
