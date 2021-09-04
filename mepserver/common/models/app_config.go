@@ -34,10 +34,11 @@ type AppDConfig struct {
 
 // TaskStatus hold the status of asynchronous sync task for app configuration
 type TaskStatus struct {
-	Progress             int          `json:"progress"`
-	TrafficRuleStatusLst []RuleStatus `json:"trafficRuleStatusList"`
-	DNSRuleStatusLst     []RuleStatus `json:"dnsRuleStatusList"`
-	Details              string       `json:"details" validate:"omitempty"`
+	Progress             int                        `json:"progress"`
+	TrafficRuleStatusLst []RuleStatus               `json:"trafficRuleStatusList"`
+	DNSRuleStatusLst     []RuleStatus               `json:"dnsRuleStatusList"`
+	Details              string                     `json:"details" validate:"omitempty"`
+	TerminationStatus    meputil.AppTerminateStatus `json:"terminationStatus,omitempty"`
 }
 
 // RuleStatus holds status of either traffic or dns rules on sync from eg to data-plane

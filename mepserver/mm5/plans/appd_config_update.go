@@ -88,7 +88,7 @@ func (t *UpdateAppDConfig) OnRequest(data string) workspace.TaskCode {
 		}
 	}
 
-	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput, false)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish

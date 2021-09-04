@@ -1946,17 +1946,13 @@ func TestAppInstanceTermination(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
 	n1 := &task.Worker{}
 	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
-	})
-
-	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
-		return nil
 	})
 
 	// Mock the response writer
@@ -2034,17 +2030,13 @@ func TestAppInstanceTermination1(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
 	n1 := &task.Worker{}
 	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
-	})
-
-	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
-		return nil
 	})
 
 	// Mock the response writer
@@ -2122,17 +2114,13 @@ func TestAppInstanceTermination2(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
 	n1 := &task.Worker{}
 	patches.ApplyMethod(reflect.TypeOf(n1), "ProcessDataPlaneSync", func(*task.Worker, string, string, string) {
 		return
-	})
-
-	patches.ApplyFunc(task.CheckForStatusDBError, func(string, string) error {
-		return nil
 	})
 
 	// Mock the response writer
@@ -2610,7 +2598,7 @@ func TestAppInstanceTerminationErrHandler(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2707,7 +2695,7 @@ func TestAppInstanceTerminationErr(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2721,7 +2709,7 @@ func TestAppInstanceTerminationErr(t *testing.T) {
 	responseGetHeader := http.Header{} // Create http response header
 	mockWriterGet.On("Header").Return(responseGetHeader)
 	mockWriterGet.On("Write").Return(0, nil)
-	mockWriterGet.On("WriteHeader", 400)
+	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
 }
@@ -2791,7 +2779,7 @@ func TestAppInstanceTerminationErrUnmarshal(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2810,7 +2798,7 @@ func TestAppInstanceTerminationErrUnmarshal(t *testing.T) {
 	responseGetHeader := http.Header{} // Create http response header
 	mockWriterGet.On("Header").Return(responseGetHeader)
 	mockWriterGet.On("Write").Return(0, nil)
-	mockWriterGet.On("WriteHeader", 400)
+	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
 }
@@ -2880,7 +2868,7 @@ func TestAppInstanceTerminationNoProgress(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2907,7 +2895,7 @@ func TestAppInstanceTerminationNoProgress(t *testing.T) {
 	responseGetHeader := http.Header{} // Create http response header
 	mockWriterGet.On("Header").Return(responseGetHeader)
 	mockWriterGet.On("Write").Return(0, nil)
-	mockWriterGet.On("WriteHeader", 400)
+	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
 }
@@ -2977,7 +2965,7 @@ func TestAppInstanceTerminationStatusDbErr(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -2991,7 +2979,7 @@ func TestAppInstanceTerminationStatusDbErr(t *testing.T) {
 	responseGetHeader := http.Header{} // Create http response header
 	mockWriterGet.On("Header").Return(responseGetHeader)
 	mockWriterGet.On("Write").Return(0, nil)
-	mockWriterGet.On("WriteHeader", 400)
+	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
 }
@@ -3061,7 +3049,7 @@ func TestAppInstanceTerminationStatusDbErrhandle(t *testing.T) {
 		return false
 	})
 	patches.ApplyMethod(reflect.TypeOf(appDComm), "StageNewTask", func(*appd.AppDCommon, string, string,
-		*models.AppDConfig) (workspace.ErrCode, string) {
+		*models.AppDConfig, bool) (workspace.ErrCode, string) {
 		return 0, ""
 	})
 
@@ -3092,4 +3080,199 @@ func TestAppInstanceTerminationStatusDbErrhandle(t *testing.T) {
 	mockWriterGet.On("WriteHeader", 200)
 
 	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
+
+const callBack = "https://%d.%d.%d.%d:%d/example/catalogue1"
+
+var callBackRef = fmt.Sprintf(callBack, 192, 0, 2, 1, 8080)
+
+func TestAppInstanceTerminationInProgress(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+	recordInDb := []byte(`
+	{
+	  "appTrafficRule": [
+		{
+		  "trafficRuleId": "TrafficRule1",
+		  "filterType": "FLOW",
+		  "priority": 1,
+		  "trafficFilter": [
+			{
+			  "srcAddress": [
+				"192.168.1.1"
+			  ],
+			  "dstAddress": [
+				"192.168.1.1"
+			  ],
+			  "srcPort": [
+				"8080"
+			  ],
+			  "dstPort": [
+				"8080"
+			  ],
+			  "protocol": [
+				"TCP"
+			  ],
+			  "qCI": 1,
+			  "dSCP": 0,
+			  "tC": 1
+			}
+		  ],
+		  "action": "DROP",
+		  "state": "ACTIVE"
+		}
+	  ],
+	  "appDNSRule": [
+		{
+		  "dnsRuleId": "dnsRule1",
+		  "domainName": "www.example.com",
+		  "ipAddressType": "IP_V6",
+		  "ipAddress": "192.0.2.0",
+		  "ttl": 30,
+		  "state": "ACTIVE"
+		}
+	  ],
+	  "appSupportMp1": true,
+	  "appName": "abc"
+	}`)
+
+	service := Mm5Service{}
+	getRequest, _ := http.NewRequest("DELETE",
+		fmt.Sprintf(delAppInstFormat, defaultAppInstanceId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	patches := gomonkey.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+
+		ins1 := &proto.MicroServiceInstance{
+			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
+			Status:         "UP",
+			Version:        "3.2.1",
+			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
+			Properties: map[string]string{
+				"appInstanceId": defaultAppInstanceId,
+				"serName":       "FaceRegService6",
+				"mecState":      "ACTIVE",
+			},
+		}
+
+		json1, _ := json.Marshal(ins1)
+		records[fmt.Sprintf(util.ServiceInfoDataCenter)] = json1
+
+		return records, 0
+	})
+	defer patches.Reset()
+
+	n := &srv.InstanceService{}
+	patches.ApplyMethod(reflect.TypeOf(n), "Unregister", func(*srv.InstanceService, context.Context,
+		*proto.UnregisterInstanceRequest) (*proto.UnregisterInstanceResponse, error) {
+		return nil, nil
+	})
+
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+
+	var appDComm *appd.AppDCommon
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAppInstanceAlreadyCreated", func(a *appd.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return true
+	})
+	patches.ApplyMethod(reflect.TypeOf(appDComm), "IsAnyOngoingOperationExist", func(a *appd.AppDCommon,
+		appInstanceId string) bool {
+		// Return Success.
+		return false
+	})
+
+	rec_count := 1
+	patches.ApplyFunc(backend.GetRecord, func(path string) (record []byte, errorCode int) {
+		if rec_count <= 3 {
+			rec_count++
+			return recordInDb, 0
+		} else if rec_count == 4 {
+			rec_count++
+			TrfSts := models.RuleStatus{Id: "r123", State: 0, Method: 0}
+			DnsSts := models.RuleStatus{Id: "r144", State: 0, Method: 0}
+
+			status := models.TaskStatus{}
+			status.Progress = 1
+			status.Details = "Status"
+			status.DNSRuleStatusLst = append(status.DNSRuleStatusLst, DnsSts)
+			status.TrafficRuleStatusLst = append(status.TrafficRuleStatusLst, TrfSts)
+			status.TerminationStatus = util.TerminationInProgress
+			outBytes, _ := json.Marshal(&status)
+			return outBytes, 0
+		} else if rec_count == 5 {
+			createSubscription := models.AppTerminationNotificationSubscription{
+				SubscriptionType:  "AppTerminationNotificationSubscription",
+				CallbackReference: "https://webhook.site/92fc3c0a-90e1-45ca-b346-ca514056fade",
+				AppInstanceId:     defaultAppInstanceId,
+			}
+			createSubscriptionBytes, _ := json.Marshal(createSubscription)
+			return createSubscriptionBytes, 0
+		} else {
+			rec_count++
+			return nil, 0
+		}
+	})
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+
+	service.URLPatterns()[7].Func(mockWriterGet, getRequest)
+}
+
+func TestHandleTerminationNotification(t *testing.T) {
+
+	count := 1
+	patches := gomonkey.ApplyFunc(backend.GetRecord, func(path string) (record []byte, errorCode int) {
+		if path == util.AppTerminationNotificationSubscription+defaultAppInstanceId+"/" {
+			createSubscription := models.AppTerminationNotificationSubscription{
+				SubscriptionType:  "AppTerminationNotificationSubscription",
+				CallbackReference: "https://webhook.site/92fc3c0a-90e1-45ca-b346-ca514056fade",
+				AppInstanceId:     defaultAppInstanceId,
+			}
+			createSubscriptionBytes, _ := json.Marshal(createSubscription)
+			return createSubscriptionBytes, 0
+		} else if count == 20 && path == util.AppConfirmTerminationPath+defaultAppInstanceId+"/" {
+			rec := models.ConfirmTerminationRecord{
+				util.TERMINATING,
+				util.TerminationInProgress,
+			}
+			recBytes, _ := json.Marshal(rec)
+			return recBytes, 0
+		}
+		count++
+		return nil, 0
+	})
+
+	defer patches.Reset()
+	patches.ApplyFunc(os.Getenv, func(key string) string {
+		if key == "MEPAUTH_SERVICE_PORT" {
+			return "10443"
+		}
+		if key == "MEPAUTH_PORT_10443_TCP_ADDR" {
+			return "1"
+		}
+		return "edgegallery"
+	})
+	//w := task.Worker {}
+	//w.HandleTerminationNotification(defaultAppInstanceId)
 }

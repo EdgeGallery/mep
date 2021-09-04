@@ -34,6 +34,9 @@ import (
 )
 
 const ServerURLFormat = "http://%s:%d/mep/dns_server_mgmt/v1/"
+const zone = "?zone=."
+const contentTypeValue = "application/json; charset=utf-8"
+const contentType = "Content-Type"
 
 // ResourceRecord represents the dns resource record
 type ResourceRecord struct {
@@ -107,8 +110,8 @@ func (d *RestDNSAgent) BuildDNSEndpoint(paths ...string) string {
 // AddResourceRecord update a dns entry in dns server
 func (d *RestDNSAgent) AddResourceRecord(host, rrType, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
-		log.Errorf(nil, "Invalid DNS remote end point.")
-		return fmt.Errorf("invalid dns server endpoint")
+		log.Errorf(nil, "Invalid DNS remote end point in add.")
+		return fmt.Errorf("invalid dns server endpoint in add")
 	}
 
 	hostName := host
@@ -123,13 +126,13 @@ func (d *RestDNSAgent) AddResourceRecord(host, rrType, class string, pointTo []s
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPost, d.BuildDNSEndpoint("rrecord")+"?zone=.",
+	httpReq, err := http.NewRequest(http.MethodPost, d.BuildDNSEndpoint("rrecord")+zone,
 		bytes.NewBuffer(rrJSON))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS add failed.")
 		return err
 	}
-	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
+	httpReq.Header.Set(contentType, contentTypeValue)
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
@@ -146,8 +149,8 @@ func (d *RestDNSAgent) AddResourceRecord(host, rrType, class string, pointTo []s
 // SetResourceRecord update a dns entry in dns server
 func (d *RestDNSAgent) SetResourceRecord(host, rrType, class string, pointTo []string, ttl uint32) error {
 	if d.ServerEndPoint == nil {
-		log.Errorf(nil, "Invalid DNS remote end point.")
-		return fmt.Errorf("invalid dns server endpoint")
+		log.Errorf(nil, "Invalid DNS remote end point in modify.")
+		return fmt.Errorf("invalid dns server endpoint in modify")
 	}
 
 	hostName := host
@@ -162,13 +165,13 @@ func (d *RestDNSAgent) SetResourceRecord(host, rrType, class string, pointTo []s
 		return err
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord", hostName, rrType)+"?zone=.",
+	httpReq, err := http.NewRequest(http.MethodPut, d.BuildDNSEndpoint("rrecord", hostName, rrType)+zone,
 		bytes.NewBuffer(rrJSON))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS update failed.")
 		return err
 	}
-	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
+	httpReq.Header.Set(contentType, contentTypeValue)
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
@@ -186,21 +189,21 @@ func (d *RestDNSAgent) SetResourceRecord(host, rrType, class string, pointTo []s
 // DeleteResourceRecord deletes an entry from dns server
 func (d *RestDNSAgent) DeleteResourceRecord(host, rrtype string) error {
 	if d.ServerEndPoint == nil {
-		log.Errorf(nil, "Invalid DNS remote end point.")
-		return fmt.Errorf("invalid dns server endpoint")
+		log.Errorf(nil, "Invalid DNS remote end point in delete.")
+		return fmt.Errorf("invalid dns server endpoint in delete")
 	}
 	hostName := host
 	if !strings.HasSuffix(host, ".") {
 		hostName = host + "."
 	}
 
-	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype)+"?zone=.",
+	httpReq, err := http.NewRequest(http.MethodDelete, d.BuildDNSEndpoint("rrecord", hostName, rrtype)+zone,
 		bytes.NewBuffer([]byte("{}")))
 	if err != nil {
 		log.Errorf(nil, "Http request creation for DNS delete failed.")
 		return err
 	}
-	httpReq.Header.Set("Content-Type", "application/json; charset=utf-8")
+	httpReq.Header.Set(contentType, contentTypeValue)
 
 	httpResp, err := d.client.Do(httpReq)
 	if err != nil {
