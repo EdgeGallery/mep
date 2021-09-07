@@ -23,6 +23,7 @@ import (
 	"mepserver/common/models"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/util"
 
@@ -150,7 +151,7 @@ func (t *DiscoverService) OnRequest(data string) workspace.TaskCode {
 	}
 	log.Debugf("Query request arrived to fetch all the service information with appId %s.", req.AppId)
 	t.InstanceId = t.AppInstanceId
-	// Flag is true when appInstanceId is null, so need authentication
+	// Flag is true when appInstanceId is null(service discovery the value is null), so need authentication
 	if t.QueryParam.Get(meputil.AppInstanceIdStr) == "" {
 		t.Flag = true
 	}
@@ -288,7 +289,9 @@ func Mp1CvtSrvAuthenDiscover(findInsResp *proto.FindInstancesResponse, appInsId 
 
 	var reqServices []string
 	isAllService := false
-	if requiredServices == "*" {
+	// when requiredServices is * or requiredServices contains service-discovery no need authentication(
+	// for developer deploy test)
+	if requiredServices == "*" || strings.Contains(requiredServices, "service-discovery") {
 		isAllService = true
 	} else {
 		err = json.Unmarshal([]byte(requiredServices), &reqServices)
