@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2 as builder
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2-alpine3.11 as builder
 
 # ENV GOPROXY https://goproxy.io
 # ENV GO111MODULE on
