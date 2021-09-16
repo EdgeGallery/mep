@@ -18,8 +18,8 @@ FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2-alpine3.11 as buil
 # ENV GO111MODULE on
 ENV HOME=/usr/mep
 
-RUN apt update &&\
-    apt install libc-dev gcc
+RUN apk update &&\
+    apk add --no-cache libc-dev gcc
 
 RUN mkdir -p $HOME
 
