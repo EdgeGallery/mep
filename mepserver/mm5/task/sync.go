@@ -17,18 +17,24 @@
 package task
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/apache/servicecomb-service-center/pkg/log"
+	"mepserver/common/appd"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dataplane"
 	"mepserver/common/extif/dns"
 	"mepserver/common/models"
 	"mepserver/common/util"
 	"net/http"
+	"os"
 	"runtime/debug"
+	"strings"
 	"sync"
-
-	"github.com/apache/servicecomb-service-center/pkg/log"
+	"time"
 )
 
 // Worker keeps the asynchronous task parameters
@@ -37,6 +43,7 @@ type Worker struct {
 	dnsTypeConfig    string
 	dataPlane        dataplane.DataPlane
 	dnsAgent         dns.DNSAgent
+	appd.AppDCommon
 }
 
 const dataInconsistentError = "Failed to revert the data, this will lead to data inconsistency."
@@ -71,6 +78,10 @@ func (w *Worker) ProcessAppDConfigSync(appName, appInstanceId, taskId string) {
 
 // ProcessDataPlaneSync Go Routine function to handle the sync of traffic and dns to the data-plane over mp2
 func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
+	isNoConfig := w.handleAppTermination(appInstanceId, taskId)
+	if isNoConfig {
+		return
+	}
 
 	syncJob := newTask(appName, appInstanceId, taskId, w.dataPlane, w.dnsAgent, w.dnsTypeConfig)
 	if syncJob == nil {
@@ -84,6 +95,7 @@ func (w *Worker) ProcessDataPlaneSync(appName, appInstanceId, taskId string) {
 		}
 		return
 	}
+
 	err := syncJob.handleDNSRules(util.ApplyFunc)
 	if err != nil {
 		log.Error("Failed to process the task in dns rules.", err)
@@ -755,4 +767,185 @@ func (t *task) cleanProcessingCache() error {
 		return fmt.Errorf("delete paths returned error(%d)", errCode)
 	}
 	return nil
+}
+
+// TlsConfig Constructs tls configuration
+func tlsConfig() (*tls.Config, error) {
+	rootCAs := x509.NewCertPool()
+	domainName := os.Getenv("MEPSERVER_CERT_DOMAIN_NAME")
+	if util.ValidateDomainName(domainName) != nil {
+		return nil, fmt.Errorf("domain name validation failed")
+	}
+	return &tls.Config{
+		RootCAs:            rootCAs,
+		ServerName:         domainName,
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	}, nil
+}
+
+func (w *Worker) sendTerminateNotification(callbackUrl string, subscribeId string, appInstanceId string) error {
+	subscribeUri := bytes.ReplaceAll([]byte(util.EndAppSubscribePath), []byte(":appInstanceId"), []byte(appInstanceId))
+	confirmUri := bytes.ReplaceAll([]byte(util.ConfirmTerminationPath), []byte(":appInstanceId"), []byte(appInstanceId))
+
+	//Create Body
+	body := models.TerminationNotification{}
+	body.NotificationType = util.AppTerminateNotification
+	body.OperationAction = util.TERMINATING
+	body.MaxGracefulTimeout = util.MaxGracefulTimeout
+	body.Links.Subscription = string(subscribeUri) + "/" + subscribeId
+	body.Links.ConfirmTermination = string(confirmUri)
+
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		log.Errorf(nil, "Marshal failed with error %s.", err.Error())
+		return fmt.Errorf("marshal failed with error(%d)", err)
+	}
+	// Create request
+	req, err := http.NewRequest("POST", callbackUrl, strings.NewReader(string(reqBody)))
+	if err != nil {
+		log.Errorf(nil, "Not able to send the request to application %s.", err.Error())
+		return fmt.Errorf("not able to send the request to application(%d)", err)
+	}
+	config, err := tlsConfig()
+	if err != nil {
+		log.Errorf(nil, "Unable to set the cipher %s.", err.Error())
+		return fmt.Errorf("send termication notifcation error(%d)", err)
+	}
+	tr := &http.Transport{
+		TLSClientConfig: config,
+	}
+	client := &http.Client{Transport: tr}
+	req.Header.Add(util.XRealIp, util.GetLocalIP())
+	// Fetch Request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Errorf(nil, "App terminate request failed.", err.Error())
+		return fmt.Errorf("app terminate request failed(%d)", err)
+	}
+	defer resp.Body.Close()
+
+	if !util.IsHttpStatusOK(resp.StatusCode) {
+		log.Error("App terminate response failure.", nil)
+		return fmt.Errorf("app terminate response failed(%d)", resp.StatusCode)
+	}
+
+	log.Info("Successfully send the termination notification to app.")
+	return nil
+}
+
+// handleTerminationNotification check app gracefully termination is subscribed or not
+func (w *Worker) handleTerminationNotification(appInstanceId string) error {
+	_, sub := w.AppTerminationIsSubscribed(appInstanceId)
+
+	err := w.sendTerminateNotification(sub.CallbackReference, sub.SubscriptionId, appInstanceId)
+	if err != nil {
+		log.Error("Send termination notification failed, continue free resource", err)
+		return nil
+	}
+	// Persist the data in the backend
+	err = w.writeConfirmTerminateToDb(appInstanceId)
+	if err != nil {
+		log.Error("Persist the current state failed, continue free resource", err)
+		return nil
+	}
+	// Wait for the response or timeout
+	err = w.handleResponseFromAppInstance(appInstanceId)
+	if err != nil {
+		log.Error("Handle termination notification response failed, continue free resource", err)
+	}
+	// Clean up the resource
+	errCode := backend.DeleteRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete confirm termination from etcd failed.")
+		return fmt.Errorf("delete confirm termination from etcd failed")
+	}
+	//Clear the terminate subscription
+	subscribeType := util.AppTerminationNotificationSubscription
+	errCode = backend.DeleteRecord(util.GetSubscribeKeyPath(subscribeType) + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete termination notification subscription from etcd failed.")
+		return fmt.Errorf("delete termination notification subscription from etcd failed")
+	}
+
+	//Clear the availability subscription subscription
+	subscribeType = util.SerAvailabilityNotificationSubscription
+	errCode = backend.DeleteRecord(util.GetSubscribeKeyPath(subscribeType) + appInstanceId + "/")
+	if errCode != 0 {
+		log.Errorf(nil, "Delete availability subscription  from etcd failed.")
+		return fmt.Errorf("availability subscription  from etcd failed")
+	}
+
+	log.Infof("Handle termination is completed for for %s.", appInstanceId) //Testing
+	return nil
+}
+
+func (w *Worker) writeConfirmTerminateToDb(appInstanceId string) error {
+	terminationConfirm := models.ConfirmTerminationRecord{}
+	terminationConfirm.OperationAction = util.TERMINATING
+	terminationConfirm.TerminationStatus = util.TerminationInProgress
+	termConfirmBytes, jsonErr := json.Marshal(terminationConfirm)
+	if jsonErr != nil {
+		log.Error("Json marshalling failed.", nil)
+		return nil
+	}
+
+	errCode := backend.PutRecord(util.AppConfirmTerminationPath+appInstanceId+"/", termConfirmBytes)
+	if errCode != 0 {
+		log.Error("Put record failed for confirm termination.", nil)
+		return nil
+	}
+	return nil
+}
+
+func (w *Worker) handleResponseFromAppInstance(appInstanceId string) error {
+	var count uint32 = 0
+	for count < util.AppTerminationTimeout {
+		log.Debugf("Confirm termination is waiting from app to respond.")
+		resp, errCode := backend.GetRecord(util.AppConfirmTerminationPath + appInstanceId + "/")
+		if errCode != 0 {
+			log.Errorf(nil, "Get confirm termination from etcd failed.")
+			return fmt.Errorf("get confirm termination from etcd failed")
+		}
+
+		confirm := &models.ConfirmTerminationRecord{}
+		jsonErr := json.Unmarshal(resp, confirm)
+		if jsonErr != nil {
+			log.Error("Confirm termination unmarshal failed.", nil)
+			return fmt.Errorf("confirm unmarshal parsed failed")
+		}
+
+		if confirm.TerminationStatus == util.TerminationFinish {
+			log.Infof("Confirm termination is success for app instance %s.", appInstanceId)
+			break
+		}
+		count++
+		time.Sleep(time.Duration(util.AppTerminationSleepDuration) * time.Millisecond) // Sleep for 100 millisecond
+	}
+
+	return nil
+}
+
+func (w *Worker) handleAppTermination(appInstanceId string, taskId string) bool {
+	isTerminate := false
+	taskStatus := newStatusDB(appInstanceId, taskId)
+	if taskStatus != nil && taskStatus.status.TerminationStatus == util.TerminationInProgress {
+		isTerminate = true
+		err := w.handleTerminationNotification(appInstanceId)
+		if err != nil {
+			log.Error("Failed to handle termination notification.", err)
+		}
+		taskStatus.status.TerminationStatus = util.TerminationFinish
+	}
+
+	if !w.IsAppInstanceAlreadyCreated(appInstanceId) && isTerminate {
+		syncJob := &task{}
+		log.Infof("Appd config not exists, termination is finished.")
+		if taskStatus != nil && taskStatus.status.TerminationStatus == util.TerminationFinish {
+			_ = syncJob.cleanProcessingCache()
+		}
+		return true
+	}
+
+	return false
 }

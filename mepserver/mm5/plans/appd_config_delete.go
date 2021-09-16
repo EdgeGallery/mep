@@ -73,7 +73,7 @@ func (t *DeleteAppDConfig) OnRequest(data string) workspace.TaskCode {
 
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig, false)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish

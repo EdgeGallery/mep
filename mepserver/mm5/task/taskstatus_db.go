@@ -123,27 +123,3 @@ func (s *statusDB) setFailureReason(reason string) {
 		s.status.Details = reason
 	}
 }
-
-// CheckForStatusDBError checks for any error in status db
-func CheckForStatusDBError(appInstanceId string, taskId string) error {
-	path := util.AppDLCMTaskStatusPath + appInstanceId + "/" + taskId
-
-	statusBytes, errCode := backend.GetRecord(path)
-	if errCode != 0 {
-		log.Errorf(nil, "Update task status on cache failed.")
-		return fmt.Errorf("error: update task statusDb on cache failed")
-	}
-
-	var statusDB *models.TaskStatus
-	err := json.Unmarshal(statusBytes, &statusDB)
-	if err != nil {
-		log.Errorf(nil, "Can not unmarshal task status info.")
-		return fmt.Errorf("error: failed to unmarshal task statusDb while writing to cache")
-	}
-
-	if statusDB.Progress == util.TaskProgressFailure {
-		return fmt.Errorf(statusDB.Details)
-	}
-
-	return nil
-}

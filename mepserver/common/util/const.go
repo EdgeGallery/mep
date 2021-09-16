@@ -58,20 +58,20 @@ const (
 	MecAppDConfigPath     = "/app_lcm/v1"
 	MecServiceGovernPath  = "/service_govern/v1"
 
-	AppServicesPath     = RootPath + MecServicePath + "/applications/:appInstanceId" + ServicePath
-	AppSubscribePath    = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
-	ServicesPath        = RootPath + MecServicePath + ServicePath
-	EndAppSubscribePath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
-	DNSRulesPath        = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
-	TrafficRulesPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
-	TimingPath          = RootPath + MecAppSupportPath + "/timing"
-	TransportPath       = RootPath + MecServicePath + "/transports"
-	ConfirmReadyPath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_ready"
-
-	CapabilityPath        = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
-	AppDConfigPath        = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
-	AppDQueryResPath      = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
-	AppInsTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
+	AppServicesPath        = RootPath + MecServicePath + "/applications/:appInstanceId" + ServicePath
+	AppSubscribePath       = RootPath + MecServicePath + "/applications/:appInstanceId/subscriptions"
+	ServicesPath           = RootPath + MecServicePath + ServicePath
+	EndAppSubscribePath    = RootPath + MecAppSupportPath + "/applications/:appInstanceId/subscriptions"
+	DNSRulesPath           = RootPath + MecAppSupportPath + "/applications/:appInstanceId/dns_rules"
+	TrafficRulesPath       = RootPath + MecAppSupportPath + "/applications/:appInstanceId/traffic_rules"
+	TimingPath             = RootPath + MecAppSupportPath + "/timing"
+	TransportPath          = RootPath + MecServicePath + "/transports"
+	ConfirmReadyPath       = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_ready"
+	ConfirmTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_termination"
+	CapabilityPath         = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
+	AppDConfigPath         = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
+	AppDQueryResPath       = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
+	AppInsTerminationPath  = RootPath + MecAppSupportPath + "/applications/:appInstanceId/AppInstanceTermination"
 
 	KongHttpLogPath        = RootPath + MecServiceGovernPath + "/kong_log"
 	SubscribeStatisticPath = RootPath + MecServiceGovernPath + "/subscribe_statistic"
@@ -102,13 +102,14 @@ const (
 
 const DBRootPath = "/cse-sr/etsi/"
 const (
-	EndAppSubKeyPath      = DBRootPath + "app-end-subscribe/"
-	AvailAppSubKeyPath    = DBRootPath + "subscribe/"
-	AppDConfigKeyPath     = DBRootPath + "appd/"
-	AppDLCMJobsPath       = DBRootPath + "mep/applcm/jobs/"
-	AppDLCMTasksPath      = DBRootPath + "mep/applcm/tasks/"
-	AppDLCMTaskStatusPath = DBRootPath + "mep/applcm/taskstatus/"
-	TransportInfoPath     = DBRootPath + "transports/"
+	EndAppSubKeyPath          = DBRootPath + "app-end-subscribe/"
+	AvailAppSubKeyPath        = DBRootPath + "subscribe/"
+	AppDConfigKeyPath         = DBRootPath + "appd/"
+	AppDLCMJobsPath           = DBRootPath + "mep/applcm/jobs/"
+	AppDLCMTasksPath          = DBRootPath + "mep/applcm/tasks/"
+	AppDLCMTaskStatusPath     = DBRootPath + "mep/applcm/taskstatus/"
+	TransportInfoPath         = DBRootPath + "transports/"
+	AppConfirmTerminationPath = DBRootPath + "app-confirm-termination/"
 )
 
 const (
@@ -124,6 +125,8 @@ const (
 	Alternatives = "alternative"
 )
 
+const EndPointPropPrefix = "endpoint/"
+
 const DefaultHeartbeatInterval = 60
 const BitSize = 32
 const FormatIntBase = 10
@@ -131,7 +134,6 @@ const SuccessRetCode = 0
 
 const SerAvailabilityNotificationSubscription string = "SerAvailabilityNotificationSubscription"
 const AppTerminationNotificationSubscription string = "AppTerminationNotificationSubscription"
-
 const RequestBodyLength = 4096
 const ServicesMaxCount = 50
 const AppSubscriptionCount = 50
@@ -283,3 +285,25 @@ const (
 	TransportGrantTypes    = "OAUTH2_CLIENT_CREDENTIALS"
 	TransportTokenEndpoint = "/mep/token"
 )
+
+// AppTerminateStatus AppD rule state machine
+type AppTerminateStatus int
+
+const (
+	NoTermination         AppTerminateStatus = iota // No Termination
+	TerminationInProgress                           // Termination started
+	TerminationFinish                               // Termination finished
+	TerminationFailed                               // Termination failed
+)
+
+type OperationAction string
+
+const (
+	TERMINATING = "TERMINATING"
+	STOPPING    = "STOPPING"
+)
+
+const AppTerminateNotification = "AppTerminationNotification"
+const MaxGracefulTimeout uint32 = 5
+const AppTerminationSleepDuration = 100
+const AppTerminationTimeout = MaxGracefulTimeout * 10

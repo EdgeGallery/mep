@@ -35,6 +35,8 @@ type Controller struct {
 	echo      *echo.Echo
 }
 
+const invalidInputErr = "invalid input!"
+
 func (e *Controller) StartController(store *datastore.DataStore, ipAddr net.IP, port uint) {
 	// Echo instance
 	e.echo = echo.New()
@@ -82,7 +84,7 @@ func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 	rr := datastore.ResourceRecord{}
 	if nil != c.Bind(&rr) {
 		log.Error("Error in parsing the rr post request body.", nil)
-		return c.String(http.StatusBadRequest, "invalid input!")
+		return c.String(http.StatusBadRequest, invalidInputErr)
 	}
 
 	if len(zone) == 0 {
@@ -92,7 +94,7 @@ func (e *Controller) handleAddResourceRecords(c echo.Context) error {
 	err := e.validateSetRecordInput(zone, &rr)
 	if err != nil {
 		log.Error("Error in validating the rr post request body.", err)
-		return c.String(http.StatusBadRequest, "invalid input!")
+		return c.String(http.StatusBadRequest, invalidInputErr)
 	}
 
 	// Check already exists, then no need to add again
@@ -131,7 +133,7 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 	rr := datastore.ResourceRecord{}
 	if nil != c.Bind(&rr) {
 		log.Error("Error in parsing the rr post request body.", nil)
-		return c.String(http.StatusBadRequest, "invalid input!")
+		return c.String(http.StatusBadRequest, invalidInputErr)
 	}
 
 	if len(fqdn) == 0 || len(rrtype) == 0 {
@@ -149,7 +151,7 @@ func (e *Controller) handleSetResourceRecords(c echo.Context) error {
 	err := e.validateSetRecordInput(zone, &rr)
 	if err != nil {
 		log.Error("Error in validating the rr post request body.", err)
-		return c.String(http.StatusBadRequest, "invalid input!")
+		return c.String(http.StatusBadRequest, invalidInputErr)
 	}
 
 	// Check already exists, if not exist then cant update

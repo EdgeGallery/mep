@@ -49,7 +49,7 @@ const (
 
 //var LocalIp string
 
-// Validate source address
+// ValidateSrcAddress Validate source address
 func ValidateSrcAddress(id string) error {
 	if id == "" {
 		return errors.New("require ip address")
@@ -63,7 +63,7 @@ func ValidateSrcAddress(id string) error {
 	return nil
 }
 
-// Get local ip
+// GetLocalIp Get local ip
 func GetLocalIp() string {
 	localIp := os.Getenv("LOCAL_IP")
 	return localIp

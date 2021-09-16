@@ -136,9 +136,8 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 				return workspace.TaskFinish
 			}
 
-			apiGwSerName := meputil.GetApiGwSerName(ins)
-			if apiGwSerName != "" {
-				cleanUpApiGwEntry(apiGwSerName)
+			for _, serName := range meputil.GetApiGwSerName(ins) {
+				meputil.ApiGWInterface.CleanUpApiGwEntry(serName)
 			}
 		}
 	}
@@ -150,15 +149,6 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 	log.Info("Successfully terminated application services.")
 	t.HttpRsp = ""
 	return workspace.TaskFinish
-}
-
-func cleanUpApiGwEntry(apiGwServiceName string) {
-	// delete service route from apiGw
-	meputil.ApiGWInterface.DeleteApiGwRoute(apiGwServiceName)
-	// delete service plugin from apiGw
-	meputil.ApiGWInterface.DeleteJwtPlugin(apiGwServiceName)
-	// delete service from apiGw
-	meputil.ApiGWInterface.DeleteApiGwService(apiGwServiceName)
 }
 
 func checkErr(response *proto.UnregisterInstanceResponse, err error) (int, string) {
@@ -270,10 +260,6 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 			3. update this request to DB (job, task and task status)
 			4. Check inside DB for an error
 	*/
-	if !t.IsAppInstanceAlreadyCreated(t.AppInstanceId) {
-		log.Errorf(nil, "App instance not found.")
-		return workspace.TaskFinish
-	}
 
 	// Check if any other ongoing operation for this AppInstance Id in the system.
 	if t.IsAnyOngoingOperationExist(t.AppInstanceId) {
@@ -286,21 +272,16 @@ func (t *DeleteAppDConfigWithSync) OnRequest(data string) workspace.TaskCode {
 	appDConfig.Operation = http.MethodDelete
 
 	taskId := meputil.GenerateUniqueId()
-	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig)
+
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, &appDConfig, true)
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)
 		return workspace.TaskFinish
 	}
-	t.Worker.ProcessDataPlaneSync(appDConfig.AppName, t.AppInstanceId, taskId)
 
-	err := task.CheckForStatusDBError(t.AppInstanceId, taskId)
-	if err != nil {
-		log.Errorf(nil, err.Error())
-		t.SetFirstErrorCode(meputil.OperateDataWithEtcdErr, err.Error())
-		return workspace.TaskFinish
-	}
+	t.Worker.StartNewTask(appDConfig.AppName, t.AppInstanceId, taskId)
 
 	log.Info("Successfully deleted DNS and traffic rule.")
-
+	t.HttpRsp = t.GenerateTaskResponse(taskId, t.AppInstanceId, "PROCESSING", "0", "Operation In progress")
 	return workspace.TaskFinish
 }

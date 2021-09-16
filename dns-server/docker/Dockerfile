@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.14.2-alpine3.11 as builder
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2-alpine3.11 as builder
 
 # ENV GOPROXY https://goproxy.io
 # ENV GO111MODULE on
@@ -29,7 +29,7 @@ RUN apk update && \
 
 RUN chmod 550 $HOME/dnsserver
 
-FROM alpine:latest
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/alpine:latest
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
 # Create the home directory for the new mep user.
 RUN mkdir -p /usr/mep

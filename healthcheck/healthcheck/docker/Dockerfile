@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.14.2-alpine3.11 as builder
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2-alpine3.11 as builder
 
 ENV HOME=/usr/mep
 
@@ -38,7 +38,7 @@ RUN chmod -R 750 $HOME/conf/ &&\
     chmod -R 500 $HOME/views &&\
     chmod -R 440 $HOME/views/error/404.tpl
 
-FROM alpine:latest
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/alpine:latest
 RUN sed -i "s|umask 022|umask 027|g" /etc/profile
 
 # Create the home directory for the new mep user.

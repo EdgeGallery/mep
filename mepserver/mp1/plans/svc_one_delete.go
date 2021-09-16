@@ -19,6 +19,7 @@ package plans
 
 import (
 	"context"
+	"strings"
 
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core"
@@ -45,6 +46,20 @@ func (t *DeleteService) OnRequest(data string) workspace.TaskCode {
 		t.SetFirstErrorCode(util.SerErrServiceDelFailed, "param is empty")
 		return workspace.TaskFinish
 	}
+	instance, err := util.GetServiceInstance(t.Ctx, t.ServiceId)
+	if err != nil {
+		log.Error("Find service on update failed.", nil)
+		t.SetFirstErrorCode(util.SerInstanceNotFound, "find service failed")
+		return workspace.TaskFinish
+	}
+	for k, v := range instance.Properties {
+		if !strings.HasPrefix(k, util.EndPointPropPrefix) {
+			continue
+		}
+		delete(instance.Properties, k)
+		util.ApiGWInterface.CleanUpApiGwEntry(v)
+	}
+
 	serviceID := t.ServiceId[:len(t.ServiceId)/2]
 	log.Debugf("Delete request arrived for service with serviceId %s.", serviceID)
 	instanceID := t.ServiceId[len(t.ServiceId)/2:]

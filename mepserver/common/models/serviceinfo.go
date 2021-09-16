@@ -80,12 +80,14 @@ func (s *ServiceInfo) GenerateServiceRequest(req *proto.CreateServiceRequest) {
 }
 
 // GenerateRegisterInstance transform ServiceInfo to RegisterInstanceRequest
-func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool, apiGwSerName string) {
+func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceRequest, isUpdateReq bool) {
 	if req != nil {
 		if req.Instance == nil {
 			req.Instance = &proto.MicroServiceInstance{}
 		}
-		req.Instance.Properties = make(map[string]string, PropertiesMapSize)
+		if req.Instance.Properties == nil {
+			req.Instance.Properties = make(map[string]string, PropertiesMapSize)
+		}
 		req.Instance.Properties["serName"] = s.SerName
 		s.serCategoryToProperties(req.Instance.Properties)
 		req.Instance.Version = s.Version
@@ -113,7 +115,7 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 		meputil.UpdatePropertiesMap(properties, "timestamp/nanoseconds", secNanoSec[len(secNanoSec)/2+1:])
 		req.Instance.HostName = "default"
 		var epType string
-		req.Instance.Endpoints, epType = s.registerEndpoints(isUpdateReq, apiGwSerName)
+		req.Instance.Endpoints, epType = s.registerEndpoints(isUpdateReq, req.Instance)
 		req.Instance.Properties["endPointType"] = epType
 
 		healthCheck := &proto.HealthCheck{
@@ -130,49 +132,100 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 	}
 }
 
-func (s *ServiceInfo) registerEndpoints(isUpdateReq bool, apiGwSerName string) ([]string, string) {
+func (s *ServiceInfo) registerEndpoints(modReq bool, instance *proto.MicroServiceInstance) ([]string, string) {
 	if len(s.TransportInfo.Endpoint.Uris) != 0 {
-		var serviceUris []string
-		_, apiGwServiceName := s.generateServiceIdAndName()
-		if isUpdateReq && apiGwSerName != "" {
-			apiGwServiceName = apiGwSerName
-		}
-
-		for _, uri := range s.TransportInfo.Endpoint.Uris {
-			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
-			s.registerToApiGw(uri, apiGwServiceName, isUpdateReq)
-		}
-		return serviceUris, meputil.Uris
-	}
-	endPoints := make([]string, 0, 1)
-	if len(s.TransportInfo.Endpoint.Addresses) != 0 {
-		var serviceUris []string
+		return s.handleEndPointUri(s.TransportInfo.Endpoint.Uris, modReq, instance)
+	} else if len(s.TransportInfo.Endpoint.Addresses) != 0 {
+		var nUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			_, apiGwServiceName := s.generateServiceIdAndName()
-			gwUri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
-			if isUpdateReq && apiGwSerName != "" {
-				apiGwServiceName = apiGwSerName
-			}
-			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, apiGwServiceName))
-			s.registerToApiGw(gwUri, apiGwServiceName, isUpdateReq)
+			uri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
+			nUris = append(nUris, uri)
 		}
-		return serviceUris, meputil.Uris
-	}
-
-	if s.TransportInfo.Endpoint.Alternative != nil {
+		return s.handleEndPointUri(nUris, modReq, instance)
+	} else if s.TransportInfo.Endpoint.Alternative != nil {
 		jsonBytes, err := json.Marshal(s.TransportInfo.Endpoint.Alternative)
 		if err != nil {
 			return nil, ""
 		}
 		jsonText := string(jsonBytes)
+		endPoints := make([]string, 0, 1)
 		endPoints = append(endPoints, jsonText)
 		return endPoints, meputil.Alternatives
+	}
+	// On modification request if there is no entry, clean up existing entries
+	if modReq {
+		for k, v := range instance.Properties {
+			if !strings.HasPrefix(k, meputil.EndPointPropPrefix) {
+				continue
+			}
+			delete(instance.Properties, k)
+			meputil.ApiGWInterface.CleanUpApiGwEntry(v)
+		}
 	}
 	return nil, ""
 }
 func (s *ServiceInfo) generateServiceIdAndName() (string, string) {
 	serviceId := util.GenerateUuid()[0:20]
 	return serviceId, s.SerName + serviceId
+}
+
+func (s *ServiceInfo) handleEndPointUri(nUris []string, modReq bool, instance *proto.MicroServiceInstance) (
+	[]string, string) {
+	var serviceUris []string
+
+	newEn, unmEn, delEn := s.compareEndPointsWithDB(nUris, modReq, instance)
+	for uri, serName := range newEn {
+		meputil.UpdatePropertiesMap(instance.Properties, meputil.EndPointPropPrefix+uri, serName)
+		serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serName))
+		s.RegisterToApiGw(uri, serName, modReq)
+	}
+	if modReq {
+		for _, serName := range unmEn {
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serName))
+		}
+		for uri, serName := range delEn {
+			delete(instance.Properties, meputil.EndPointPropPrefix+uri)
+			meputil.ApiGWInterface.CleanUpApiGwEntry(serName)
+		}
+	}
+	return serviceUris, meputil.Uris
+}
+
+func (s *ServiceInfo) compareEndPointsWithDB(nUris []string, modReq bool, instance *proto.MicroServiceInstance) (
+	map[string]string, map[string]string, map[string]string) {
+	newEn := make(map[string]string) // new entries
+	if !modReq {
+		for _, uri := range nUris {
+			_, gwSerName := s.generateServiceIdAndName()
+			newEn[uri] = gwSerName // not found, adding new
+		}
+		return newEn, nil, nil
+	}
+	unmEn := make(map[string]string) // un-modified
+	delEn := make(map[string]string) // to delete
+	for _, uri := range nUris {
+		if serName, found := instance.Properties[meputil.EndPointPropPrefix+uri]; !found {
+			_, gwSerName := s.generateServiceIdAndName()
+			newEn[uri] = gwSerName // not found, adding new
+		} else {
+			unmEn[uri] = serName // found, so keeping as unmodified
+		}
+	}
+	// look for deleted entries
+	for k, v := range instance.Properties {
+		if !strings.HasPrefix(k, meputil.EndPointPropPrefix) {
+			continue
+		}
+		uri := k[len(meputil.EndPointPropPrefix):]
+		if _, found := newEn[uri]; found {
+			continue
+		}
+		if _, found := unmEn[uri]; found {
+			continue
+		}
+		delEn[uri] = v
+	}
+	return newEn, unmEn, delEn
 }
 
 func (s *ServiceInfo) transportInfoToProperties(properties map[string]string) {
@@ -239,7 +292,7 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	s.transportInfoFromProperties(inst.Properties)
 }
 
-func (s *ServiceInfo) registerToApiGw(uri string, serviceName string, isUpdateReq bool) {
+func (s *ServiceInfo) RegisterToApiGw(uri string, serviceName string, isUpdateReq bool) {
 	log.Infof("API gateway registration for new service(name: %s, uri: %s).", serviceName, uri)
 	serInfo := meputil.SerInfo{
 		SerName: serviceName,

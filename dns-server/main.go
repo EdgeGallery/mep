@@ -45,6 +45,9 @@ type InputParameters struct {
 	loadBalance     *bool   // need load balancing?
 }
 
+const invalidMulticastErr = "error: multicast or broadcast ip address "
+const multicastBroadcastIpErr = "Multicast or broadcast ip address(%s). %s"
+
 // Input flag parameters registration.
 func registerInputParameters(inParam *InputParameters) {
 	if inParam == nil {
@@ -109,8 +112,8 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	}
 
 	if ipAdd != nil && (ipAdd.IsMulticast() || ipAdd.Equal(net.IPv4bcast)) {
-		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.ipAddString, err.Error())
+		err := fmt.Errorf(invalidMulticastErr)
+		log.Fatalf(multicastBroadcastIpErr, *inParam.ipAddString, err.Error())
 	}
 
 	// Validate Management IP address
@@ -121,8 +124,8 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	}
 
 	if ipMgmtAdd != nil && (ipMgmtAdd.IsMulticast() || ipMgmtAdd.Equal(net.IPv4bcast)) {
-		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.ipMgmtAddString, err.Error())
+		err := fmt.Errorf(invalidMulticastErr)
+		log.Fatalf(multicastBroadcastIpErr, *inParam.ipMgmtAddString, err.Error())
 	}
 
 	// Validate forwarder
@@ -133,8 +136,8 @@ func validateInputAndGenerateConfig(inParam *InputParameters) *Config {
 	}
 
 	if forwarderAdd != nil && (forwarderAdd.IsMulticast() || forwarderAdd.Equal(net.IPv4bcast)) {
-		err := fmt.Errorf("error: multicast or broadcast ip address ")
-		log.Fatalf("Multicast or broadcast ip address(%s). %s", *inParam.forwarder, err.Error())
+		err := fmt.Errorf(invalidMulticastErr)
+		log.Fatalf(multicastBroadcastIpErr, *inParam.forwarder, err.Error())
 	}
 
 	return &Config{dbName: *inParam.dbName,

@@ -154,3 +154,16 @@ func (a *ApiGwIf) ApiGwDelRoute(serName string) {
 	}
 	log.Infof("Deleted service route from API Gateway(result=%s).", str)
 }
+
+// CleanUpApiGwEntry deleted the api gateway entries for a service name
+func (a *ApiGwIf) CleanUpApiGwEntry(serName string) {
+	if serName == "" {
+		return
+	}
+	// delete service route from apiGw
+	a.DeleteApiGwRoute(serName)
+	// delete service plugin from apiGw
+	a.DeleteJwtPlugin(serName)
+	// delete service from apiGw
+	a.DeleteApiGwService(serName)
+}

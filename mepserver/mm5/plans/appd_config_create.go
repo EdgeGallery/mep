@@ -69,11 +69,6 @@ func (t *DecodeAppDRestReq) WithBody(body interface{}) *DecodeAppDRestReq {
 func (t *DecodeAppDRestReq) getParam(r *http.Request) error {
 	queryReq, _ := meputil.GetHTTPTags(r)
 	t.AppInstanceId = queryReq.Get(meputil.AppInstanceIdStr)
-	if err := meputil.ValidateAppInstanceIdWithHeader(t.AppInstanceId, r); err != nil {
-		log.Error("Validate X-AppInstanceId failed.", err)
-		t.SetFirstErrorCode(meputil.AuthorizationValidateErr, err.Error())
-		return nil
-	}
 	t.Ctx = util.SetTargetDomainProject(r.Context(), r.Header.Get("X-Domain-Name"), queryReq.Get(":project"))
 	return nil
 }
@@ -221,7 +216,7 @@ func (t *CreateAppDConfig) OnRequest(data string) workspace.TaskCode {
 	// Add to Task InstanceID mapping DB
 	taskId := meputil.GenerateUniqueId()
 
-	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput)
+	errCode, msg := t.StageNewTask(t.AppInstanceId, taskId, appDConfigInput, false)
 
 	if errCode != 0 {
 		t.SetFirstErrorCode(errCode, msg)

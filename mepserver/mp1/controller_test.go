@@ -141,6 +141,7 @@ const getCurrentTIme = "currentTime"
 const getCaps = "timing_caps"
 const getTransport = "transports"
 const confirm_ready = "/mec_app_support/v1/applications/%s/confirm_ready"
+const confirm_termination = "/mec_app_support/v1/applications/%s/confirm_termination"
 
 //=====================================COMMON====================================================================
 const restApi = "REST API"
@@ -3779,6 +3780,54 @@ func TestConfirmReadyInvalidAppInstaces(t *testing.T) {
 	service.URLPatterns()[27].Func(mockWriter, getRequest)
 
 	assert.Equal(t, "401", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+
+	mockWriter.AssertExpectations(t)
+}
+
+// Check confirm ready app instances
+func TestConfirmTermination(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmTermination := models.ConfirmTermination{OperationAction: "TERMINATING"}
+	body, _ := json.Marshal(confirmTermination)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_termination, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("\"\""+"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 204)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		rec := models.ConfirmTerminationRecord{}
+		rec.TerminationStatus = util.TerminationInProgress
+		rec.OperationAction = util.TERMINATING
+		bytes, _ := json.Marshal(rec)
+		return bytes, 0
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[28].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "204", responseHeader.Get(responseStatusHeader),
 		responseCheckFor204)
 
 	mockWriter.AssertExpectations(t)
