@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2-alpine3.11 as builder
+FROM swr.cn-north-4.myhuaweicloud.com/eg-common/golang:1.14.2 as builder
 
 # ENV GOPROXY https://goproxy.io
 # ENV GO111MODULE on
 ENV HOME=/usr/mep
 
-RUN apk update &&\
-    apk add --no-cache libc-dev gcc
+RUN apt update &&\
+    apt install libc-dev gcc
 
 RUN mkdir -p $HOME
 
