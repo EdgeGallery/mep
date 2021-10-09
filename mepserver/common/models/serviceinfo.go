@@ -69,7 +69,7 @@ func (s *ServiceInfo) GenerateServiceRequest(req *proto.CreateServiceRequest) {
 		}
 		req.Service.AppId = ""
 		req.Service.ServiceName = s.SerName
-		req.Service.Version = s.Version
+		req.Service.Version = meputil.ServiceVersion
 		req.Service.Status = "UP"
 		if s.State == meputil.InactiveState {
 			req.Service.Status = "DOWN"
@@ -90,7 +90,8 @@ func (s *ServiceInfo) GenerateRegisterInstance(req *proto.RegisterInstanceReques
 		}
 		req.Instance.Properties["serName"] = s.SerName
 		s.serCategoryToProperties(req.Instance.Properties)
-		req.Instance.Version = s.Version
+		req.Instance.Version = meputil.ServiceVersion
+		req.Instance.Properties["version"] = s.Version
 		req.Instance.Timestamp = strconv.FormatInt(time.Now().Unix(), FormatIntBase)
 		req.Instance.ModTimestamp = req.Instance.Timestamp
 
@@ -262,7 +263,7 @@ func (s *ServiceInfo) FromServiceInstance(inst *proto.MicroServiceInstance) {
 	}
 	s.SerInstanceId = inst.ServiceId + inst.InstanceId
 	s.serCategoryFromProperties(inst.Properties)
-	s.Version = inst.Version
+	s.Version = inst.Properties["version"]
 	s.State = inst.Properties["mecState"]
 
 	s.Links = Link{
