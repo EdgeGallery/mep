@@ -3844,7 +3844,7 @@ func TestConfirmReadBodyFailed(t *testing.T) {
 		return resultList, 0
 	})
 
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		return []byte("8eb442b7cdfc11eba09314feb5b475da"), fmt.Errorf("error")
 	})
 
@@ -4016,7 +4016,7 @@ func TestConfirmReadBodyLenExceed(t *testing.T) {
 		return nil, 0
 	})
 
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		out := make([]byte, 5000)
 		return out, nil
 	})
@@ -4210,7 +4210,7 @@ func TestConfirmTerminationParseErr(t *testing.T) {
 		bytes, _ := json.Marshal(rec)
 		return bytes, 0
 	})
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		return []byte(""), fmt.Errorf("read err")
 	})
 
@@ -4261,7 +4261,7 @@ func TestConfirmTerminationParseInvalidLen(t *testing.T) {
 		bytes, _ := json.Marshal(rec)
 		return bytes, 0
 	})
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		out := make([]byte, 5000)
 		return out, nil
 	})

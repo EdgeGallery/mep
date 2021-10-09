@@ -25,6 +25,7 @@ import (
 	es "github.com/olivere/elastic/v7"
 	uuid "github.com/satori/go.uuid"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
@@ -1313,7 +1314,7 @@ dataplane:
 		return dnsTestServer.URL
 	})
 
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		patches.Reset()
 		return nil, fmt.Errorf("error")
 	})
@@ -1486,7 +1487,7 @@ dataplane:
 		return dnsTestServer.URL
 	})
 
-	patches.ApplyFunc(io.ReadAll, func(r io.Reader) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
 		patches.Reset()
 		out := make([]byte, 5000*8)
 		return out, nil
@@ -4333,7 +4334,7 @@ func TestInitRootKeyAndWorkKey(t *testing.T) {
 	util.KeyComponentFromUserStr = &key
 	var Encdata []byte
 	var Noncedata []byte
-	patches := gomonkey.ApplyFunc(os.WriteFile, func(filename string, data []byte, perm os.FileMode) error {
+	patches := gomonkey.ApplyFunc(ioutil.WriteFile, func(filename string, data []byte, perm os.FileMode) error {
 		if filename == util.EncryptedWorkKeyFilePath {
 			Encdata = data
 		}
@@ -4343,7 +4344,7 @@ func TestInitRootKeyAndWorkKey(t *testing.T) {
 		return nil
 	})
 	count := 1
-	patches.ApplyFunc(os.ReadFile, func(name string) ([]byte, error) {
+	patches.ApplyFunc(ioutil.ReadFile, func(name string) ([]byte, error) {
 		if name == util.EncryptedWorkKeyFilePath {
 			return Encdata, nil
 		} else if name == util.WorkKeyNonceFilePath {
