@@ -25,7 +25,6 @@ import (
 	es "github.com/olivere/elastic/v7"
 	uuid "github.com/satori/go.uuid"
 	"io"
-	"io/fs"
 	"math/rand"
 	"mepserver/common/appd"
 	"mepserver/common/arch/workspace"
@@ -4334,7 +4333,7 @@ func TestInitRootKeyAndWorkKey(t *testing.T) {
 	util.KeyComponentFromUserStr = &key
 	var Encdata []byte
 	var Noncedata []byte
-	patches := gomonkey.ApplyFunc(os.WriteFile, func(filename string, data []byte, perm fs.FileMode) error {
+	patches := gomonkey.ApplyFunc(os.WriteFile, func(filename string, data []byte, perm os.FileMode) error {
 		if filename == util.EncryptedWorkKeyFilePath {
 			Encdata = data
 		}
