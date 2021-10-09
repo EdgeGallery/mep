@@ -14,8 +14,8 @@ require (
 	github.com/apache/servicecomb-service-center v0.0.0-20191027084911-c2dc0caef706
 	github.com/astaxie/beego v1.12.0
 	github.com/beevik/ntp v0.3.0
+	github.com/coreos/etcd v3.3.6+incompatible
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
-	github.com/coreos/etcd v3.3.6+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chassis/paas-lager v1.1.1 // indirect
 	github.com/go-mesh/openlogging v1.0.1 // indirect
@@ -25,8 +25,8 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
 	github.com/sirupsen/logrus v1.6.0
+	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.6.1
-	go.etcd.io/etcd v3.3.25+incompatible
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 )
