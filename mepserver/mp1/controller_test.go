@@ -3807,55 +3807,6 @@ func TestConfirmIndiactionWrong(t *testing.T) {
 }
 
 // Check confirm ready app instances
-func TestConfirmReadBodyFailed(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	confirmReady := models.ConfirmReady{"READY"}
-	body, _ := json.Marshal(confirmReady)
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
-		bytes.NewReader([]byte(body)))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"read request body error\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
-		return "8eb442b7cdfc11eba09314feb5b475da"
-	})
-	defer patches.Reset()
-
-	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
-		resultList := make(map[string][]byte)
-		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
-		return resultList, 0
-	})
-
-	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
-		return []byte("8eb442b7cdfc11eba09314feb5b475da"), fmt.Errorf("error")
-	})
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[27].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
 
 // Check confirm ready app instances
 func TestConfirmReadUnMarshalErr(t *testing.T) {
@@ -3979,56 +3930,6 @@ func TestConfirmReadyRestBodyNil(t *testing.T) {
 }
 
 // Check confirm ready app instances
-func TestConfirmReadBodyLenExceed(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	confirmReady := models.ConfirmReady{"READY"}
-	body, _ := json.Marshal(confirmReady)
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
-		bytes.NewReader([]byte(body)))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
-		return "8eb442b7cdfc11eba09314feb5b475da"
-	})
-	defer patches.Reset()
-
-	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
-		resultList := make(map[string][]byte)
-		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
-		return nil, 0
-	})
-
-	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
-		out := make([]byte, 5000)
-		return out, nil
-	})
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[27].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor400)
-
-	mockWriter.AssertExpectations(t)
-}
 
 // Check confirm ready app instances
 func TestConfirmReadyInvalidAppInstaces(t *testing.T) {
@@ -4173,107 +4074,8 @@ func TestConfirmTerminationParamErr(t *testing.T) {
 }
 
 // Check confirm ready app instances
-func TestConfirmTerminationParseErr(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	confirmTermination := models.ConfirmTermination{OperationAction: "TERMINATING"}
-	body, _ := json.Marshal(confirmTermination)
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(confirm_termination, defaultAppInstanceId),
-		bytes.NewReader(body))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"read request body error\"}"+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
-		return "8eb442b7cdfc11eba09314feb5b475da"
-	})
-	defer patches.Reset()
-	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		rec := models.ConfirmTerminationRecord{}
-		rec.TerminationStatus = util.TerminationInProgress
-		rec.OperationAction = util.TERMINATING
-		bytes, _ := json.Marshal(rec)
-		return bytes, 0
-	})
-	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
-		return []byte(""), fmt.Errorf("read err")
-	})
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[28].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor204)
-
-	mockWriter.AssertExpectations(t)
-}
 
 // Check confirm ready app instances
-func TestConfirmTerminationParseInvalidLen(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf(panicFormatString, r)
-		}
-	}()
-
-	service := Mp1Service{}
-
-	confirmTermination := models.ConfirmTermination{OperationAction: "TERMINATING"}
-	body, _ := json.Marshal(confirmTermination)
-	// Create http get request
-	getRequest, _ := http.NewRequest("POST",
-		fmt.Sprintf(confirm_termination, defaultAppInstanceId),
-		bytes.NewReader(body))
-	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-
-	// Mock the response writer
-	mockWriter := &mockHttpWriter{}
-	responseHeader := http.Header{} // Create http response header
-	mockWriter.On("Header").Return(responseHeader)
-	mockWriter.On("Write", []byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}"+"\n")).
-		Return(0, nil)
-	mockWriter.On("WriteHeader", 400)
-
-	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
-		return "8eb442b7cdfc11eba09314feb5b475da"
-	})
-	defer patches.Reset()
-	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
-		rec := models.ConfirmTerminationRecord{}
-		rec.TerminationStatus = util.TerminationInProgress
-		rec.OperationAction = util.TERMINATING
-		bytes, _ := json.Marshal(rec)
-		return bytes, 0
-	})
-	patches.ApplyFunc(ioutil.ReadAll, func(r io.Reader) ([]byte, error) {
-		out := make([]byte, 5000)
-		return out, nil
-	})
-
-	// 13 is the order of the DNS get all handler in the URLPattern
-	service.URLPatterns()[28].Func(mockWriter, getRequest)
-
-	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
-		responseCheckFor204)
-
-	mockWriter.AssertExpectations(t)
-}
 
 // Check confirm ready app instances
 func TestConfirmTerminationValidateFailed(t *testing.T) {
