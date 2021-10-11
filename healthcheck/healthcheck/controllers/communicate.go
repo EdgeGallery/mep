@@ -89,7 +89,6 @@ func (c *ComController) Post() {
 	data.EdgeList = data.EdgeList.NewNodeList(MecList)
 	localIp := util.GetLocalIp()
 
-	//TODO: can use go routine to check every edge at same time
 	for _, ip := range MecList {
 		if ip == localIp {
 			err = data.EdgeList.SetResult(ip)
@@ -120,7 +119,6 @@ func (c *ComController) Post() {
 				c.HandleLoggingForError(ip, util.StatusInternalServerError, util.ErrSetResult)
 			}
 		} else {
-			//TODO:check here if it should return error code when the checked edge is unhealthy
 			c.HandleLoggingForError(ip, util.StatusInternalServerError, "this edge is unhealthy")
 
 			err = data.EdgeList.SetBadResult(ip)

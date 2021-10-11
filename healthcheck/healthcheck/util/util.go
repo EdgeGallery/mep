@@ -43,7 +43,6 @@ const (
 	ErrCallForEdge    string = "mep and lcm in this edge is failed, check if lcm and mep are ready"
 	ErrSetResult      string = "fail to set communicate result from other edge"
 	FailedToUnmarshal string = "failed to unmarshal request"
-	LcmHealthQuery    string = "https://119.8.47.5:31252/lcmcontroller/v1/health"
 	MepHealthQuery    string = "https://mep-mm5.mep/healthcheck"
 )
 

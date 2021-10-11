@@ -36,14 +36,6 @@ func (c *NodeList) NewNodeList(ipList []string) NodeList {
 	return EdgeList
 }
 
-/*func (c *NodeList) SetNodeListFromMecM(m *controllers.MecMController) {
-
-	for _, ip := range m.GetNodeIpList() {
-		//TODO: check whether can insert key-value to map in this way?
-		c.NodeList[ip] = false // default value for every checking edge is false
-	}
-}*/
-
 func (c *NodeList) SetResult(ip string) error {
 	_, ok := c.NodeList[ip]
 	if ok { //c.NodeList contains this ip, which means this ip is in edge zone
