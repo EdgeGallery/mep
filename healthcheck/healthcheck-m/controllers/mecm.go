@@ -19,7 +19,6 @@ package controllers
 import log "github.com/sirupsen/logrus"
 
 // Mec host information
-//TODO: check here if it needs full information
 type MecHostInfo struct {
 	MechostIp          string              `json:"mechostIp"`
 	MechostName        string              `json:"mechostName"`
@@ -55,49 +54,3 @@ func (c *MecMController) Get() {
 	log.Info("Health Check center side connection is ok.")
 	c.Ctx.WriteString("Health Check center side connection is ok.")
 }
-
-//var HostList []string
-/*
-func (c *MecMController) GetNodeIpList() ([]string, error) {
-	log.Info("Query services request received.")
-	clientIp := c.Ctx.Input.IP()
-	err := util.ValidateSrcAddress(clientIp)
-	if err != nil {
-		c.HandleLoggingForError(clientIp, util.BadRequest, util.ClientIpaddressInvalid)
-		return nil, err
-	}
-	c.displayReceivedMsg(clientIp)
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: tr}
-	response, err := client.Get(util.MecMServiceQuery)
-	if err != nil {
-		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
-		return nil, err
-	}
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-
-	var mecMInfo []MecHostInfo
-	err = json.Unmarshal(body, &mecMInfo)
-
-	if err != nil {
-		c.writeErrorResponse(util.FailedToUnmarshal, util.BadRequest)
-		return nil, err
-	}
-
-	for _, info := range mecMInfo {
-		HostList = append(HostList, info.MechostIp)
-	}
-
-	iplistJson, _ := json.Marshal(HostList)
-	_, _ = c.Ctx.ResponseWriter.Write(iplistJson)
-
-	c.handleLoggingForSuccess(clientIp, "Query Service from mecm is successful")
-	return nil, nil
-}
-
-*/

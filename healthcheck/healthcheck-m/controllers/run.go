@@ -123,8 +123,6 @@ func (c *RunController) Get() {
 			continue
 		}
 
-		//TODO: determine if it needs to check checkerIp map already have or not
-
 		//Get VoteMap
 		_, ok := VoteMap[checkerIp]
 		if !ok {
