@@ -24,6 +24,7 @@ import (
 	"github.com/ghodss/yaml"
 	es "github.com/olivere/elastic/v7"
 	uuid "github.com/satori/go.uuid"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"mepserver/common/appd"
@@ -1150,6 +1151,356 @@ dataplane:
 }
 
 // Create ConfigRules - Success case for none dataplane
+func TestCreateAppDConfigRuleReadAllError(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	//taskId
+
+	patches := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
+
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, "Parsing configuration file error")
+		}
+		return &mepConfig, nil
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(util.ReadMepAuthEndpoint, func() (string, error) {
+		return "", nil
+	})
+
+	service := Mm5Service{}
+	err := service.Init()
+	if err != nil {
+		assert.Fail(t, err.Error())
+		return
+	}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "FLOW",
+      "priority": 1,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IPv4",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	taskId := uuid.NewV4()
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"read request body error\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	db := safeDB{}
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		log.Infof("Get path: %v.", path)
+		db.String()
+		if db.Get(path) != nil {
+			log.Infof("Found the path in db: %s.", string(db.Get(path)))
+			return db.Get(path), 0
+		}
+
+		return nil, util.SubscriptionNotFound
+	})
+
+	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		log.Infof("Put path: %v.", path)
+		log.Infof("Put value: %v.", string(value))
+		db.String()
+		db.Put(path, value)
+		// Return Success.
+		return 0
+	})
+
+	patches.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
+		log.Infof("Delete path: %v", paths)
+		db.String()
+		for _, path := range paths {
+			db.Delete(path)
+		}
+		return 0
+	})
+
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
+		return taskId.String()
+	})
+
+	patches.ApplyFunc((*http.Client).Do, func(client *http.Client, req *http.Request) (*http.Response,
+		error) {
+		response := http.Response{Status: "200 OK", StatusCode: 200}
+		return &response, nil
+	})
+
+	dnsTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err2 := w.Write([]byte(""))
+		if err2 != nil {
+			t.Error("Error: Write Response Error")
+		}
+	}))
+
+	defer dnsTestServer.Close()
+
+	patches.ApplyFunc((*dns.RestDNSAgent).BuildDNSEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
+		log.Infof("DNS Agent End Point: %v", dnsTestServer.URL)
+		return dnsTestServer.URL
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		return 0, fmt.Errorf("error")
+	})
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor200)
+	mockWriter.AssertExpectations(t)
+}
+
+func TestCreateAppDConfigRuleReadAllExceedLen(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	//taskId
+
+	patches := gomonkey.ApplyFunc(config.LoadMepServerConfig, func() (*config.MepServerConfig, error) {
+		configData := `
+# dns agent configuration
+dnsAgent:
+  # values: local, dataplane, all
+  type: all
+  # local dns server end point
+  endPoint:
+    address:
+      host: localhost
+      port: 80
+
+
+# data plane option to use in Mp2 interface
+dataplane:
+  # values: none
+  type: none
+`
+		var mepConfig config.MepServerConfig
+		err := yaml.Unmarshal([]byte(configData), &mepConfig)
+		if err != nil {
+			assert.Fail(t, "Parsing configuration file error")
+		}
+		return &mepConfig, nil
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(util.ReadMepAuthEndpoint, func() (string, error) {
+		return "", nil
+	})
+
+	service := Mm5Service{}
+	err := service.Init()
+	if err != nil {
+		assert.Fail(t, err.Error())
+		return
+	}
+
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(appConfigUrlFormat, defaultAppInstanceId),
+		bytes.NewReader([]byte(`
+{
+  "appTrafficRule": [
+    {
+      "trafficRuleId": "TrafficRule1",
+      "filterType": "FLOW",
+      "priority": 1,
+      "trafficFilter": [
+        {
+          "srcAddress": [
+            "192.168.1.1"
+          ],
+          "dstAddress": [
+            "192.168.1.1"
+          ],
+          "srcPort": [
+            "8080"
+          ],
+          "dstPort": [
+            "8080"
+          ],
+          "protocol": [
+            "TCP"
+          ],
+          "qCI": 1,
+          "dSCP": 0,
+          "tC": 1
+        }
+      ],
+      "action": "DROP",
+      "state": "ACTIVE"
+    }
+  ],
+  "appDNSRule": [
+    {
+      "dnsRuleId": "dnsRule1",
+      "domainName": "www.example.com",
+      "ipAddressType": "IPv4",
+      "ipAddress": "192.0.2.0",
+      "ttl": 30,
+      "state": "ACTIVE"
+    }
+  ],
+  "appSupportMp1": true,
+  "appName": "abc"
+}`)))
+
+	taskId := uuid.NewV4()
+
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	db := safeDB{}
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		log.Infof("Get path: %v.", path)
+		db.String()
+		if db.Get(path) != nil {
+			log.Infof("Found the path in db: %s.", string(db.Get(path)))
+			return db.Get(path), 0
+		}
+
+		return nil, util.SubscriptionNotFound
+	})
+
+	patches.ApplyFunc(backend.PutRecord, func(path string, value []byte) int {
+		log.Infof("Put path: %v.", path)
+		log.Infof("Put value: %v.", string(value))
+		db.String()
+		db.Put(path, value)
+		// Return Success.
+		return 0
+	})
+
+	patches.ApplyFunc(backend.DeletePaths, func(paths []string, continueOnFailure bool) int {
+		log.Infof("Delete path: %v", paths)
+		db.String()
+		for _, path := range paths {
+			db.Delete(path)
+		}
+		return 0
+	})
+
+	patches.ApplyFunc(util.GenerateUniqueId, func() string {
+		return taskId.String()
+	})
+
+	patches.ApplyFunc((*http.Client).Do, func(client *http.Client, req *http.Request) (*http.Response,
+		error) {
+		response := http.Response{Status: "200 OK", StatusCode: 200}
+		return &response, nil
+	})
+
+	dnsTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err2 := w.Write([]byte(""))
+		if err2 != nil {
+			t.Error("Error: Write Response Error")
+		}
+	}))
+
+	defer dnsTestServer.Close()
+
+	patches.ApplyFunc((*dns.RestDNSAgent).BuildDNSEndpoint, func(d *dns.RestDNSAgent, paths ...string) string {
+		log.Infof("DNS Agent End Point: %v", dnsTestServer.URL)
+		return dnsTestServer.URL
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		b.WriteByte('A')
+		out := make([]byte, 5000*8)
+		b.WriteString(string(out))
+		return 5000 * 8, nil
+	})
+
+	// 1
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader), responseCheckFor200)
+	mockWriter.AssertExpectations(t)
+}
 
 // Query capability
 func TestGetCapabilitiesEmpty(t *testing.T) {
@@ -1960,12 +2311,297 @@ func TestGetCapabilitiesWithMultiConsumersAndCategoryFilter(t *testing.T) {
 }
 
 // Query capability
+func TestGetCapabilitySuccessCase(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET", getCapabilitiesUrl, bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(capabilityQueryFormat, defCapabilityId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte("{\"capabilityId\":\"16384563dca094183778a41ea7701d15\",\"capabilityName\":\"FaceRegService6\",\"status\":\"ACTIVE\",\"version\":\"3.2.1\",\"consumers\":[]}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *proto.GetOneInstanceRequest) (*proto.GetOneInstanceResponse, error) {
+		response := proto.GetOneInstanceResponse{}
+
+		response.Instance = &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Properties: map[string]string{
+				"serName":  "FaceRegService6",
+				"mecState": "ACTIVE",
+				"version":  "3.2.1",
+			},
+		}
+		return &response, nil
+	})
+	defer patch1.Reset()
+
+	// 2 is the order of the DNS get one handler in the URLPattern
+	service.URLPatterns()[6].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Query capability
+func TestGetCapabilitySuccessCaseWithConsumers(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET", getCapabilitiesUrl, bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(capabilityQueryFormat, defCapabilityId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(respMsg1)).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *proto.GetOneInstanceRequest) (*proto.GetOneInstanceResponse, error) {
+		response := proto.GetOneInstanceResponse{}
+
+		response.Instance = &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Properties: map[string]string{
+				"serName":  "FaceRegService6",
+				"mecState": "ACTIVE",
+				"version":  "3.2.1",
+			},
+		}
+		return &response, nil
+	})
+	defer patch1.Reset()
+
+	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
+		}
+		entry.FilteringCriteria.SerInstanceIds = append(entry.FilteringCriteria.SerInstanceIds, defCapabilityId)
+		outBytes, _ := json.Marshal(&entry)
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
+
+		return records, 0
+	})
+	defer patch2.Reset()
+
+	// 2 is the order of the DNS get one handler in the URLPattern
+	service.URLPatterns()[6].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Query capability
+func TestGetCapabilitySuccessCaseWithConsumersAndSerNameFilter(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET", getCapabilitiesUrl, bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(capabilityQueryFormat, defCapabilityId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(respMsg1)).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *proto.GetOneInstanceRequest) (*proto.GetOneInstanceResponse, error) {
+		response := proto.GetOneInstanceResponse{}
+
+		response.Instance = &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Version:    "3.2.1",
+			Properties: map[string]string{
+				"serName":  "FaceRegService6",
+				"mecState": "ACTIVE",
+				"version":  "3.2.1",
+			},
+		}
+		return &response, nil
+	})
+	defer patch1.Reset()
+
+	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
+		}
+		entry.FilteringCriteria.SerNames = append(entry.FilteringCriteria.SerNames, "FaceRegService6")
+		outBytes, _ := json.Marshal(&entry)
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
+
+		return records, 0
+	})
+	defer patch2.Reset()
+
+	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+		response := proto.FindInstancesResponse{}
+		response.Instances = make([]*proto.MicroServiceInstance, 0)
+		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Version:    "3.2.1",
+			Properties: map[string]string{
+				"serName":     "FaceRegService6",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
+			},
+		})
+		return &response, nil
+	})
+	defer patch3.Reset()
+
+	// 2 is the order of the DNS get one handler in the URLPattern
+	service.URLPatterns()[6].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Query capability
+func TestGetCapabilitySuccessCaseWithConsumersAndCategoryFilter(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET", getCapabilitiesUrl, bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(capabilityQueryFormat, defCapabilityId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(respMsg1)).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *proto.GetOneInstanceRequest) (*proto.GetOneInstanceResponse, error) {
+		response := proto.GetOneInstanceResponse{}
+
+		response.Instance = &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Version:    "3.2.1",
+			Properties: map[string]string{
+				"serName":     "FaceRegService6",
+				"mecState":    "ACTIVE",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
+				"version":     "3.2.1",
+			},
+		}
+		return &response, nil
+	})
+	defer patch1.Reset()
+
+	patch2 := gomonkey.ApplyFunc(backend.GetRecordsWithCompleteKeyPath, func(path string) (map[string][]byte, int) {
+		records := make(map[string][]byte)
+		entry := models.SerAvailabilityNotificationSubscription{
+			SubscriptionId:    subscriberId1,
+			FilteringCriteria: models.FilteringCriteria{},
+		}
+		entry.FilteringCriteria.SerCategories = append(entry.FilteringCriteria.SerCategories, models.CategoryRef{
+			Href:    svcCatResponse,
+			ID:      "id12345",
+			Name:    "RNI",
+			Version: "v1.1",
+		})
+		outBytes, _ := json.Marshal(&entry)
+		records[fmt.Sprintf(recordDB, defaultAppInstanceId, subscriberId1)] = outBytes
+
+		return records, 0
+	})
+	defer patch2.Reset()
+
+	patch3 := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+		response := proto.FindInstancesResponse{}
+		response.Instances = make([]*proto.MicroServiceInstance, 0)
+		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Version:    "3.2.1",
+			Properties: map[string]string{
+				"serName":     "FaceRegService6",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
+			},
+		})
+		return &response, nil
+	})
+	defer patch3.Reset()
+
+	// 2 is the order of the DNS get one handler in the URLPattern
+	service.URLPatterns()[6].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
 
 func TestAppInstanceTermination3(t *testing.T) {
 	defer func() {
@@ -2096,7 +2732,6 @@ func TestAppInstanceTermination1(t *testing.T) {
 			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
 			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
 			Status:         "UP",
-			Version:        "3.2.1",
 			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
 			Properties: map[string]string{
 				"appInstanceId": defaultAppInstanceId,
@@ -2180,7 +2815,6 @@ func TestAppInstanceTermination2(t *testing.T) {
 			InstanceId:     defCapabilityId[len(defCapabilityId)/2:],
 			ServiceId:      defCapabilityId[:len(defCapabilityId)/2],
 			Status:         "UP",
-			Version:        "3.2.1",
 			DataCenterInfo: &proto.DataCenterInfo{Name: "", Region: "", AvailableZone: ""},
 			Properties: map[string]string{
 				"appInstanceId": defaultAppInstanceId,
@@ -2244,6 +2878,56 @@ func TestAppInstanceTermination2(t *testing.T) {
 }
 
 // Query All services
+func TestGetAllServices(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mm5Service{}
+
+	// Create http get request
+	getRequest, _ := http.NewRequest("GET", getCapabilitiesUrl, bytes.NewReader([]byte("")))
+	getRequest.URL.RawQuery = fmt.Sprintf(writeAllServices)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write",
+		[]byte(writeAllServices)).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 200)
+
+	patches := gomonkey.ApplyFunc(util.FindInstanceByKey, func(result url.Values) (*proto.FindInstancesResponse, error) {
+		response := proto.FindInstancesResponse{}
+		response.Instances = make([]*proto.MicroServiceInstance, 0)
+		response.Instances = append(response.Instances, &proto.MicroServiceInstance{
+			InstanceId: defCapabilityId[len(defCapabilityId)/2:],
+			ServiceId:  defCapabilityId[:len(defCapabilityId)/2],
+			Status:     "UP",
+			Properties: map[string]string{
+				"serName":     "FaceRegService6",
+				svcCatHref:    svcCatResponse,
+				svcCatId:      "id12345",
+				svcCatName:    "RNI",
+				svcCatVersion: "v1.1",
+				"version":     "3.2.1",
+			},
+		})
+		return &response, nil
+	})
+	defer patches.Reset()
+
+	// 2 is the order of the DNS get one handler in the URLPattern
+	service.URLPatterns()[11].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "200", responseHeader.Get(responseStatusHeader),
+		responseCheckFor200)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Query capability
 func TestAppDUpdate(t *testing.T) {
