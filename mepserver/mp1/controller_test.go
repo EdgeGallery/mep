@@ -57,6 +57,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"reflect"
 
+	"github.com/coreos/etcd/mvcc/mvccpb"
 	"mepserver/common/extif/backend"
 	"mepserver/common/extif/dns"
 	ntpc "mepserver/common/extif/ntp"
@@ -3807,6 +3808,56 @@ func TestConfirmIndiactionWrong(t *testing.T) {
 }
 
 // Check confirm ready app instances
+func TestConfirmReadBodyFailed(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader([]byte(body)))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"read request body error\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return resultList, 0
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		return 5000 * 8, fmt.Errorf("error")
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Check confirm ready app instances
 func TestConfirmReadUnMarshalErr(t *testing.T) {
@@ -3930,6 +3981,59 @@ func TestConfirmReadyRestBodyNil(t *testing.T) {
 }
 
 // Check confirm ready app instances
+func TestConfirmReadBodyLenExceed(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmReady := models.ConfirmReady{"READY"}
+	body, _ := json.Marshal(confirmReady)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_ready, defaultAppInstanceId),
+		bytes.NewReader([]byte(body)))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+
+	patches.ApplyFunc(backend.GetRecords, func(path string) (map[string][]byte, int) {
+		resultList := make(map[string][]byte)
+		resultList[util.AppDLCMJobsPath] = []byte(writeTransport)
+		return nil, 0
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		b.WriteByte('A')
+		out := make([]byte, 5000*8)
+		b.WriteString(string(out))
+		return 5000 * 8, nil
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[27].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor400)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Check confirm ready app instances
 func TestConfirmReadyInvalidAppInstaces(t *testing.T) {
@@ -4074,8 +4178,113 @@ func TestConfirmTerminationParamErr(t *testing.T) {
 }
 
 // Check confirm ready app instances
+func TestConfirmTerminationParseErr(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmTermination := models.ConfirmTermination{OperationAction: "TERMINATING"}
+	body, _ := json.Marshal(confirmTermination)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_termination, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Bad Request\",\"status\":1,\"detail\":\"read request body error\"}"+"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		rec := models.ConfirmTerminationRecord{}
+		rec.TerminationStatus = util.TerminationInProgress
+		rec.OperationAction = util.TERMINATING
+		bytes, _ := json.Marshal(rec)
+		return bytes, 0
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		return 0, fmt.Errorf("mock error")
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[28].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Check confirm ready app instances
+func TestConfirmTerminationParseInvalidLen(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+
+	confirmTermination := models.ConfirmTermination{OperationAction: "TERMINATING"}
+	body, _ := json.Marshal(confirmTermination)
+	// Create http get request
+	getRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(confirm_termination, defaultAppInstanceId),
+		bytes.NewReader(body))
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriter{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write", []byte("{\"title\":\"Request parameter error\",\"status\":14,\"detail\":\"request body too large\"}"+"\n")).
+		Return(0, nil)
+	mockWriter.On("WriteHeader", 400)
+
+	patches := gomonkey.ApplyFunc(baseutil.GenerateUuid, func() string {
+		return "8eb442b7cdfc11eba09314feb5b475da"
+	})
+	defer patches.Reset()
+	patches.ApplyFunc(backend.GetRecord, func(path string) ([]byte, int) {
+		rec := models.ConfirmTerminationRecord{}
+		rec.TerminationStatus = util.TerminationInProgress
+		rec.OperationAction = util.TERMINATING
+		bytes, _ := json.Marshal(rec)
+		return bytes, 0
+	})
+
+	patches.ApplyFunc((*bytes.Buffer).ReadFrom, func(b *bytes.Buffer, r io.Reader) (n int64, err error) {
+		log.Infof("reading from buffer")
+		b.WriteByte('A')
+		out := make([]byte, 5000*8)
+		b.WriteString(string(out))
+		return 5000 * 8, nil
+	})
+
+	// 13 is the order of the DNS get all handler in the URLPattern
+	service.URLPatterns()[28].Func(mockWriter, getRequest)
+
+	assert.Equal(t, "400", responseHeader.Get(responseStatusHeader),
+		responseCheckFor204)
+
+	mockWriter.AssertExpectations(t)
+}
 
 // Check confirm ready app instances
 func TestConfirmTerminationValidateFailed(t *testing.T) {
@@ -4720,390 +4929,388 @@ func TestGetsTrafficRulesUnmarshalErr(t *testing.T) {
 }
 
 // Post App service availability Notification
-//func TestAppSubscribeGet(t *testing.T) {
-//	defer func() {
-//		if r := recover(); r != nil {
-//			t.Errorf(panicFormatString, r)
-//		}
-//	}()
-//
-//	service := Mp1Service{}
-//	createSubscription := models.SerAvailabilityNotificationSubscription{
-//		SubscriptionType:  "SerAvailabilityNotificationSubscription",
-//		CallbackReference: callBackRef,
-//		FilteringCriteria: models.FilteringCriteria{
-//			SerInstanceIds: []string{
-//				"f7e898d1c9ea9edd8a41295fc55c2373",
-//			},
-//			SerNames: []string{
-//				"FaceRegService5",
-//			},
-//			SerCategories: []models.CategoryRef{
-//				{
-//					Href:    callBackRef,
-//					ID:      "id12345",
-//					Name:    "RNI",
-//					Version: "1.2.2",
-//				},
-//			},
-//			States: []string{
-//				"ACTIVE",
-//			},
-//			IsLocal: true,
-//		},
-//	}
-//	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-//	var resp = &pb.GetOneInstanceResponse{
-//		Response: &pb.Response{Code: pb.Response_SUCCESS},
-//	}
-//	n := &srv.InstanceService{}
-//	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
-//		return resp, nil
-//	})
-//	defer patch1.Reset()
-//	ec  := &buildin.BuildinRegistry{}
-//	var response registry.PluginResponse
-//	r :=  &mvccpb.KeyValue{}
-//	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp",func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
-//
-//		var resp registry.PluginResponse
-//		if success[0].Action == 1 {
-//            r.Key = success[0].Key
-//            r.Value = success[0].Value
-//			resp.Kvs = append(resp.Kvs, r)
-//			fmt.Println(len(resp.Kvs))
-//			response.Kvs = append(response.Kvs, resp.Kvs...)
-//		}
-//
-//		return &registry.PluginResponse{
-//			Succeeded: true,
-//			Revision:  1,
-//			Kvs:       response.Kvs,
-//			Count:     response.Count,
-//		}, nil
-//	})
-//	// Create http get request
-//	postRequest, _ := http.NewRequest("POST",
-//		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
-//		bytes.NewReader(createSubscriptionBytes))
-//	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriter := &mockHttpWriterWithoutWrite{}
-//	responseHeader := http.Header{} // Create http response header
-//	mockWriter.On("Header").Return(responseHeader)
-//	mockWriter.On("Write").Return(0, nil)
-//	mockWriter.On("WriteHeader", 201)
-//
-//	service.URLPatterns()[0].Func(mockWriter, postRequest)
-//
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//	notification := models.SerAvailabilityNotificationSubscription{}
-//	_ = json.Unmarshal(mockWriter.response, &notification)
-//	assert.Equal(t, subtype1, notification.SubscriptionType, errorSubtypeMissMatch)
-//	mockWriter.AssertExpectations(t)
-//
-//	//subscriptionId := uuid.NewV4().String()
-//	getRequest, _ := http.NewRequest("GET",
-//		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
-//		nil)
-//	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriterGet := &mockHttpWriterWithoutWrite{}
-//	responseGetHeader := http.Header{} // Create http response header
-//	mockWriterGet.On("Header").Return(responseGetHeader)
-//	mockWriterGet.On("Write").Return(0, nil)
-//	mockWriterGet.On("WriteHeader", 200)
-//
-//	service.URLPatterns()[1].Func(mockWriterGet, getRequest)
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//}
-//
-//// Post App service availability Notification
-//func TestAppSubscribeGetOneTermination(t *testing.T) {
-//	defer func() {
-//		if r := recover(); r != nil {
-//			t.Errorf(panicFormatString, r)
-//		}
-//	}()
-//
-//	service := Mp1Service{}
-//	createSubscription := models.AppTerminationNotificationSubscription{
-//		SubscriptionType:  "AppTerminationNotificationSubscription",
-//		CallbackReference: callBackRef,
-//
-//	}
-//	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-//	var resp = &pb.GetOneInstanceResponse{
-//		Response: &pb.Response{Code: pb.Response_SUCCESS},
-//	}
-//	n := &srv.InstanceService{}
-//	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
-//		return resp, nil
-//	})
-//	defer patch1.Reset()
-//	ec  := &buildin.BuildinRegistry{}
-//	var response registry.PluginResponse
-//	r :=  &mvccpb.KeyValue{}
-//	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp",func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
-//
-//		var resp registry.PluginResponse
-//		if success[0].Action == 1 {
-//			r.Key = success[0].Key
-//			r.Value = success[0].Value
-//			resp.Kvs = append(resp.Kvs, r)
-//			fmt.Println(len(resp.Kvs))
-//			response.Kvs = append(response.Kvs, resp.Kvs...)
-//		}
-//
-//		return &registry.PluginResponse{
-//			Succeeded: true,
-//			Revision:  1,
-//			Kvs:       response.Kvs,
-//			Count:     response.Count,
-//		}, nil
-//	})
-//	// Create http get request
-//	postRequest, _ := http.NewRequest("POST",
-//		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
-//		bytes.NewReader(createSubscriptionBytes))
-//	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriter := &mockHttpWriterWithoutWrite{}
-//	responseHeader := http.Header{} // Create http response header
-//	mockWriter.On("Header").Return(responseHeader)
-//	mockWriter.On("Write").Return(0, nil)
-//	mockWriter.On("WriteHeader", 201)
-//
-//	service.URLPatterns()[0].Func(mockWriter, postRequest)
-//
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//	notification := models.AppTerminationNotificationSubscription{}
-//	_ = json.Unmarshal(mockWriter.response, &notification)
-//	assert.Equal(t, subtype2, notification.SubscriptionType, errorSubtypeMissMatch)
-//	mockWriter.AssertExpectations(t)
-//
-//	//subscriptionId := uuid.NewV4().String()
-//	getRequest, _ := http.NewRequest("GET",
-//		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
-//		nil)
-//	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriterGet := &mockHttpWriterWithoutWrite{}
-//	responseGetHeader := http.Header{} // Create http response header
-//	mockWriterGet.On("Header").Return(responseGetHeader)
-//	mockWriterGet.On("Write").Return(0, nil)
-//	mockWriterGet.On("WriteHeader", 200)
-//
-//	service.URLPatterns()[11].Func(mockWriterGet, getRequest)
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//}
-//
-//// Post App service availability Notification
-//func TestAppSubscribeGetOne(t *testing.T) {
-//	defer func() {
-//		if r := recover(); r != nil {
-//			t.Errorf(panicFormatString, r)
-//		}
-//	}()
-//
-//	service := Mp1Service{}
-//	createSubscription := models.SerAvailabilityNotificationSubscription{
-//		SubscriptionType:  "SerAvailabilityNotificationSubscription",
-//		CallbackReference: callBackRef,
-//		FilteringCriteria: models.FilteringCriteria{
-//			SerInstanceIds: []string{
-//				"f7e898d1c9ea9edd8a41295fc55c2373",
-//			},
-//			SerNames: []string{
-//				"FaceRegService5",
-//			},
-//			SerCategories: []models.CategoryRef{
-//				{
-//					Href:    callBackRef,
-//					ID:      "id12345",
-//					Name:    "RNI",
-//					Version: "1.2.2",
-//				},
-//			},
-//			States: []string{
-//				"ACTIVE",
-//			},
-//			IsLocal: true,
-//		},
-//	}
-//	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-//	var resp = &pb.GetOneInstanceResponse{
-//		Response: &pb.Response{Code: pb.Response_SUCCESS},
-//	}
-//	n := &srv.InstanceService{}
-//	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
-//		return resp, nil
-//	})
-//	defer patch1.Reset()
-//	ec  := &buildin.BuildinRegistry{}
-//	var response registry.PluginResponse
-//	r :=  &mvccpb.KeyValue{}
-//	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp",func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
-//
-//		var resp registry.PluginResponse
-//		if success[0].Action == 1 {
-//			r.Key = success[0].Key
-//			r.Value = success[0].Value
-//			resp.Kvs = append(resp.Kvs, r)
-//			fmt.Println(len(resp.Kvs))
-//			response.Kvs = append(response.Kvs, resp.Kvs...)
-//		}
-//
-//		return &registry.PluginResponse{
-//			Succeeded: true,
-//			Revision:  1,
-//			Kvs:       response.Kvs,
-//			Count:     response.Count,
-//		}, nil
-//	})
-//	// Create http get request
-//	postRequest, _ := http.NewRequest("POST",
-//		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
-//		bytes.NewReader(createSubscriptionBytes))
-//	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriter := &mockHttpWriterWithoutWrite{}
-//	responseHeader := http.Header{} // Create http response header
-//	mockWriter.On("Header").Return(responseHeader)
-//	mockWriter.On("Write").Return(0, nil)
-//	mockWriter.On("WriteHeader", 201)
-//
-//	service.URLPatterns()[0].Func(mockWriter, postRequest)
-//
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//	notification := models.SerAvailabilityNotificationSubscription{}
-//	_ = json.Unmarshal(mockWriter.response, &notification)
-//	assert.Equal(t, subtype1, notification.SubscriptionType, errorSubtypeMissMatch)
-//	mockWriter.AssertExpectations(t)
-//
-//	//subscriptionId := uuid.NewV4().String()
-//	getRequest, _ := http.NewRequest("GET",
-//		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
-//		nil)
-//	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriterGet := &mockHttpWriterWithoutWrite{}
-//	responseGetHeader := http.Header{} // Create http response header
-//	mockWriterGet.On("Header").Return(responseGetHeader)
-//	mockWriterGet.On("Write").Return(0, nil)
-//	mockWriterGet.On("WriteHeader", 200)
-//
-//	service.URLPatterns()[2].Func(mockWriterGet, getRequest)
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//}
-//
-//// Post App service availability Notification
-//func TestAppSubscribeGetOneDbError(t *testing.T) {
-//	defer func() {
-//		if r := recover(); r != nil {
-//			t.Errorf(panicFormatString, r)
-//		}
-//	}()
-//
-//	service := Mp1Service{}
-//	createSubscription := models.AppTerminationNotificationSubscription{
-//		SubscriptionType:  "AppTerminationNotificationSubscription",
-//		CallbackReference: callBackRef,
-//
-//	}
-//	createSubscriptionBytes, _ := json.Marshal(createSubscription)
-//	var resp = &pb.GetOneInstanceResponse{
-//		Response: &pb.Response{Code: pb.Response_SUCCESS},
-//	}
-//	n := &srv.InstanceService{}
-//	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
-//		return resp, nil
-//	})
-//	defer patch1.Reset()
-//	ec  := &buildin.BuildinRegistry{}
-//	var response registry.PluginResponse
-//	r :=  &mvccpb.KeyValue{}
-//	count := 0
-//	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp",func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
-//        count++
-//		var resp registry.PluginResponse
-//		if success[0].Action == 1 {
-//			r.Key = success[0].Key
-//			r.Value = success[0].Value
-//			resp.Kvs = append(resp.Kvs, r)
-//			fmt.Println(len(resp.Kvs))
-//			response.Kvs = append(response.Kvs, resp.Kvs...)
-//		}
-//		if count == 3 {
-//			return nil, fmt.Errorf("Error")
-//		}
-//
-//		return &registry.PluginResponse{
-//			Succeeded: true,
-//			Revision:  1,
-//			Kvs:       response.Kvs,
-//			Count:     response.Count,
-//		}, nil
-//	})
-//	// Create http get request
-//	postRequest, _ := http.NewRequest("POST",
-//		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
-//		bytes.NewReader(createSubscriptionBytes))
-//	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriter := &mockHttpWriterWithoutWrite{}
-//	responseHeader := http.Header{} // Create http response header
-//	mockWriter.On("Header").Return(responseHeader)
-//	mockWriter.On("Write").Return(0, nil)
-//	mockWriter.On("WriteHeader", 201)
-//
-//	service.URLPatterns()[0].Func(mockWriter, postRequest)
-//
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//	notification := models.AppTerminationNotificationSubscription{}
-//	_ = json.Unmarshal(mockWriter.response, &notification)
-//	assert.Equal(t, subtype2, notification.SubscriptionType, errorSubtypeMissMatch)
-//	mockWriter.AssertExpectations(t)
-//
-//	//subscriptionId := uuid.NewV4().String()
-//	getRequest, _ := http.NewRequest("GET",
-//		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
-//		nil)
-//	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
-//	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
-//
-//	// Mock the response writer
-//	mockWriterGet := &mockHttpWriterWithoutWrite{}
-//	responseGetHeader := http.Header{} // Create http response header
-//	mockWriterGet.On("Header").Return(responseGetHeader)
-//	mockWriterGet.On("Write").Return(0, nil)
-//	mockWriterGet.On("WriteHeader", 400)
-//
-//	service.URLPatterns()[11].Func(mockWriterGet, getRequest)
-//	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
-//		responseCheckFor201)
-//}
+func TestAppSubscribeGet(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+	createSubscription := models.SerAvailabilityNotificationSubscription{
+		SubscriptionType:  "SerAvailabilityNotificationSubscription",
+		CallbackReference: callBackRef,
+		FilteringCriteria: models.FilteringCriteria{
+			SerInstanceIds: []string{
+				"f7e898d1c9ea9edd8a41295fc55c2373",
+			},
+			SerNames: []string{
+				"FaceRegService5",
+			},
+			SerCategories: []models.CategoryRef{
+				{
+					Href:    callBackRef,
+					ID:      "id12345",
+					Name:    "RNI",
+					Version: "1.2.2",
+				},
+			},
+			States: []string{
+				"ACTIVE",
+			},
+			IsLocal: true,
+		},
+	}
+	createSubscriptionBytes, _ := json.Marshal(createSubscription)
+	var resp = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	ec := &buildin.BuildinRegistry{}
+	var response registry.PluginResponse
+	r := &mvccpb.KeyValue{}
+	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp", func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
+
+		var resp registry.PluginResponse
+		if success[0].Action == 1 {
+			r.Key = success[0].Key
+			r.Value = success[0].Value
+			resp.Kvs = append(resp.Kvs, r)
+			fmt.Println(len(resp.Kvs))
+			response.Kvs = append(response.Kvs, resp.Kvs...)
+		}
+
+		return &registry.PluginResponse{
+			Succeeded: true,
+			Revision:  1,
+			Kvs:       response.Kvs,
+			Count:     response.Count,
+		}, nil
+	})
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
+		bytes.NewReader(createSubscriptionBytes))
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 201)
+
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+	notification := models.SerAvailabilityNotificationSubscription{}
+	_ = json.Unmarshal(mockWriter.response, &notification)
+	assert.Equal(t, subtype1, notification.SubscriptionType, errorSubtypeMissMatch)
+	mockWriter.AssertExpectations(t)
+
+	//subscriptionId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+
+	service.URLPatterns()[1].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+}
+
+// Post App service availability Notification
+func TestAppSubscribeGetOneTermination(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+	createSubscription := models.AppTerminationNotificationSubscription{
+		SubscriptionType:  "AppTerminationNotificationSubscription",
+		CallbackReference: callBackRef,
+	}
+	createSubscriptionBytes, _ := json.Marshal(createSubscription)
+	var resp = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	ec := &buildin.BuildinRegistry{}
+	var response registry.PluginResponse
+	r := &mvccpb.KeyValue{}
+	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp", func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
+
+		var resp registry.PluginResponse
+		if success[0].Action == 1 {
+			r.Key = success[0].Key
+			r.Value = success[0].Value
+			resp.Kvs = append(resp.Kvs, r)
+			fmt.Println(len(resp.Kvs))
+			response.Kvs = append(response.Kvs, resp.Kvs...)
+		}
+
+		return &registry.PluginResponse{
+			Succeeded: true,
+			Revision:  1,
+			Kvs:       response.Kvs,
+			Count:     response.Count,
+		}, nil
+	})
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
+		bytes.NewReader(createSubscriptionBytes))
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 201)
+
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+	notification := models.AppTerminationNotificationSubscription{}
+	_ = json.Unmarshal(mockWriter.response, &notification)
+	assert.Equal(t, subtype2, notification.SubscriptionType, errorSubtypeMissMatch)
+	mockWriter.AssertExpectations(t)
+
+	//subscriptionId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+
+	service.URLPatterns()[11].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+}
+
+// Post App service availability Notification
+func TestAppSubscribeGetOne(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+	createSubscription := models.SerAvailabilityNotificationSubscription{
+		SubscriptionType:  "SerAvailabilityNotificationSubscription",
+		CallbackReference: callBackRef,
+		FilteringCriteria: models.FilteringCriteria{
+			SerInstanceIds: []string{
+				"f7e898d1c9ea9edd8a41295fc55c2373",
+			},
+			SerNames: []string{
+				"FaceRegService5",
+			},
+			SerCategories: []models.CategoryRef{
+				{
+					Href:    callBackRef,
+					ID:      "id12345",
+					Name:    "RNI",
+					Version: "1.2.2",
+				},
+			},
+			States: []string{
+				"ACTIVE",
+			},
+			IsLocal: true,
+		},
+	}
+	createSubscriptionBytes, _ := json.Marshal(createSubscription)
+	var resp = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	ec := &buildin.BuildinRegistry{}
+	var response registry.PluginResponse
+	r := &mvccpb.KeyValue{}
+	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp", func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
+
+		var resp registry.PluginResponse
+		if success[0].Action == 1 {
+			r.Key = success[0].Key
+			r.Value = success[0].Value
+			resp.Kvs = append(resp.Kvs, r)
+			fmt.Println(len(resp.Kvs))
+			response.Kvs = append(response.Kvs, resp.Kvs...)
+		}
+
+		return &registry.PluginResponse{
+			Succeeded: true,
+			Revision:  1,
+			Kvs:       response.Kvs,
+			Count:     response.Count,
+		}, nil
+	})
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
+		bytes.NewReader(createSubscriptionBytes))
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 201)
+
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+	notification := models.SerAvailabilityNotificationSubscription{}
+	_ = json.Unmarshal(mockWriter.response, &notification)
+	assert.Equal(t, subtype1, notification.SubscriptionType, errorSubtypeMissMatch)
+	mockWriter.AssertExpectations(t)
+
+	//subscriptionId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 200)
+
+	service.URLPatterns()[2].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+}
+
+// Post App service availability Notification
+func TestAppSubscribeGetOneDbError(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf(panicFormatString, r)
+		}
+	}()
+
+	service := Mp1Service{}
+	createSubscription := models.AppTerminationNotificationSubscription{
+		SubscriptionType:  "AppTerminationNotificationSubscription",
+		CallbackReference: callBackRef,
+	}
+	createSubscriptionBytes, _ := json.Marshal(createSubscription)
+	var resp = &pb.GetOneInstanceResponse{
+		Response: &pb.Response{Code: pb.Response_SUCCESS},
+	}
+	n := &srv.InstanceService{}
+	patch1 := gomonkey.ApplyMethod(reflect.TypeOf(n), "GetOneInstance", func(*srv.InstanceService, context.Context, *pb.GetOneInstanceRequest) (*pb.GetOneInstanceResponse, error) {
+		return resp, nil
+	})
+	defer patch1.Reset()
+	ec := &buildin.BuildinRegistry{}
+	var response registry.PluginResponse
+	r := &mvccpb.KeyValue{}
+	count := 0
+	patch1.ApplyMethod(reflect.TypeOf(ec), "TxnWithCmp", func(t *buildin.BuildinRegistry, ctx context.Context, success []registry.PluginOp, cmp []registry.CompareOp, fail []registry.PluginOp) (*registry.PluginResponse, error) {
+		count++
+		var resp registry.PluginResponse
+		if success[0].Action == 1 {
+			r.Key = success[0].Key
+			r.Value = success[0].Value
+			resp.Kvs = append(resp.Kvs, r)
+			fmt.Println(len(resp.Kvs))
+			response.Kvs = append(response.Kvs, resp.Kvs...)
+		}
+		if count == 3 {
+			return nil, fmt.Errorf("Error")
+		}
+
+		return &registry.PluginResponse{
+			Succeeded: true,
+			Revision:  1,
+			Kvs:       response.Kvs,
+			Count:     response.Count,
+		}, nil
+	})
+	// Create http get request
+	postRequest, _ := http.NewRequest("POST",
+		fmt.Sprintf(postSubscribeUrl, defaultAppInstanceId),
+		bytes.NewReader(createSubscriptionBytes))
+	postRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	postRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriter := &mockHttpWriterWithoutWrite{}
+	responseHeader := http.Header{} // Create http response header
+	mockWriter.On("Header").Return(responseHeader)
+	mockWriter.On("Write").Return(0, nil)
+	mockWriter.On("WriteHeader", 201)
+
+	service.URLPatterns()[0].Func(mockWriter, postRequest)
+
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+	notification := models.AppTerminationNotificationSubscription{}
+	_ = json.Unmarshal(mockWriter.response, &notification)
+	assert.Equal(t, subtype2, notification.SubscriptionType, errorSubtypeMissMatch)
+	mockWriter.AssertExpectations(t)
+
+	//subscriptionId := uuid.NewV4().String()
+	getRequest, _ := http.NewRequest("GET",
+		fmt.Sprintf(getOrDelOneSubscribeOrSveUrl, defaultAppInstanceId, notification.SubscriptionId),
+		nil)
+	getRequest.URL.RawQuery = fmt.Sprintf(appInstanceQueryFormat, defaultAppInstanceId)
+	getRequest.Header.Set(appInstanceIdHeader, defaultAppInstanceId)
+
+	// Mock the response writer
+	mockWriterGet := &mockHttpWriterWithoutWrite{}
+	responseGetHeader := http.Header{} // Create http response header
+	mockWriterGet.On("Header").Return(responseGetHeader)
+	mockWriterGet.On("Write").Return(0, nil)
+	mockWriterGet.On("WriteHeader", 400)
+
+	service.URLPatterns()[11].Func(mockWriterGet, getRequest)
+	assert.Equal(t, "201", responseHeader.Get(responseStatusHeader),
+		responseCheckFor201)
+}
 
 // Post App service availability Notification
 func TestAppSubscribeInsertDbError(t *testing.T) {
