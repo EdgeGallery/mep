@@ -18,11 +18,10 @@ package util
 
 import (
 	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/astaxie/beego"
 
 	. "github.com/agiledragon/gomonkey"
 	log "github.com/sirupsen/logrus"
@@ -72,7 +71,7 @@ func TestGenRandRootKeyComponent(t *testing.T) {
 func TestGetPublicKey(t *testing.T) {
 	Convey("get public key", t, func() {
 		Convey("for success", func() {
-			patch1 := ApplyFunc(beego.AppConfig.String, func(string) string {
+			patch1 := ApplyFunc(GetAppConfig, func(_ string) string {
 				return "abed"
 			})
 			defer patch1.Reset()
@@ -89,14 +88,46 @@ func TestGetPublicKey(t *testing.T) {
 				return block, nil
 			})
 			defer patch3.Reset()
-			GetPublicKey()
+			_, err := GetPublicKey()
+			So(err, ShouldBeNil)
 
 		})
-		Convey("for fail", func() {
+		Convey("for fail1", func() {
 			patches := ApplyFunc(GetAppConfig, func(_ string) string {
 				return ""
 			})
 			defer patches.Reset()
+			_, err := GetPublicKey()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("for fail2", func() {
+			patch1 := ApplyFunc(GetAppConfig, func(_ string) string {
+				return "abed"
+			})
+			defer patch1.Reset()
+
+			patch2 := ApplyFunc(ioutil.ReadFile, func(string) ([]byte, error) {
+				return nil, errors.New("ReadFile error")
+			})
+			defer patch2.Reset()
+			_, err := GetPublicKey()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("for fail3", func() {
+			patch1 := ApplyFunc(GetAppConfig, func(_ string) string {
+				return "abed"
+			})
+			defer patch1.Reset()
+
+			patch2 := ApplyFunc(ioutil.ReadFile, func(string) ([]byte, error) {
+				return []byte("abc"), nil
+			})
+			defer patch2.Reset()
+
+			patch3 := ApplyFunc(pem.Decode, func([]byte) (*pem.Block, []byte) {
+				return nil, nil
+			})
+			defer patch3.Reset()
 			_, err := GetPublicKey()
 			So(err, ShouldNotBeNil)
 		})
