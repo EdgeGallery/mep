@@ -20,9 +20,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"github.com/agiledragon/gomonkey"
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"io"
 	"mepauth/adapter"
+	"mepauth/controllers"
 	"mepauth/util"
 	"os"
 	"reflect"
@@ -181,5 +183,55 @@ func TestDoInitialization(t *testing.T) {
 			So(res, ShouldBeFalse)
 		})
 
+	})
+}
+
+func TestSetSwaggerConfig(t *testing.T) {
+	Convey("Set Swagger Config", t, func() {
+		Convey("for success", func() {
+			beego.BConfig.RunMode = util.DevMode
+			setSwaggerConfig()
+		})
+	})
+}
+
+func TestMainFunc(t *testing.T) {
+	Convey("main", t, func() {
+		Convey("for success", func() {
+			patches := gomonkey.ApplyFunc(adapter.InitDb, func() {
+				return
+			})
+			defer patches.Reset()
+			patches.ApplyFunc(readPropertiesFile, func(filename string) (util.AppConfigProperties, error) {
+				properties := util.AppConfigProperties{}
+				val := []byte("Here is a string....")
+				properties["APP_INST_ID"] = &val
+				properties["ACCESS_KEY"] = &val
+				properties["SECRET_KEY"] = &val
+				return properties, nil
+			})
+			patches.ApplyFunc(util.ValidateInputArgs, func(appConfig util.AppConfigProperties) bool {
+				return true
+			})
+			patches.ApplyFunc(util.ValidateKeyComponentUserInput, func(keyComponentUserStr *[]byte) error {
+				return nil
+			})
+			patches.ApplyFunc(doInitialization, func(trustedNetworks *[]byte) bool {
+				return true
+			})
+			patches.ApplyFunc(util.EncryptAndSaveJwtPwd, func(jwtPrivateKeyPwd *[]byte) error {
+				return nil
+			})
+			patches.ApplyFunc(controllers.ConfigureAkAndSk, func(appInsID string, ak string, sk *[]byte, appName string, requiredServices string) error {
+				return nil
+			})
+			patches.ApplyFunc(util.TLSConfig, func(crtName string) (*tls.Config, error) {
+				return nil, nil
+			})
+			patches.ApplyFunc(beego.Run, func(params ...string) {
+				return
+			})
+			main()
+		})
 	})
 }
