@@ -124,20 +124,12 @@ func (c *RunController) Get() {
 		}
 
 		//Get VoteMap
-		_, ok := VoteMap[checkerIp]
-		if !ok {
-			tmpMap := make(map[string]bool)
-			for _, edgeResult := range edgeResult.EdgeCheckResult {
-				tmpMap[edgeResult.CheckedIp] = edgeResult.Condition
-			}
-			VoteMap[checkerIp] = tmpMap
-		} else {
-			tmpMap := make(map[string]bool)
-			for _, edgeResult := range edgeResult.EdgeCheckResult {
-				tmpMap[edgeResult.CheckedIp] = edgeResult.Condition
-			}
-			VoteMap[checkerIp] = tmpMap
+		tmpMap := make(map[string]bool)
+		for _, edgeResult := range edgeResult.EdgeCheckResult {
+			tmpMap[edgeResult.CheckedIp] = edgeResult.Condition
 		}
+		VoteMap[checkerIp] = tmpMap
+
 	}
 
 	//totalNum := len(hostList)
