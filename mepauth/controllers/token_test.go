@@ -61,6 +61,14 @@ func TestGetTokenInfo(t *testing.T) {
 		ak := "QVUJMSUMgS0VZLS0tLS0"
 		token := "jwtToken"
 		c := getController()
+		Convey("Client ip is nil", func() {
+			c.Ctx.Request.Header.Set("X-Real-Ip", "")
+			patches := ApplyFunc(generateJwtToken, func(_ string, _ string) (*string, error) {
+				return &token, nil
+			})
+			defer patches.Reset()
+			So(c.getTokenInfo(appInsId, ak), ShouldNotBeNil)
+		})
 		Convey("for success", func() {
 			c.Ctx.Request.Header.Set("X-Real-Ip", "127.0.0.1")
 			patches := ApplyFunc(generateJwtToken, func(_ string, _ string) (*string, error) {
@@ -70,7 +78,6 @@ func TestGetTokenInfo(t *testing.T) {
 			So(c.getTokenInfo(appInsId, ak), ShouldNotBeNil)
 		})
 		Convey("for fail", func() {
-
 			patches := ApplyFunc(generateJwtToken, func(_ string, _ string) (*string, error) {
 				return nil, errors.New("generate token fail")
 			})
@@ -350,6 +357,51 @@ func TestGenerateJwtToken(t *testing.T) {
 
 			So(token, ShouldBeNil)
 			So(err.Error(), ShouldEqual, "failed to get private key")
+		})
+	})
+}
+
+func TestCheckAkExistAndWriteErrorRes(t *testing.T)  {
+	c := getController()
+	Convey("Check AK exist and write error res", t, func() {
+		Convey("for success", func() {
+			c.checkAkExistAndWriteErrorRes(true)
+			out := c.Data["json"]
+			So(out, ShouldContainSubstring, "Internal server error.")
+		})
+		Convey("for failure", func() {
+			c.checkAkExistAndWriteErrorRes(false)
+			out := c.Data["json"]
+			So(out, ShouldContainSubstring, "Invalid access or signature.")
+		})
+	})
+}
+
+func TestPost(t *testing.T) {
+	c := getController()
+	Convey("test post", t, func() {
+		Convey("Invalid ip", func() {
+			c.Ctx.Request.Header.Set("X-Real-Ip", "127.0.0.0.1")
+			c.Post()
+			out := c.Data["json"]
+			So(out, ShouldContainSubstring, "clientIp address is invalid")
+		})
+
+		Convey("Bad auth header format", func() {
+			c.Ctx.Request.Header.Set("X-Real-Ip", "127.0.0.1")
+			c.Post()
+			out := c.Data["json"]
+			So(out, ShouldContainSubstring, "Bad auth header format")
+		})
+
+		Convey("Bad x-sdk-time format", func() {
+			c.Ctx.Request.Header.Set("X-Real-Ip", "127.0.0.1")
+			c.Ctx.Request.Header.Set("authorization", "SDK-HMAC-SHA256 Access=QVUJMSUMgS0VZLS0tLS0, " +
+				"SignedHeaders=content-type;host;x-sdk-date, " +
+				"Signature=62192e2ee0b871321e43a607654f93f661a91fcdedba86e45f02602c99eca052")
+			c.Post()
+			out := c.Data["json"]
+			So(out, ShouldContainSubstring, "Bad x-sdk-time format")
 		})
 	})
 }

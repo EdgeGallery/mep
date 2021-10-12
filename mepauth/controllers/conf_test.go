@@ -236,7 +236,18 @@ func TestPutSuccess(t *testing.T) {
 	})
 }
 
-// Test conf PUT
+// Test conf PUT Failure
+func TestPutFailure(t *testing.T) {
+	Convey("Test put failure", t, func() {
+		c := getConfController()
+		c.Ctx.Request.Header.Set("X-Real-Ip", "")
+		c.Put()
+		out := c.Data["json"]
+		So(out, ShouldContainSubstring, "clientIp address is invalid")
+	})
+}
+
+// Test conf Delete
 func TestDeleteSuccess(t *testing.T) {
 	Convey("Test delete", t, func() {
 		validAppInsID := "5abe4782-2c70-4e47-9a4e-0ee3a1a0fd1f"
@@ -261,6 +272,27 @@ func TestDeleteSuccess(t *testing.T) {
 		c.Delete()
 		out := c.Data["json"]
 		So(out, ShouldEqual, "Delete success.")
+	})
+}
+
+func TestDeleteFailure(t *testing.T) {
+	Convey("Test delete failure", t, func() {
+		c := getConfController()
+		c.Ctx.Request.Header.Set("X-Real-Ip", "")
+		c.Delete()
+		out := c.Data["json"]
+		So(out, ShouldContainSubstring, "clientIp address is invalid")
+	})
+}
+
+func TestDeleteApplicationInstanceIDFailure(t *testing.T) {
+	Convey("Test delete", t, func() {
+		inValidAppInsID := "5abe478223-2c70-4e47-9a4e-0ee3a1a0fd1f"
+		c := getConfController()
+		c.Ctx.Input.SetParam(util.UrlApplicationId, inValidAppInsID)
+		c.Delete()
+		out := c.Data["json"]
+		So(out, ShouldContainSubstring, "Application Instance ID validation failed")
 	})
 }
 
@@ -289,5 +321,24 @@ func TestGetSuccess(t *testing.T) {
 		c.Get()
 		out := c.Data["json"]
 		So(out, ShouldNotBeNil)
+	})
+}
+
+// Test conf Get failure
+func TestGetFailure(t *testing.T) {
+	Convey("Test get failure", t, func() {
+		c := getConfController()
+		c.Ctx.Request.Header.Set("X-Real-Ip", "")
+		c.Get()
+		out := c.Data["json"]
+		So(out, ShouldContainSubstring, "clientIp address is invalid")
+	})
+	Convey("Test Get failure with invalid application instance id", t, func() {
+		inValidAppInsID := "5abe478223-2c70-4e47-9a4e-0ee3a1a0fd1f"
+		c := getConfController()
+		c.Ctx.Input.SetParam(util.UrlApplicationId, inValidAppInsID)
+		c.Get()
+		out := c.Data["json"]
+		So(out, ShouldContainSubstring, "Application Instance ID validation failed")
 	})
 }
