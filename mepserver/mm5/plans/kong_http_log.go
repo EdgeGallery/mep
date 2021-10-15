@@ -228,7 +228,6 @@ func statisticMepServices() []interface{} {
 	registerMap["desc"] = ""
 	registerMap["callTimes"] = statisticRegisterServices()
 	list = append(list, registerMap)
-	//services["serviceRegister"] = statisticRegisterServices()
 
 	// service discovery data
 	discoveryMap := make(map[string]interface{})
@@ -236,7 +235,6 @@ func statisticMepServices() []interface{} {
 	discoveryMap["desc"] = ""
 	discoveryMap["callTimes"] = statisticDiscoveryServices()
 	list = append(list, discoveryMap)
-	//services["serviceDiscovery"] = statisticDiscoveryServices()
 
 	return list
 }
