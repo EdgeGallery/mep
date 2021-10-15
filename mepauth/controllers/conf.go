@@ -58,7 +58,6 @@ func (c *ConfController) Put() {
 	appInsId := c.Ctx.Input.Param(util.UrlApplicationId)
 
 	if err = json.Unmarshal(c.Ctx.Input.RequestBody, &appInstanceInfo); err == nil {
-		log.Info(appInstanceInfo)
 		c.Data["json"] = appInstanceInfo
 		appAuthInfo := appInstanceInfo.AuthInfo
 		appInfo := appInstanceInfo.AppInfo
