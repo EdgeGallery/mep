@@ -202,7 +202,7 @@ func ConfigureAkAndSk(appInsID string, ak string, sk *[]byte, appName string, re
 
 	saveAkAndSkErr := saveAkAndSk(appInsID, ak, sk, appName, requiredServices)
 	if saveAkAndSkErr != nil {
-		log.Error("Failed to save ak and sk to file, appInstanceId is " + appInsID + ".")
+		log.Error("Failed to save ak and sk to database, appInstanceId is " + appInsID + ".")
 		return saveAkAndSkErr
 	}
 	log.Info("Succeed to save ak and sk, appInstanceId is " + appInsID + ".")
@@ -222,7 +222,6 @@ func saveAkAndSk(appInsID string, ak string, sk *[]byte, appName string, require
 		AppName:          appName,
 		RequiredServices: requiredServices,
 	}
-	//err = InsertOrUpdateDataToFile(authInfoRecord)
 	err = adapter.Db.InsertOrUpdateData(authInfoRecord, appInstanceID)
 	util.ClearByteArray(nonceBytes)
 	if err != nil && err.Error() != util.PgOkMsg {
