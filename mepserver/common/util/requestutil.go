@@ -24,6 +24,7 @@ import (
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -141,6 +142,45 @@ func SendGetRequest(url string, tlsCfg *tls.Config) (string, error) {
 func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
 	log.Infof("New rest request url: %s, method: %s.", url, method)
 	log.Debugf("Rest body: %s.", string(jsonStr))
+	req := generateReq(url, method, jsonStr, tlsCfg)
+
+	res, err := req.String()
+	if err != nil {
+		log.Errorf(nil, "Rest request failed on server(result: %s).", res)
+		return res, err
+	}
+	log.Infof("Rest request completed(result: %s).", res)
+	return res, nil
+}
+
+//SendRequest rest request return response object
+func SendRequestRes(url string, method string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
+	log.Infof("New rest request url: %s, method: %s.", url, method)
+	log.Debugf("Rest body: %s.", string(jsonStr))
+	req := generateReq(url, method, jsonStr, tlsCfg)
+
+	resp, err := req.Response()
+	if err != nil {
+		log.Errorf(nil, "Rest request failed on server(result: %s).", resp.Status)
+		return resp.Status, err
+	}
+
+	statusCode := resp.StatusCode
+	if statusCode != http.StatusOK && statusCode != http.StatusCreated {
+		log.Errorf(nil, "Rest request failed on server(statusCode: %d).", resp.StatusCode)
+		return resp.Status, err
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf(nil, "Rest request failed on server(respBody: %s).", resp.Status)
+		return resp.Status, err
+	}
+	log.Infof("Rest request completed(result: %s).", string(respBody))
+	return string(respBody), nil
+}
+
+func generateReq(url string, method string, jsonStr []byte, tlsCfg *tls.Config) *httplib.BeegoHTTPRequest {
 	var req *httplib.BeegoHTTPRequest
 	switch method {
 	case PostMethod:
@@ -159,14 +199,7 @@ func SendRequest(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 
 	req.SetTLSClientConfig(tlsCfg)
 	req.Header(XRealIp, GetLocalIP())
-
-	res, err := req.String()
-	if err != nil {
-		log.Errorf(nil, "Rest request failed on server(result: %s).", res)
-		return res, err
-	}
-	log.Infof("Rest request completed(result: %s).", res)
-	return res, nil
+	return req
 }
 
 // GetLocalIP get local ip

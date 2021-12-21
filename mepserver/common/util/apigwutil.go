@@ -135,10 +135,8 @@ func (a *ApiGwIf) EnableJwtPlugin(serInfo SerInfo) {
 
 func (a *ApiGwIf) DeleteJwtPlugin(serviceName string) {
 	apiGwPluginUrl := a.baseURL + serviceUrl + serviceName + "/plugins"
-	response, err := SendGetRequest(apiGwPluginUrl, a.tlsCfg)
-	log.Infof("response: %s", response)
 	jwtConfig := fmt.Sprintf(`{ "name": "%s", "config": { "claims_to_verify": ["exp"] } }`, JwtPlugin)
-	_, err = SendPostRequest(apiGwPluginUrl, []byte(jwtConfig), a.tlsCfg)
+	_, err := SendPostRequest(apiGwPluginUrl, []byte(jwtConfig), a.tlsCfg)
 	if err != nil {
 		log.Error("Register API GW jwt plugin failed.", err)
 	}
