@@ -50,7 +50,7 @@ func getAllServices() []*models.ServiceInfo {
 	serviceInfos := make([]*models.ServiceInfo, 0)
 	findInstancesResponse, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {
-		log.Errorf(nil, "Find service instance failed for retrieving the service names.")
+		log.Warn("Find service instance failed for retrieving the service names.")
 		return serviceInfos
 	}
 

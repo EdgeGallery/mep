@@ -131,7 +131,7 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 			Func: m.getHeartbeat},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.AppServicesPath + meputil.ServiceIdPath + meputil.Liveness,
 			Func: m.heartbeatService},
-		//Liveness and readiness
+		// Liveness and readiness
 		{Method: rest.HTTP_METHOD_GET, Path: "/health", Func: func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(200)
 			w.Write([]byte("ok"))
@@ -139,16 +139,18 @@ func (m *Mp1Service) URLPatterns() []rest.Route {
 		// services discovery
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath, Func: m.serviceDiscover},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.ServicesPath + "/:serviceId", Func: m.getOneService},
-		//traffic Rules
+		// traffic Rules
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath, Func: m.getTrafficRules},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.getTrafficRule},
 		{Method: rest.HTTP_METHOD_PUT, Path: meputil.TrafficRulesPath + meputil.TrafficRuleIdPath, Func: m.trafficRuleUpdate},
-		//NTP
+		// NTP
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.CurrentTIme, Func: m.getCurrentTime},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TimingPath + meputil.TimingCaps, Func: m.getTimingCaps},
 		{Method: rest.HTTP_METHOD_GET, Path: meputil.TransportPath, Func: m.getTransports},
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.ConfirmReadyPath, Func: m.confirmReady},
 		{Method: rest.HTTP_METHOD_POST, Path: meputil.ConfirmTerminationPath, Func: m.confirmTermination},
+		// provider app callback the consumer app
+		{Method: rest.HTTP_METHOD_POST, Path: meputil.CallbackPath, Func: m.callbackApp},
 	}
 }
 
@@ -428,6 +430,15 @@ func (m *Mp1Service) confirmTermination(w http.ResponseWriter, r *http.Request) 
 	workPlan.Try((&plans.DecodeConfirmTerminateReq{}).WithBody(&models.ConfirmTermination{}),
 		&plans.ConfirmTermination{})
 	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
+
+	workspace.WkRun(workPlan)
+}
+
+func (m *Mp1Service) callbackApp(w http.ResponseWriter, r *http.Request) {
+
+	workPlan := NewWorkSpace(w, r)
+	workPlan.Try(&plans.Callback{})
+	workPlan.Finally(&common.SendHttpRsp{})
 
 	workspace.WkRun(workPlan)
 }

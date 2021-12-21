@@ -45,6 +45,7 @@ const (
 	DuplicateOperation          = 19
 	ForbiddenOperation          = 20
 	NtpConnectionErr            = 21
+	CallbackUrlNotFound         = 22
 )
 
 // Mep server api paths
@@ -68,6 +69,7 @@ const (
 	TransportPath          = RootPath + MecServicePath + "/transports"
 	ConfirmReadyPath       = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_ready"
 	ConfirmTerminationPath = RootPath + MecAppSupportPath + "/applications/:appInstanceId/confirm_termination"
+	CallbackPath           = RootPath + MecAppSupportPath + "/applications/:appInstanceId/callback"
 	CapabilityPath         = Mm5RootPath + MecPlatformConfigPath + "/capabilities"
 	AppDConfigPath         = Mm5RootPath + MecAppDConfigPath + "/applications/:appInstanceId/appd_configuration"
 	AppDQueryResPath       = Mm5RootPath + MecAppDConfigPath + "/tasks/:taskId/appd_configuration"
