@@ -49,7 +49,7 @@ type RequestBody struct {
 // @Description start total health check for this mec-m
 // @Success 200 ok
 // @Failure 400 bad request
-// @router /health-check/v1/center/action/start [get]
+// @router /health-check/v1/center/tenants/:tenantId/action/start [get]
 func (c *RunController) Get() {
 	log.Info("Query services request received.")
 	clientIp := c.Ctx.Input.IP()
@@ -60,13 +60,21 @@ func (c *RunController) Get() {
 	}
 	c.displayReceivedMsg(clientIp)
 
+	tenantId := c.Ctx.Input.Param(":tenantId")
+	accessToken := c.Ctx.Input.Header("access_token")
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	//get mecList from mec-m
 	client := &http.Client{Transport: tr}
-	response, err := client.Get(util.MecMServiceQuery)
+	url := "https://" + util.GetLocalIp() + ":" + util.GetInventoryPort() + "/inventory/v1/tenants/" + tenantId + "/mechosts"
+
+	request, _ := http.NewRequest("GET", url, nil)
+	request.Header.Add("access_token", accessToken)
+
+	response, err := client.Do(request)
 
 	if err != nil {
 		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
