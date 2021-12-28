@@ -109,6 +109,7 @@ func (c *EdgeController) MepHealthQuery() bool {
 // @router /health-check/v1/edge/health [get]
 func (c *EdgeController) Get() {
 	if c.LcmHealthQuery() || c.MepHealthQuery() {
+		c.Ctx.WriteString("ok.")
 		return
 	} else {
 		c.writeErrorResponse(util.ErrCallForEdge, util.StatusInternalServerError)

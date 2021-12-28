@@ -18,6 +18,7 @@ package util
 import (
 	"errors"
 	"github.com/go-playground/validator/v10"
+	"os"
 )
 
 const (
@@ -40,7 +41,7 @@ const (
 	ErrCallFromMecM   string = "failed to execute rest calling, check if mecm service is ready."
 	ErrCallFromEdge   string = "failed to call edge health check"
 
-	MecMServiceQuery = "https://119.8.63.144:30093/mecm-inventory/inventory/v1/mechosts"
+	MecMServiceQuery = "/inventory/v1/tenants/%s/mechosts"
 	EdgeHealthCheck  = "/health-check/v1/edge/action/start"
 )
 
@@ -56,4 +57,15 @@ func ValidateSrcAddress(id string) error {
 		return validate.Var(id, "required,ipv6")
 	}
 	return nil
+}
+
+// GetLocalIp Get local ip
+func GetLocalIp() string {
+	localIp := os.Getenv("LOCAL_IP")
+	return localIp
+}
+
+func GetInventoryPort() string {
+	//inventoryPort := os.Getenv("INVENTORY_PORT")
+	return "30203"
 }
