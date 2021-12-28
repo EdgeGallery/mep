@@ -59,61 +59,63 @@ func (c *RunController) Get() {
 		return
 	}
 	c.displayReceivedMsg(clientIp)
-
 	tenantId := c.Ctx.Input.Param(":tenantId")
 	accessToken := c.Ctx.Input.Header("access_token")
-
+	log.Info("tenantId is: " + tenantId)
+	log.Info("accessToken is:" + accessToken)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
 	//get mecList from mec-m
 	client := &http.Client{Transport: tr}
-	url := "https://" + util.GetLocalIp() + ":" + util.GetInventoryPort() + "/inventory/v1/tenants/" + tenantId + "/mechosts"
-
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("access_token", accessToken)
-
-	response, err := client.Do(request)
-
+	response, err := c.getMecHostList(tenantId, accessToken, client)
 	if err != nil {
-		c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
 		return
 	}
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
-
 	var mecMInfo []MecHostInfo
 	err = json.Unmarshal(body, &mecMInfo)
-
 	if err != nil {
 		c.writeErrorResponse(util.FailedToUnmarshal, util.BadRequest)
 		return
 	}
-
-	var hostList []string
+	log.Info("query mecm inventory to get hosts success")
+	var k8sHostList []string
+	var osHostList []string
 	var requestBody RequestBody
 
 	for _, info := range mecMInfo {
-		hostList = append(hostList, info.MechostIp)
-		requestBody.MechostIpList = append(requestBody.MechostIpList, info.MechostIp)
+		if info.Vim == "K8S" {
+			log.Info("MechostIp has:" + info.MechostIp + "and here is k8s")
+			log.Info("MechostIp vim is :" + info.Vim)
+			k8sHostList = append(k8sHostList, info.MechostIp)
+			requestBody.MechostIpList = append(requestBody.MechostIpList, info.MechostIp)
+		} else {
+			log.Info("MechostIp has:" + info.MechostIp + "and here is openstack")
+			log.Info("MechostIp vim is :" + info.Vim)
+			osHostList = append(osHostList, info.MechostIp)
+		}
 	}
 
 	var VoteMap map[string]map[string]bool
 	VoteMap = make(map[string]map[string]bool)
 
 	//after get mec list, tell every edge to get health check result from every edge
-	for _, mecIp := range hostList {
+	for _, mecIp := range k8sHostList {
+		log.Info("tell " + mecIp + " to get health check result from every edge")
 		client := &http.Client{Transport: tr}
 
 		requestJson, err := json.Marshal(requestBody)
+		if err != nil {
+			c.HandleLoggingForError(mecIp, util.StatusInternalServerError, "fail to marshal request body")
+			continue
+		}
 		requestBody := bytes.NewReader(requestJson)
 		tmpUrl := "http://" + mecIp + ":" + strconv.Itoa(util.EdgeHealthPort) + util.EdgeHealthCheck
-
-		//	response, err := client.Get(tmpUrl )
+		log.Info("temporary url is " + tmpUrl)
 		response, err := client.Post(tmpUrl, "application/json", requestBody)
 		if err != nil {
-			//	c.HandleLoggingForError(clientIp, util.StatusInternalServerError, util.ErrCallFromMecM)
 			continue
 		}
 		defer response.Body.Close()
@@ -122,7 +124,7 @@ func (c *RunController) Get() {
 		var edgeResult EdgeHealthResult
 		err = json.Unmarshal(body, &edgeResult)
 		if err != nil {
-			c.writeErrorResponse(util.FailedToUnmarshal, util.BadRequest)
+			c.writeErrorResponse("fail to unmarshall edge result", util.BadRequest)
 			continue
 		}
 		checkerIp := edgeResult.CheckerIp
@@ -137,7 +139,6 @@ func (c *RunController) Get() {
 			tmpMap[edgeResult.CheckedIp] = edgeResult.Condition
 		}
 		VoteMap[checkerIp] = tmpMap
-
 	}
 
 	//totalNum := len(hostList)
@@ -173,6 +174,11 @@ func (c *RunController) Get() {
 		}
 	}
 
+	//add openstack condition
+	for _, osIp := range osHostList {
+		ResultMap[osIp] = true
+	}
+
 	var result []CheckedEdgeInfo
 	for checkedIp, condition := range ResultMap {
 		edgeInfo := CheckedEdgeInfo{
@@ -190,4 +196,17 @@ func (c *RunController) Get() {
 	}
 
 	_, _ = c.Ctx.ResponseWriter.Write(resp)
+}
+
+func (c *RunController) getMecHostList(tenantId string, accessToken string, client *http.Client) (*http.Response, error) {
+	url := "https://" + util.GetLocalIp() + ":" + util.GetInventoryPort() + "/inventory/v1/tenants/" + tenantId + "/mechosts"
+	log.Info("url is:" + url)
+	request, _ := http.NewRequest("GET", url, nil)
+	request.Header.Add("access_token", accessToken)
+	response, err := client.Do(request)
+	if err != nil {
+		c.writeErrorResponse(util.ErrCallFromMecM, util.StatusInternalServerError)
+		return nil, err
+	}
+	return response, nil
 }
