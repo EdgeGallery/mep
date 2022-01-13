@@ -25,7 +25,6 @@ import (
 // Base Controller
 type BaseController struct {
 	beego.Controller
-	//	Db dbAdapter.Database
 }
 
 // To display log for received message
