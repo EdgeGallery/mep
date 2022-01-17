@@ -53,9 +53,3 @@ func (c *BaseController) writeResponse(msg string, code int) {
 	c.Ctx.ResponseWriter.WriteHeader(code)
 	c.ServeJSON()
 }
-
-// Handled logging for success case
-func (c *BaseController) handleLoggingForSuccess(clientIp string, msg string) {
-	log.Info("Response message for ClientIP [" + clientIp + util.Operation + c.Ctx.Request.Method + "]" +
-		util.Resource + c.Ctx.Input.URL() + "] Result [Success: " + msg + ".]")
-}
