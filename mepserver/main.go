@@ -53,7 +53,7 @@ func main() {
 		}
 
 	}
-	//go heartbeatProcess()
+	go heartbeatProcess()
 	util.ApiGWInterface = util.NewApiGwIf()
 	server.Run()
 }
