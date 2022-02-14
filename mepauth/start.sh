@@ -180,6 +180,7 @@ if [ ! -z "$MEPAUTH_DB_HOST" ]; then
   fi
 fi
 
+echo "Config env parameters."
 cd /usr/mep
 
 set +e
@@ -190,6 +191,7 @@ sed -i "s/^apigw_port.*=.*$/apigw_port = ${MEPAUTH_APIGW_PORT}/g" conf/app.conf
 sed -i "s/^server_name.*=.*$/server_name = ${MEPAUTH_CERT_DOMAIN_NAME}/g" conf/app.conf
 
 sed -i "s/^HTTPSAddr.*=.*$/HTTPSAddr = $(hostname -i)/g" conf/app.conf
+sed -i "s/^httpaddr.*=.*$/httpaddr = $(hostname -i)/g" conf/app.conf
 sed -i "s/^mepserver_host.*=.*$/mepserver_host = ${MEPSERVER_HOST}/g" conf/app.conf
 
 # config db
