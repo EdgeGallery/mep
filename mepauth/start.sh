@@ -117,25 +117,27 @@ if [ ! "$valid_mepserver_host_name" -eq "0" ] ; then
 fi
 
 # ssl parameters validation
-validate_file_exists "/usr/mep/ssl/server.crt"
-valid_file_exist="$?"
-if [ ! "$valid_file_exist" -eq "0" ]; then
-  echo "server certificate is missing"
-  exit 1
-fi
+if [ ${SSL_ENABLED} ]; then
+  validate_file_exists "/usr/mep/ssl/server.crt"
+  valid_file_exist="$?"
+  if [ ! "$valid_file_exist" -eq "0" ]; then
+    echo "server certificate is missing"
+    exit 1
+  fi
 
-validate_file_exists "/usr/mep/ssl/server.key"
-valid_file_exist="$?"
-if [ ! "$valid_file_exist" -eq "0" ]; then
-  echo "server key is missing"
-  exit 1
-fi
+  validate_file_exists "/usr/mep/ssl/server.key"
+  valid_file_exist="$?"
+  if [ ! "$valid_file_exist" -eq "0" ]; then
+    echo "server key is missing"
+    exit 1
+  fi
 
-validate_file_exists "/usr/mep/ssl/ca.crt"
-valid_file_exist="$?"
-if [ ! "$valid_file_exist" -eq "0" ]; then
-  echo "ca cert is missing"
-  exit 1
+  validate_file_exists "/usr/mep/ssl/ca.crt"
+  valid_file_exist="$?"
+  if [ ! "$valid_file_exist" -eq "0" ]; then
+    echo "ca cert is missing"
+    exit 1
+  fi
 fi
 
 validate_file_exists "/usr/mep/keys/jwt_publickey"
