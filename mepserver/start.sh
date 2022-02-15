@@ -67,8 +67,8 @@ sed -i "s/^server_name.*=.*$/server_name = ${MEPSERVER_CERT_DOMAIN_NAME}/g" conf
 if [ ${SSL_ENABLED} ];
 then
   sed -i "s/^ssl_mode.*=.*$/ssl_mode = 1/g" conf/app.conf
-else
-  sed -i "s/^ssl_mode.*=.*$/ssl_mode = 0/g" conf/app.conf
+#else
+#  sed -i "s/^ssl_mode.*=.*$/ssl_mode = 0/g" conf/app.conf
 fi
 
 set -e
