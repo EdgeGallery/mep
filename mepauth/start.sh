@@ -117,7 +117,7 @@ if [ ! "$valid_mepserver_host_name" -eq "0" ] ; then
 fi
 
 # ssl parameters validation
-if [ ${SSL_ENABLED} ]; then
+if [ $SSL_ENABLED = "true" ]; then
   validate_file_exists "/usr/mep/ssl/server.crt"
   valid_file_exist="$?"
   if [ ! "$valid_file_exist" -eq "0" ]; then
