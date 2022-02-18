@@ -61,12 +61,15 @@ func NewApiGwIf() *ApiGwIf {
 	if len(baseUrl) == 0 {
 		return nil
 	}
-	tlsCfg, err := TLSConfig(ApiGwCaCertName, false)
-	if err != nil {
-		return nil
+	if GetAppConfigByKey("ssl_mode") == "1" {
+		tlsCfg, err := TLSConfig(ApiGwCaCertName, false)
+		if err != nil {
+			return nil
+		}
+		a.tlsCfg = tlsCfg
 	}
+
 	a.baseURL = baseUrl
-	a.tlsCfg = tlsCfg
 	return a
 }
 
