@@ -93,9 +93,9 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	/*	if !doInitialization(appConfig["TRUSTED_LIST"]) {
+	if !doInitialization(appConfig["TRUSTED_LIST"]) {
 		return
-	}*/
+	}
 
 	err = util.EncryptAndSaveJwtPwd(appConfig["JWT_PRIVATE_KEY"])
 	if err != nil {
