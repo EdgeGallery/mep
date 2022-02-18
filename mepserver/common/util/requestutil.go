@@ -118,6 +118,16 @@ func GetAppConfig() (AppConfigProperties, error) {
 	return appConfig, err
 }
 
+// GetAppConfig gets app configuration by key
+func GetAppConfigByKey(k string) string {
+	appConfig, err := GetAppConfig()
+	if err != nil {
+		log.Error("Get app config failed.", err)
+		return ""
+	}
+	return appConfig[k]
+}
+
 // SendPostRequest sends post request
 func SendPostRequest(url string, jsonStr []byte, tlsCfg *tls.Config) (string, error) {
 	return SendRequest(url, PostMethod, jsonStr, tlsCfg)
