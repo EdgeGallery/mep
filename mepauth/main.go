@@ -93,8 +93,10 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	if !doInitialization(appConfig["TRUSTED_LIST"]) {
-		return
+	if strings.EqualFold(util.GetAppConfig("EnableHTTPS"), "true") {
+		if !doInitialization(appConfig["TRUSTED_LIST"]) {
+			return
+		}
 	}
 
 	err = util.EncryptAndSaveJwtPwd(appConfig["JWT_PRIVATE_KEY"])
