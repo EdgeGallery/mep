@@ -31,6 +31,7 @@ import (
 	"mepauth/util"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func scanConfig(r io.Reader) (util.AppConfigProperties, error) {
@@ -92,9 +93,9 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	if !doInitialization(appConfig["TRUSTED_LIST"]) {
+	/*	if !doInitialization(appConfig["TRUSTED_LIST"]) {
 		return
-	}
+	}*/
 
 	err = util.EncryptAndSaveJwtPwd(appConfig["JWT_PRIVATE_KEY"])
 	if err != nil {
@@ -112,13 +113,16 @@ func main() {
 		log.Error("Failed to configure ak sk values")
 		return
 	}
-	tlsConf, err := util.TLSConfig("HTTPSCertFile")
-	if err != nil {
-		log.Error("Failed to add TLS configuration for beego")
-		return
+	if strings.EqualFold(util.GetAppConfig("EnableHTTPS"), "true") {
+		tlsConf, err := util.TLSConfig("HTTPSCertFile")
+		if err != nil {
+			log.Error("Failed to add TLS configuration for beego")
+			return
+		}
+		beego.BeeApp.Server.TLSConfig = tlsConf
 	}
+
 	controllers.InitAuthInfoList()
-	beego.BeeApp.Server.TLSConfig = tlsConf
 	setSwaggerConfig()
 	beego.ErrorController(&controllers.ErrorController{})
 	beego.Run()
