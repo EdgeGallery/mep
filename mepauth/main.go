@@ -93,8 +93,8 @@ func main() {
 	}
 	util.KeyComponentFromUserStr = keyComponentUserStr
 
-	if strings.EqualFold(util.GetAppConfig("EnableHTTPS"), "true") {
-		if !doInitialization(appConfig["TRUSTED_LIST"]) {
+	if !doInitialization(appConfig["TRUSTED_LIST"]) {
+		if strings.EqualFold(util.GetAppConfig("EnableHTTPS"), "true") {
 			return
 		}
 	}
@@ -144,6 +144,11 @@ func clearAppConfigOnExit(appConfig util.AppConfigProperties) {
 }
 
 func doInitialization(trustedNetworks *[]byte) bool {
+	err := util.InitRootKeyAndWorkKey()
+	if err != nil {
+		log.Error("Failed to initialize root key and work key.")
+		return false
+	}
 
 	config, err := util.TLSConfig("apigw_cacert")
 	if err != nil {
@@ -158,10 +163,6 @@ func doInitialization(trustedNetworks *[]byte) bool {
 		log.Error("Failed to initialize API gateway.")
 		return false
 	}
-	err = util.InitRootKeyAndWorkKey()
-	if err != nil {
-		log.Error("Failed to initialize root key and work key.")
-		return false
-	}
+
 	return true
 }
