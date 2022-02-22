@@ -438,7 +438,7 @@ func (m *Mp1Service) callbackApp(w http.ResponseWriter, r *http.Request) {
 
 	workPlan := NewWorkSpace(w, r)
 	workPlan.Try(&plans.Callback{})
-	workPlan.Finally(&common.SendHttpRsp{})
+	workPlan.Finally(&common.SendHttpRsp{StatusCode: http.StatusNoContent})
 
 	workspace.WkRun(workPlan)
 }
