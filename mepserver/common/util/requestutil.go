@@ -199,6 +199,7 @@ func generateReq(url string, method string, jsonStr []byte, tlsCfg *tls.Config) 
 
 	req.SetTLSClientConfig(tlsCfg)
 	req.Header(XRealIp, GetLocalIP())
+	req.Header("Connection", "Keep-Alive")
 	return req
 }
 
