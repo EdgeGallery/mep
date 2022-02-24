@@ -57,9 +57,9 @@ const (
 
 // Plugin related constants
 const (
-	MepserverRateConf               = `{ "minute": 1000, "policy": "local", "hide_client_headers": true }`
+	MepserverRateConf               = `{ "minute": 6000, "policy": "local", "hide_client_headers": true }`
 	MepserverPreFunctionConf        = `{ "functions": ["ngx.var.upstream_x_forwarded_for=UNKNOWN"] }`
-	MepauthRateConf                 = `{ "minute": 100, "policy": "local", "hide_client_headers": true }`
+	MepauthRateConf                 = `{ "minute": 600, "policy": "local", "hide_client_headers": true }`
 	ResponseTransformerConf         = `{ "name": "response-transformer", "config": { "remove": { "headers": ["server"] } } }`
 	AppidPlugin                     = "appid-header"
 	PreFunctionPlugin               = "pre-function"
