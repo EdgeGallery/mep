@@ -21,10 +21,13 @@ import (
 	"errors"
 	"github.com/apache/servicecomb-service-center/pkg/log"
 	"github.com/apache/servicecomb-service-center/server/core/proto"
+	"github.com/astaxie/beego/httplib"
 	"io/ioutil"
 	"mepserver/common/arch/workspace"
 	meputil "mepserver/common/util"
+	"net"
 	"net/http"
+	"time"
 )
 
 // Callback to callback consumer app by provider app
@@ -33,6 +36,17 @@ type Callback struct {
 	R          *http.Request   `json:"r,in"`
 	HttpErrInf *proto.Response `json:"httpErrInf,out"`
 	HttpRsp    interface{}     `json:"httpRsp,out"`
+}
+
+var tp http.RoundTripper = &http.Transport{
+	DialContext: (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
 }
 
 // OnRequest callback the consumer app by header info
@@ -59,18 +73,26 @@ func (t *Callback) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
-	config, err := meputil.TLSConfig(meputil.ApiGwCaCertName, true)
+	req := httplib.Post(callbackUrl)
+	req.Header("Content-Type", "application/json; charset=utf-8")
+	req.Header(meputil.XRealIp, meputil.GetLocalIP())
+	req.Header("Connection", "Keep-Alive")
+	req.SetTransport(tp)
+	req.Body(msg)
+
+	resp, err := req.Response()
 	if err != nil {
-		log.Errorf(err, "TLSConfig fail.")
-		t.SetFirstErrorCode(meputil.RequestParamErr, "TLSConfig fail.")
+		log.Errorf(nil, "Callback failed(result: %s).", resp.Status)
 		return workspace.TaskFinish
 	}
 
-	response, err := meputil.SendRequestRes(callbackUrl, http.MethodPost, msg, config)
-	if err != nil {
-		log.Error("Callback failed", err)
+	statusCode := resp.StatusCode
+	if statusCode != http.StatusNoContent {
+		log.Errorf(nil, "Callback failed(statusCode: %d).", resp.StatusCode)
+		return workspace.TaskFinish
 	}
-	log.Info(response)
-	t.HttpRsp = response
+
+	log.Info(resp.Status)
+	t.HttpRsp = resp.Status
 	return workspace.TaskFinish
 }
