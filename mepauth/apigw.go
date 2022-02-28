@@ -63,11 +63,6 @@ func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 		return err
 	}
 
-	err = i.SetupHttpLogPlugin(apiGwUrl)
-	if err != nil {
-		return err
-	}
-
 	log.Info("Initialization of consumer is successful")
 	return nil
 }

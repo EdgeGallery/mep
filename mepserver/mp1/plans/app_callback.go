@@ -82,7 +82,7 @@ func (t *Callback) OnRequest(data string) workspace.TaskCode {
 
 	resp, err := req.Response()
 	if err != nil {
-		log.Errorf(nil, "Callback failed(result: %s).", resp.Status)
+		log.Errorf(err, "Callback failed(result: %s).", resp)
 		return workspace.TaskFinish
 	}
 
