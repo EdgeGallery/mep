@@ -19,6 +19,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"github.com/astaxie/beego"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -150,10 +151,13 @@ func doInitialization(trustedNetworks *[]byte) bool {
 		return false
 	}
 
-	config, err := util.TLSConfig("apigw_cacert")
-	if err != nil {
-		log.Error("Failed to add TLS configurations during API gateway initialization")
-		return false
+	var config *tls.Config
+	if strings.EqualFold(os.Getenv("SSL_ENABLED"), "true") {
+		config, err = util.TLSConfig("apigw_cacert")
+		if err != nil {
+			log.Error("Failed to add TLS configurations during API gateway initialization")
+			return false
+		}
 	}
 
 	initializer := &apiGwInitializer{tlsConfig: config}
