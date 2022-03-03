@@ -43,6 +43,8 @@ type apiGwInitializer struct {
 	tlsConfig *tls.Config
 }
 
+var httpProtocol = util.GetAppConfig(util.HttpProtocol)
+
 func (i *apiGwInitializer) InitAPIGateway(trustedNetworks *[]byte) error {
 	apiGwUrl, getApiGwUrlErr := util.GetAPIGwURL()
 	if getApiGwUrlErr != nil {
@@ -136,7 +138,7 @@ func (i *apiGwInitializer) SetupApiGwMepServer(apiGwUrl string) error {
 		return errors.New(msg)
 	}
 	err := i.AddServiceRoute(util.MepserverName, []string{util.MepServerServiceMgmt, util.MepServerAppSupport},
-		"https://"+mepServerHost+":"+mepServerPort, false)
+		httpProtocol+"://"+mepServerHost+":"+mepServerPort, false)
 	if err != nil {
 		log.Error("Add mep server route to apiGw failed")
 		return err
@@ -182,7 +184,12 @@ func (i *apiGwInitializer) SetupApiGwMepServer(apiGwUrl string) error {
 
 func (i *apiGwInitializer) SetupApiGwMepAuth(apiGwURL string, trustedNetworks *[]byte) error {
 	// add mep auth service and route to apiGw
-	httpsPort := util.GetAppConfig("HttpsPort")
+	var httpsPort string
+	if strings.EqualFold(util.GetAppConfig("EnableHTTPS"), "true") {
+		httpsPort = util.GetAppConfig("HttpsPort")
+	} else {
+		httpsPort = util.GetAppConfig("HttpPort")
+	}
 	if len(httpsPort) == 0 {
 		msg := "HTTPS port configuration is not set"
 		log.Error(msg)
@@ -195,7 +202,7 @@ func (i *apiGwInitializer) SetupApiGwMepAuth(apiGwURL string, trustedNetworks *[
 		log.Error(msg)
 		return errors.New(msg)
 	}
-	mepAuthURL := "https://" + mepAuthHost + ":" + httpsPort
+	mepAuthURL := httpProtocol + "://" + mepAuthHost + ":" + httpsPort
 	err := i.AddServiceRoute(util.MepauthName, []string{routers.AuthTokenPath, routers.AppManagePath}, mepAuthURL, false)
 	if err != nil {
 		log.Error("Addition of mep server route to apiGw failed.")
@@ -341,7 +348,7 @@ func (i *apiGwInitializer) SendPutRequest(consumerURL string, jsonStr []byte) er
 
 func (i *apiGwInitializer) getHttpLogPluginData() (data []byte, err error) {
 	c := &models.ConfigInfo{
-		HTTPEndpoint: "https://mep-mm5:80/mep/service_govern/v1/kong_log",
+		HTTPEndpoint: httpProtocol + "://mep-mm5:80/mep/service_govern/v1/kong_log",
 		Method:       "POST",
 		Timeout:      1000,
 		Keepalive:    1000,

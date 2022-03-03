@@ -160,7 +160,8 @@ func GetAPIGwURL() (string, error) {
 		log.Error("Validation of consumer URL failed")
 		return "", validateApiGwParamsErr
 	}
-	apiGwConsumerUrl := fmt.Sprintf("https://%s:%s", apiGwHost, apiGwPort)
+	httpProtocol := GetAppConfig(HttpProtocol)
+	apiGwConsumerUrl := fmt.Sprintf("%s://%s:%s", httpProtocol, apiGwHost, apiGwPort)
 	return apiGwConsumerUrl, nil
 }
 

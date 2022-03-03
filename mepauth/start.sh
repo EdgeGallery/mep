@@ -203,9 +203,8 @@ sed -i "s/^db_passwd.*=.*$/db_passwd = ${MEPAUTH_DB_PASSWD}/g" conf/app.conf
 sed -i "s/^db_host.*=.*$/db_host = ${MEPAUTH_DB_HOST}/g" conf/app.conf
 
 # config ssl enable
-# if [ ${SSL_ENABLED} ]; then
-  sed -i "s/^EnableHTTPS.*=.*$/EnableHTTPS = ${SSL_ENABLED}/g" conf/app.conf
-# fi
+sed -i "s/^EnableHTTPS.*=.*$/EnableHTTPS = ${SSL_ENABLED}/g" conf/app.conf
+sed -i "s/^HttpProtocol.*=.*$/HttpProtocol = ${HTTP_PROTOCOL}/g" conf/app.conf
 
 set -e
 

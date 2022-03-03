@@ -35,7 +35,7 @@ import (
 const PropertiesMapSize = 5
 const FormatIntBase = 10
 const serviceLivenessInterval = "livenessInterval"
-const serviceGatewayURIFormatString = "https://mep-api-gw.mep:8443/%s"
+const serviceGatewayURIFormatString = "%s://mep-api-gw.mep:%d/%s"
 
 // ServiceInfo holds the service info response/request body
 type ServiceInfo struct {
@@ -139,7 +139,7 @@ func (s *ServiceInfo) registerEndpoints(modReq bool, instance *proto.MicroServic
 	} else if len(s.TransportInfo.Endpoint.Addresses) != 0 {
 		var nUris []string
 		for _, address := range s.TransportInfo.Endpoint.Addresses {
-			uri := fmt.Sprintf("http://%s:%d/", address.Host, address.Port)
+			uri := fmt.Sprintf("%s://%s:%d/", s.TransportInfo.Protocol, address.Host, address.Port)
 			nUris = append(nUris, uri)
 		}
 		return s.handleEndPointUri(nUris, modReq, instance)
@@ -173,16 +173,29 @@ func (s *ServiceInfo) generateServiceIdAndName() (string, string) {
 func (s *ServiceInfo) handleEndPointUri(nUris []string, modReq bool, instance *proto.MicroServiceInstance) (
 	[]string, string) {
 	var serviceUris []string
+	appConfig, err := meputil.GetAppConfig()
+	if err != nil {
+		log.Error("Get app config failed.", err)
+		return nil, ""
+	}
+	httpProtocol := appConfig["http_protocol"]
+	sslEnable := appConfig["ssl_enabled"]
+	var proxyPort int
+	if strings.EqualFold(sslEnable, "true") {
+		proxyPort = 8443
+	} else {
+		proxyPort = 8000
+	}
 
 	newEn, unmEn, delEn := s.compareEndPointsWithDB(nUris, modReq, instance)
 	for uri, serName := range newEn {
 		meputil.UpdatePropertiesMap(instance.Properties, meputil.EndPointPropPrefix+uri, serName)
-		serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serName))
+		serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, httpProtocol, proxyPort, serName))
 		s.RegisterToApiGw(uri, serName, modReq)
 	}
 	if modReq {
 		for _, serName := range unmEn {
-			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, serName))
+			serviceUris = append(serviceUris, fmt.Sprintf(serviceGatewayURIFormatString, httpProtocol, proxyPort, serName))
 		}
 		for uri, serName := range delEn {
 			delete(instance.Properties, meputil.EndPointPropPrefix+uri)
