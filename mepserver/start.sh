@@ -64,7 +64,7 @@ sed -i "s/^apigw_port.*=.*$/apigw_port = ${MEPSERVER_APIGW_PORT}/g" conf/app.con
 sed -i "s/^server_name.*=.*$/server_name = ${MEPSERVER_CERT_DOMAIN_NAME}/g" conf/app.conf
 
 # config ssl enable
-sed -i "s/^ssl_enabled.*=.*$/ssl_enabled = ${$SSL_ENABLED}/g" conf/app.conf
+sed -i "s/^ssl_enabled.*=.*$/ssl_enabled = ${SSL_ENABLED}/g" conf/app.conf
 if [ $SSL_ENABLED = "true" ];
 then
   sed -i "s/^ssl_mode.*=.*$/ssl_mode = 1/g" conf/app.conf
