@@ -79,7 +79,7 @@ func (a *ApiGwIf) getApiGwUrl() string {
 		log.Error("Get app config failed.", err)
 		return ""
 	}
-	apiGwUrl := fmt.Sprintf("https://%s:%s", appConfig["apigw_host"], appConfig["apigw_port"])
+	apiGwUrl := fmt.Sprintf("%s://%s:%s",appConfig["http_protocol"], appConfig["apigw_host"], appConfig["apigw_port"])
 	return apiGwUrl
 
 }

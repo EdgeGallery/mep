@@ -53,6 +53,7 @@ const (
 	ApigwHost            string = "apigw_host"
 	ApigwPort            string = "apigw_port"
 	UrlApplicationId     string = ":applicationId"
+	HttpProtocol         string = "HttpProtocol"
 )
 
 // Plugin related constants

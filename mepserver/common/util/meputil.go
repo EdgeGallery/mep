@@ -805,7 +805,14 @@ func ReadMepAuthEndpoint() (string, error) {
 		return "", fmt.Errorf("ip parse error")
 	}
 
-	return fmt.Sprintf(MepAuthBaseUrlFormat, mepAuthIp, mepAuthPort), nil
+	appConfig, err := GetAppConfig()
+	if err != nil {
+		log.Error("Get app config failed.", err)
+		return "", fmt.Errorf("get app config failed")
+	}
+	httpProtocol := appConfig["http_protocol"]
+
+	return fmt.Sprintf(MepAuthBaseUrlFormat, httpProtocol, mepAuthIp, mepAuthPort), nil
 }
 
 // InArray whether the element exists in array
