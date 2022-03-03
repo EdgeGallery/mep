@@ -27,6 +27,7 @@ import (
 	"mepauth/models"
 	"mepauth/routers"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -298,10 +299,12 @@ func (i *apiGwInitializer) AddServiceRoute(serviceName string, servicePaths []st
 
 // Send post request
 func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) error {
-
+	log.Info("consumerURL: " + consumerURL)
 	req := httplib.Post(consumerURL)
 	req.Header(util.ContentType, util.JsonUtf8)
-	req.SetTLSClientConfig(i.tlsConfig)
+	if strings.EqualFold(os.Getenv("SSL_ENABLED"), "true") {
+		req.SetTLSClientConfig(i.tlsConfig)
+	}
 	req.Body(jsonStr)
 	resp, err := req.Response()
 	if err != nil {
