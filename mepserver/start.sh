@@ -71,7 +71,7 @@ then
 else
   sed -i "s/^ssl_mode.*=.*$/ssl_mode = 0/g" conf/app.conf
 fi
-sed -i "s/^HttpProtocol.*=.*$/HttpProtocol = ${HTTP_PROTOCOL}/g" conf/app.conf
+sed -i "s/^http_protocol.*=.*$/http_protocol = ${HTTP_PROTOCOL}/g" conf/app.conf
 
 set -e
 umask 0027
