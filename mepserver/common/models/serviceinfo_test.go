@@ -42,6 +42,14 @@ func TestGetTrafficRules(t *testing.T) {
 			return
 		})
 
+	patches.ApplyFunc(meputil.GetAppConfig, func() (meputil.AppConfigProperties, error) {
+		var config meputil.AppConfigProperties
+		config = make(map[string]string)
+		config["http_protocol"] = "https"
+		config["ssl_enabled"] = "true"
+		return config, nil
+	})
+
 	t.Run("Create new uri", func(t *testing.T) {
 		instance := &proto.MicroServiceInstance{}
 		instance.Properties = make(map[string]string, 0)
