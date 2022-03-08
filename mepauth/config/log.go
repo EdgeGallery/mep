@@ -45,4 +45,5 @@ func init() {
 		logrus.Warn("Failed to log to file, using default stderr")
 	}
 	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetReportCaller(true)
 }
