@@ -116,6 +116,7 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	log.Info("CreateKongHttpLog msg: " + string(msg))
 	var temp map[string]interface{}
 	err = json.Unmarshal(msg, &temp)
 	if err != nil {
