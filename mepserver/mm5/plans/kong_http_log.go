@@ -336,7 +336,7 @@ func getAllServiceNames() []string {
 	serviceNames := make([]string, 0)
 	findInstancesResponse, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {
-		log.Errorf(nil, "Find service instance failed for retrieving the service names.")
+		log.Errorf(err, "Find service instance failed for retrieving the service names.")
 		return serviceNames
 	}
 
