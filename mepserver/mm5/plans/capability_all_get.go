@@ -111,7 +111,7 @@ func (t *CapabilitiesGet) OnRequest(dataInput string) workspace.TaskCode {
 
 		// Build the capability structure
 		capability := models.PlatformCapability{CapabilityId: capabilityId,
-			CapabilityName: instance.Properties["serName"], Status: capabilityState, Version: instance.GetVersion(),
+			CapabilityName: instance.Properties["serName"], Status: capabilityState, Version: instance.Properties["version"],
 			Consumers: t.consumerList[capabilityId]}
 		if capability.Consumers == nil {
 			capability.Consumers = make([]models.Consumer, 0)
