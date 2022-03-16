@@ -116,6 +116,7 @@ func (t *CreateKongHttpLog) OnRequest(data string) workspace.TaskCode {
 		return workspace.TaskFinish
 	}
 
+	log.Info("CreateKongHttpLog msg: " + string(msg))
 	var temp map[string]interface{}
 	err = json.Unmarshal(msg, &temp)
 	if err != nil {
@@ -335,7 +336,7 @@ func getAllServiceNames() []string {
 	serviceNames := make([]string, 0)
 	findInstancesResponse, err := meputil.FindInstanceByKey(url.Values{})
 	if err != nil {
-		log.Errorf(nil, "Find service instance failed for retrieving the service names.")
+		log.Errorf(err, "Find service instance failed for retrieving the service names.")
 		return serviceNames
 	}
 

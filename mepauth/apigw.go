@@ -308,7 +308,8 @@ func (i *apiGwInitializer) SendPostRequest(consumerURL string, jsonStr []byte) e
 	req.Body(jsonStr)
 	resp, err := req.Response()
 	if err != nil {
-		log.Error("Request sending is having error")
+		log.Error("Request sending is having error:", err)
+		log.Error(err.Error())
 		return err
 	}
 	defer resp.Body.Close()
