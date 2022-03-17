@@ -129,7 +129,7 @@ func generateJwtToken(appInsId string, clientIp string) (*string, error) {
 	}
 	claims := jwtClaims{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: jwt.At(time.Now().Add(time.Hour * 1 * 24 * 30)),
+			ExpiresAt: jwt.At(time.Now().Add(time.Minute * 5)), // five minutes
 			Issuer:    mepAuthKey,
 			Subject:   appInsId,
 		},
