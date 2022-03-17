@@ -41,7 +41,7 @@ const (
 	maxHostNameLen                = 253
 	BaseVal                       = 10
 	MaxMatchVarSize               = 3
-	ExpiresVal                    = 3600 * 24 * 30
+	ExpiresVal                    = 60 * 5 // five minutes
 )
 
 // End point related constants
